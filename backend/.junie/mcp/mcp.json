@@ -1,0 +1,11 @@
+{
+    "mcpServers": {
+        "laravel-boost": {
+            "command": "/opt/homebrew/Cellar/php/8.5.10/bin/php",
+            "args": [
+                "/Volumes/Dev/Uni/Semester 7/Dafpus-Sitasi-Halu/dafpus-sitasi-halu/artisan",
+                "boost:mcp"
+            ]
+        }
+    }
+}
