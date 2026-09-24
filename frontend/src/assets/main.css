@@ -1,0 +1,116 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --radius-DEFAULT: var(--radius);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --background: #f8f9fb;
+  --foreground: #0f1629;
+  --card: #ffffff;
+  --card-foreground: #0f1629;
+  --primary: #1e3a6e;
+  --primary-foreground: #ffffff;
+  --secondary: #eef2f9;
+  --secondary-foreground: #1e3a6e;
+  --muted: #f0f3f8;
+  --muted-foreground: #6b7a99;
+  --accent: #2d5be3;
+  --accent-foreground: #ffffff;
+  --border: #dde3ef;
+  --input: #dde3ef;
+  --ring: #2d5be3;
+  --popover: #ffffff;
+  --popover-foreground: #0f1629;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --radius: 0.625rem;
+}
+
+.dark {
+  --background: #0b0f1a;
+  --foreground: #eef2f9;
+  --card: #131929;
+  --card-foreground: #eef2f9;
+  --primary: #2d5be3;
+  --primary-foreground: #ffffff;
+  --secondary: #1a2340;
+  --secondary-foreground: #b8c5e8;
+  --muted: #1a2340;
+  --muted-foreground: #6b7a99;
+  --accent: #4a7cf7;
+  --accent-foreground: #ffffff;
+  --border: #1f2d4a;
+  --input: #1f2d4a;
+  --ring: #4a7cf7;
+  --popover: #131929;
+  --popover-foreground: #eef2f9;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --radius: 0.625rem;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  font-family: "Manrope", sans-serif;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+*:hover {
+  scrollbar-color: var(--border) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 2px;
+}
+
+*:hover::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+
+/* Matikan icon "reveal password" bawaan Edge/Chrome agar tidak dobel
+   dengan tombol mata custom di komponen PasswordInput. */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
