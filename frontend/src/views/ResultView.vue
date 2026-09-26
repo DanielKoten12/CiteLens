@@ -1,13 +1,115 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, reactive, ref, shallowRef, watch } from "vue";
 import { useRouter } from "vue-router";
-import type { DocumentSegment, FilterStatus, Reference, RefStatus } from "@/types";
+import { getDocument, GlobalWorkerOptions, type PDFDocumentProxy, type PageViewport } from "pdfjs-dist";
+import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import { useDocumentStore } from "@/stores/document";
+import type { DocumentSegment, FilterStatus, PdfHighlight, Reference, RefStatus } from "@/types";
 
 const router = useRouter();
+const documentStore = useDocumentStore();
+GlobalWorkerOptions.workerSrc = workerUrl;
+
+const pdfDocument = shallowRef<PDFDocumentProxy | null>(null);
+const pdfLoading = ref(false);
+const pdfError = ref("");
+
+type RenderedPdfPage = {
+  number: number;
+  width: number;
+  height: number;
+  viewport: PageViewport;
+};
+
+const renderedPages = ref<RenderedPdfPage[]>([]);
+const pageCanvasEls = ref<Record<number, HTMLCanvasElement | null>>({});
+
+async function renderPdf() {
+  if (!documentStore.file || !documentStore.isPdf) return;
+  pdfLoading.value = true;
+  pdfError.value = "";
+  renderedPages.value = [];
+
+  try {
+    await pdfDocument.value?.cleanup();
+    pdfDocument.value = null;
+    const fileData = new Uint8Array(await documentStore.file.arrayBuffer());
+    const loadingTask = getDocument({ data: fileData });
+    const loadedDocument = await loadingTask.promise;
+    pdfDocument.value = loadedDocument;
+
+    const pages: RenderedPdfPage[] = [];
+    for (let pageNumber = 1; pageNumber <= loadedDocument.numPages; pageNumber += 1) {
+      const page = await loadedDocument.getPage(pageNumber);
+      const viewport = page.getViewport({ scale: 1.35 });
+      pages.push({ number: pageNumber, width: viewport.width, height: viewport.height, viewport });
+    }
+    renderedPages.value = pages;
+    pdfLoading.value = false;
+    let canvases: HTMLCanvasElement[] = [];
+    for (let attempt = 0; attempt < 60 && canvases.length < pages.length; attempt += 1) {
+      await nextTick();
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      canvases = Array.from(document.querySelectorAll<HTMLCanvasElement>(".pdf-page-canvas"));
+    }
+    if (canvases.length < pages.length) throw new Error("Canvas halaman PDF belum siap dirender.");
+    for (const [index, page] of pages.entries()) {
+      const canvas = canvases[index];
+      if (!canvas) continue;
+      const pdfPage = await loadedDocument.getPage(page.number);
+      canvas.width = page.width;
+      canvas.height = page.height;
+      const canvasContext = canvas.getContext("2d");
+      if (!canvasContext) throw new Error("Canvas context tidak tersedia.");
+      canvasContext.clearRect(0, 0, canvas.width, canvas.height);
+      await pdfPage.render({ canvas, viewport: page.viewport }).promise;
+    }
+  } catch (error) {
+    console.error("Gagal merender PDF:", error);
+    pdfError.value = error instanceof Error ? `PDF tidak dapat ditampilkan: ${error.message}` : "PDF tidak dapat ditampilkan.";
+  } finally {
+    pdfLoading.value = false;
+  }
+}
+
+function setPageCanvas(pageNumber: number, element: Element | null) {
+  pageCanvasEls.value[pageNumber] = element as HTMLCanvasElement | null;
+}
+
+function pageHighlights(pageNumber: number) {
+  return documentStore.highlights.filter((highlight) => highlight.page === pageNumber);
+}
+
+function highlightStyle(highlight: PdfHighlight, page: RenderedPdfPage) {
+  const points = [
+    page.viewport.convertToViewportPoint(highlight.x, highlight.y),
+    page.viewport.convertToViewportPoint(highlight.x + highlight.width, highlight.y),
+    page.viewport.convertToViewportPoint(highlight.x, highlight.y + highlight.height),
+    page.viewport.convertToViewportPoint(highlight.x + highlight.width, highlight.y + highlight.height),
+  ];
+  const left = Math.min(...points.map(([x]) => x));
+  const top = Math.min(...points.map(([, y]) => y));
+  const right = Math.max(...points.map(([x]) => x));
+  const bottom = Math.max(...points.map(([, y]) => y));
+  const statusColor = statusMeta[highlight.status];
+  return {
+    left: `${left}px`,
+    top: `${top}px`,
+    width: `${right - left}px`,
+    height: `${bottom - top}px`,
+    background: statusColor.bg,
+    borderColor: statusColor.fg,
+  };
+}
+
+watch(() => documentStore.objectUrl, renderPdf, { immediate: true });
+onBeforeUnmount(() => {
+  void pdfDocument.value?.cleanup();
+});
 
 // TODO: ganti mock data ini dengan hasil asli dari backend / store setelah
 // pipeline pemeriksaan selesai (lihat ProcessingView.vue).
-const fileName = "naskah-skripsi-bab-2.pdf";
+const fileName = computed(() => documentStore.fileName);
 
 const references: Reference[] = [
   {
@@ -372,41 +474,46 @@ function downloadReport() {
       </div>
     </div>
 
-    <div class="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-5 gap-8">
-      <div class="lg:col-span-3">
-        <p class="text-xs font-bold tracking-widest mb-4" :style="{ color: 'var(--muted-foreground)' }">
-          ISI DOKUMEN
-        </p>
+    <div class="result-workspace">
+      <div class="result-layout max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-5 gap-8">
+        <section class="lg:col-span-3">
+          <div class="document-paper">
+            <div class="document-toolbar">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="document-file-icon">PDF</span>
+                <div class="min-w-0">
+                  <p class="document-file-name truncate">{{ fileName }}</p>
+                  <p class="document-file-meta">Hasil pemeriksaan sitasi</p>
+                </div>
+              </div>
+              <span class="document-page-label">Halaman 1 dari 1</span>
+            </div>
 
-        <div class="flex flex-col gap-4">
-          <template v-for="(block, index) in documentBlocks" :key="index">
-            <h2 v-if="block.kind === 'h1'" class="text-base font-extrabold mt-2" :style="{ color: 'var(--foreground)' }">
-              {{ block.text }}
-            </h2>
-            <h3 v-else-if="block.kind === 'h2'" class="text-base font-extrabold" :style="{ color: 'var(--foreground)' }">
-              {{ block.text }}
-            </h3>
-            <h4 v-else-if="block.kind === 'h3'" class="text-sm font-bold mt-2" :style="{ color: 'var(--foreground)' }">
-              {{ block.text }}
-            </h4>
-            <p v-else class="text-sm leading-8" :style="{ color: 'var(--foreground)' }">
-              <template v-for="(segment, sIndex) in block.segments" :key="sIndex">
-                <span v-if="segment.type === 'text'">{{ segment.content }}</span>
-                <button
-                  v-else
-                  class="mx-0.5 px-1 rounded transition-shadow cursor-pointer"
-                  :style="citationStyle(segment.refId)"
-                  @click="selectCitation(segment.refId)"
-                >
-                  {{ segment.content }}
-                </button>
-              </template>
-            </p>
-          </template>
-        </div>
-      </div>
+            <div class="document-viewer">
+              <div v-if="pdfLoading" class="document-viewer-empty">Memuat PDF&hellip;</div>
+              <div v-else-if="pdfError" class="document-viewer-empty">{{ pdfError }}</div>
+              <div v-else-if="renderedPages.length" class="pdf-pages">
+                <div v-for="page in renderedPages" :key="page.number" class="pdf-page-shell" :style="{ width: `${page.width}px`, height: `${page.height}px` }">
+                  <canvas :ref="(element) => setPageCanvas(page.number, element as Element | null)" class="pdf-page-canvas" />
+                  <button
+                    v-for="highlight in pageHighlights(page.number)"
+                    :key="highlight.id"
+                    class="pdf-highlight"
+                    :style="highlightStyle(highlight, page)"
+                    :title="highlight.text ?? statusMeta[highlight.status].label"
+                    @click="selectCitation(highlight.refId)"
+                  />
+                </div>
+              </div>
+              <div v-else class="document-viewer-empty">
+                <p class="font-bold">Pratinjau PDF belum tersedia</p>
+                <p class="mt-1">Unggah file PDF untuk melihat dokumen asli.</p>
+              </div>
+            </div>
+          </div>
+        </section>
 
-      <div class="lg:col-span-2">
+      <div class="lg:col-span-2 reference-panel">
         <div class="flex items-center justify-between mb-4">
           <p class="text-xs font-bold tracking-widest" :style="{ color: 'var(--muted-foreground)' }">
             DAFTAR PUSTAKA
@@ -514,4 +621,5 @@ function downloadReport() {
       </div>
     </div>
   </div>
+</div>
 </template>
