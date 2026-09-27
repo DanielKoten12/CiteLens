@@ -4,77 +4,44 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UploadDocumentRequest;
-use App\Models\Document;
+use App\Http\Resources\ResearchedDocumentResource;
+use App\Services\DocumentUploadService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
-use Throwable;
 
 /**
- * Controller untuk endpoint upload dokumen DafpusCek.
+ * {@see DocumentUploadService}.
  *
- * Tanggung jawab endpoint ini (sengaja dibatasi dulu):
- *   1. Terima file dari FE (multipart/form-data)
- *   2. Validasi format & ukuran (ditangani UploadDocumentRequest)
- *   3. Simpan ke storage/app/private/temp/ dengan nama UUID unik
- *   4. Return metadata file ke FE
- *
- * BELUM termasuk (menyusul setelah koordinasi tim):
- *   - Dispatch job ke queue untuk pipeline analisis
- *     TODO(integrasi): dispatch AnalyzeDocumentJob setelah
- *     user klik "Mulai Analisis", bukan di sini
+ * TODO(integrasi): pasang middleware auth:sanctum pada route setelah Sanctum
+ * terpasang.
+ * TODO(integrasi): dispatch AnalyzeDocumentJob di sini. Saat ini endpoint hanya
+ * menyimpan dokumen (status `pending`, step `queued`) tanpa menjalankan pipeline.
  */
 class UploadController extends Controller
 {
-    public function upload(UploadDocumentRequest $request): JsonResponse
-    {
-        $file = $request->file('file');
+    public function upload(
+        UploadDocumentRequest $request,
+        DocumentUploadService $service,
+    ): JsonResponse {
+        $user = $request->user();
 
-        // Buat identifier unik untuk dokumen ini
-        $documentId = (string) Str::uuid();
-        $originalName = $file->getClientOriginalName();
-        $extension = $file->getClientOriginalExtension();
-        $storedName = $documentId.'.'.$extension;
-        $fileSize = $file->getSize();       // bytes
-        $contentType = $file->getMimeType();
-
-        // Simpan ke storage/app/private/temp/{uuid}.pdf (atau .docx)
-        // File ini SEMENTARA — sesuai catatan privasi PRD:
-        // belum permanen sampai user memicu "Mulai Analisis"
-        $stored = $file->storeAs('temp', $storedName, 'local');
-
-        if ($stored === false) {
+        if ($user === null) {
             return response()->json([
-                'message' => 'Dokumen gagal disimpan. Silakan coba lagi.',
-            ], 503);
+                'error' => [
+                    'code' => 'UNAUTHENTICATED',
+                    'message' => 'Unauthenticated.',
+                ],
+            ], 401);
         }
 
-        try {
-            $document = Document::create([
-                'id' => $documentId,
-                'filename' => $originalName,
-                'stored_filename' => $storedName,
-                'file_path' => storage_path('app/private/'.$stored),
-                'file_size' => $fileSize,
-                'content_type' => $contentType,
-                'status' => 'uploaded',
-            ]);
-        } catch (Throwable $exception) {
-            Storage::disk('local')->delete($stored);
-            report($exception);
+        $document = $service->handle(
+            user: $user,
+            file: $request->file('file'),
+            name: $request->validated('name'),
+        );
 
-            return response()->json([
-                'message' => 'Dokumen berhasil diunggah tetapi gagal dicatat. Silakan coba lagi.',
-            ], 500);
-        }
-
-        return response()->json([
-            'document_id' => $document->id,
-            'original_filename' => $originalName,
-            'stored_filename' => $storedName,
-            'file_size' => $fileSize,
-            'content_type' => $contentType,
-            'status' => 'uploaded',
-        ], 201);
+        return (new ResearchedDocumentResource($document->load('files')))
+            ->additional(['message' => 'Dokumen berhasil diunggah.'])
+            ->response()
+            ->setStatusCode(202);
     }
 }
