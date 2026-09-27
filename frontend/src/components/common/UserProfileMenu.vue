@@ -26,6 +26,11 @@ function handleLogout() {
   router.push({ name: "login" });
 }
 
+function goTo(name: "profile" | "documents" | "settings") {
+  close();
+  router.push({ name });
+}
+
 watch(open, (isOpen) => {
   if (isOpen) {
     document.addEventListener("click", close);
@@ -107,6 +112,7 @@ const menuItems = [
         :key="item.label"
         class="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium transition-colors text-left hover:bg-[var(--muted)]"
         :style="{ color: 'var(--foreground)' }"
+        @click="item.label === 'Profil Saya' ? goTo('profile') : item.label === 'Dokumen Saya' ? goTo('documents') : goTo('settings')"
       >
         <span :style="{ color: 'var(--muted-foreground)' }">
           <svg width="13" height="13" fill="none" viewBox="0 0 13 13" v-html="item.icon" />

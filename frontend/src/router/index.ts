@@ -26,6 +26,12 @@ const router = createRouter({
       meta: { hideHeader: true, public: true },
     },
     {
+      path: "/lupa-kata-sandi",
+      name: "forgot-password",
+      component: () => import("@/views/ForgotPasswordView.vue"),
+      meta: { hideHeader: true, public: true },
+    },
+    {
       path: "/",
       name: "upload",
       component: () => import("@/views/UploadView.vue"),
@@ -44,6 +50,21 @@ const router = createRouter({
       path: "/riwayat",
       name: "history",
       component: () => import("@/views/HistoryView.vue"),
+    },
+    {
+      path: "/profil",
+      name: "profile",
+      component: () => import("@/views/ProfileView.vue"),
+    },
+    {
+      path: "/dokumen-saya",
+      name: "documents",
+      component: () => import("@/views/DocumentsView.vue"),
+    },
+    {
+      path: "/pengaturan",
+      name: "settings",
+      component: () => import("@/views/SettingsView.vue"),
     },
   ],
   scrollBehavior() {

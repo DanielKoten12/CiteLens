@@ -75,6 +75,7 @@ async function handleSubmit() {
                 type="button"
                 class="text-xs underline underline-offset-2"
                 :style="{ color: 'var(--muted-foreground)' }"
+                @click="router.push({ name: 'forgot-password' })"
               >
                 Lupa kata sandi?
               </button>
