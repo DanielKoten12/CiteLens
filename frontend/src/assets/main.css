@@ -114,3 +114,273 @@ input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear {
   display: none;
 }
+
+.result-workspace {
+  min-height: calc(100vh - 73px);
+  background: #e9edf3;
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(226, 232, 240, 0.45));
+}
+
+.result-layout {
+  align-items: start;
+}
+
+.document-paper {
+  overflow: hidden;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 18px 45px rgba(31, 46, 70, 0.13), 0 2px 5px rgba(31, 46, 70, 0.08);
+}
+
+.document-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 62px;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid #e4e8ef;
+  background: #f8fafc;
+}
+
+.document-file-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 40px;
+  border-radius: 4px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.document-file-name {
+  max-width: 250px;
+  color: #24334d;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.document-file-meta,
+.document-page-label {
+  color: #8490a4;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.document-page-label {
+  white-space: nowrap;
+}
+
+.document-page {
+  position: relative;
+  min-height: 820px;
+  padding: 2.25rem clamp(1.5rem, 5vw, 4.5rem) 4rem;
+  background: #fff;
+}
+
+.document-viewer {
+  min-height: 820px;
+  background: #697586;
+  overflow: auto;
+}
+
+.pdf-pages {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: min-content;
+  padding: 1.25rem;
+}
+
+.pdf-page-shell {
+  position: relative;
+  flex: 0 0 auto;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25);
+}
+
+.pdf-page-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.pdf-highlight {
+  position: absolute;
+  z-index: 1;
+  border: 1px solid;
+  border-radius: 2px;
+  opacity: 0.48;
+  cursor: pointer;
+  transition: opacity 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pdf-highlight:hover {
+  opacity: 0.75;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.22);
+}
+
+.document-viewer-empty {
+  display: flex;
+  min-height: 820px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 2rem;
+  color: #eef2f7;
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.document-page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 3rem;
+  color: #8792a6;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+}
+
+.document-page-number {
+  color: #b2bac7;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.document-content {
+  color: #172238;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.document-heading {
+  color: #111c30;
+  font-family: "Manrope", sans-serif;
+}
+
+.document-heading-chapter {
+  margin: 0 0 2rem;
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.document-heading-title {
+  margin: 0 0 2.4rem;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.document-heading-section {
+  margin: 0 0 1.35rem;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.document-paragraph {
+  margin: 0 0 1.35rem;
+  font-size: 0.98rem;
+  line-height: 2.05;
+  text-align: justify;
+}
+
+.document-citation {
+  margin: 0 0.1rem;
+  padding: 0.08rem 0.28rem;
+  border-radius: 3px;
+  font: inherit;
+  line-height: inherit;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.document-citation:hover {
+  filter: saturate(1.15);
+  box-shadow: 0 0 0 1px rgba(45, 91, 227, 0.45);
+}
+
+.document-page-footer {
+  position: absolute;
+  right: clamp(1.5rem, 5vw, 4.5rem);
+  bottom: 1.5rem;
+  left: clamp(1.5rem, 5vw, 4.5rem);
+  display: flex;
+  justify-content: space-between;
+  padding-top: 0.75rem;
+  border-top: 1px solid #edf0f4;
+  color: #a2abba;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.document-page-footer span {
+  margin-left: auto;
+  margin-right: 0.35rem;
+  color: #c4cad4;
+}
+
+.reference-panel {
+  position: sticky;
+  top: 1rem;
+}
+
+@media (max-width: 1023px) {
+  .reference-panel {
+    position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .document-toolbar {
+    padding-inline: 1rem;
+  }
+
+  .document-page {
+    min-height: 700px;
+    padding-top: 1.5rem;
+  }
+
+  .document-viewer,
+  .document-viewer-empty {
+    min-height: 680px;
+    height: 680px;
+  }
+
+  .document-page-heading {
+    margin-bottom: 2rem;
+  }
+
+  .document-paragraph {
+    font-size: 0.92rem;
+    line-height: 1.9;
+  }
+
+  .document-page-label {
+    display: none;
+  }
+}
+
+@media print {
+  .document-toolbar,
+  .reference-panel {
+    display: none;
+  }
+
+  .result-workspace {
+    background: #fff;
+  }
+
+  .document-paper {
+    border: 0;
+    box-shadow: none;
+  }
+}

@@ -77,3 +77,15 @@ export interface HighlightColor {
   border: string;
   text: string;
 }
+
+export interface PdfHighlight {
+  id: string;
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  status: RefStatus;
+  refId?: number;
+  text?: string;
+}

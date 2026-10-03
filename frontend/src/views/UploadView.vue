@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
+import { useDocumentStore } from "@/stores/document";
 
 const router = useRouter();
+const documentStore = useDocumentStore();
 
 const ACCEPTED_EXTENSIONS = [".pdf", ".docx"];
 const MAX_SIZE_MB = 50;
@@ -68,7 +70,7 @@ function handleCta() {
     openFilePicker();
     return;
   }
-  // TODO: kirim file ke backend / store sebelum pindah halaman.
+  documentStore.setFile(selectedFile.value);
   router.push({ name: "processing" });
 }
 
