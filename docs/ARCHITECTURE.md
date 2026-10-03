@@ -62,7 +62,7 @@ Hard rules:
 | Layer | Technology |
 |---|---|
 | Frontend | Vue 3 + TypeScript, Vite 6, Pinia, vue-router, Tailwind 4, shadcn-vue (`reka-ui`), `pdfjs-dist` |
-| Backend | PHP 8.3+ (local CLI 8.5), Laravel 13, spatie/laravel-data 4 (DTOs), Laravel Sanctum (planned), Pest 5, Pint |
+| Backend | PHP 8.3+ (local CLI 8.5), Laravel 13, spatie/laravel-data 4 (DTOs), Laravel Sanctum, Pest 5, Pint |
 | Database | MySQL/Postgres (target); SQLite for local dev and tests |
 | Queue | Laravel queue (`QUEUE_CONNECTION=database` by default; `sync` in tests) |
 | Inference | Python 3.14, FastAPI (`fastapi[standard]`), uv-managed; GROBID + SBERT |
@@ -284,13 +284,14 @@ Report and document files are stored on a private disk; access is via signed/tem
 
 Verified against the repository:
 
-- **Backend** is a Laravel 13 skeleton. Present: `User`, `ResearchedDocument`, `File` models; the
-  canonical domain migration (`create_initial_tables`); `UploadController`,
-  `UploadDocumentRequest`, `ResearchedDocumentDetailData` / `FilePreviewData`
-  (spatie/laravel-data), `DocumentUploadService`,
-  `DocumentUploadFailedException`; and the upload route in `routes/api.php`. **Missing:**
-  Sanctum, all other endpoints, `AnalyzeDocumentJob`, the Crossref client, scoring, the inference
-  client, and report generation.
+- **Backend** is a Laravel 13 app. Present: `User`, `ResearchedDocument`, `File` models; the
+  canonical domain migration (`create_initial_tables`); Sanctum auth
+  (`AuthController`, `AuthService`, `RegisterRequest` / `LoginRequest`, `AuthenticationData` /
+  `UserDetailData`, `ErrorResponseData`, `InvalidCredentialsException`) with the `/auth/*` routes; and the upload slice
+  (`UploadController`, `UploadDocumentRequest`, `ResearchedDocumentDetailData` /
+  `FilePreviewData`, `DocumentUploadService`, `DocumentUploadFailedException`) in
+  `routes/api.php`. **Missing:** all other endpoints, `AnalyzeDocumentJob`, the Crossref client,
+  scoring, the inference client, and report generation.
 - **Frontend** is a working Vue 3 + Vite SPA with mocked auth and prototype types; the API is not
   wired yet.
 - **Inference** is a FastAPI hello-world stub; `/health`, `/v1/extract`, `/v1/embeddings` are
