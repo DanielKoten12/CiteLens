@@ -2,7 +2,7 @@
 
 namespace App\Data\ResearchedDocument;
 
-use App\Data\BaseData;
+use App\Data\ModelData;
 use App\Data\File\FilePreviewData;
 use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Attributes\MapInputName;
@@ -16,7 +16,7 @@ use Spatie\LaravelData\Mappers\SnakeCaseMapper;
  * Mirrors the document object in `docs/API_SPEC.md` §4.
  */
 #[MapName(SnakeCaseMapper::class)]
-class ResearchedDocumentDetailData extends BaseData
+class ResearchedDocumentDetailData extends ModelData
 {
     public string $id;
     public string $name;

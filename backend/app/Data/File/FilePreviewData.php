@@ -2,13 +2,13 @@
 
 namespace App\Data\File;
 
-use App\Data\BaseData;
+use App\Data\ModelData;
 use App\Extensions\Data\Injectors\UrlFromFilePath;
 use Spatie\LaravelData\Attributes\MapName;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
 
 #[MapName(SnakeCaseMapper::class)]
-class FilePreviewData extends BaseData
+class FilePreviewData extends ModelData
 {
     public string $filename;
     public ?string $mimeType;
