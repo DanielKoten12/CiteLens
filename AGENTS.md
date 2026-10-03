@@ -147,8 +147,8 @@ Hard rules:
 │   ├── AGENTS.md / CLAUDE.md  # Laravel Boost guidelines (auto-generated; follow them)
 │   ├── bootstrap/app.php      # middleware/exception bootstrap
 │   ├── routes/                # web.php, api.php (API under /api/v1), console.php
-│   ├── app/                   # Http/{Controllers/Api,Requests,Resources}, Models, Services,
-│   │                          # Exceptions, Providers
+│   ├── app/                   # Http/{Controllers/Api,Requests}, Data (spatie/laravel-data DTOs),
+│   │                          # Models, Services, Exceptions, Providers
 │   ├── config/                # app, auth, database, queue, services, ...
 │   ├── database/              # migrations (incl. canonical domain schema), factories, seeders
 │   └── tests/                 # Pest tests (tests/Feature, tests/Unit)
@@ -174,6 +174,7 @@ Notes:
 | Laravel HTTP bootstrap | `backend/bootstrap/app.php` |
 | Laravel routes | `backend/routes/api.php` (API under `/api/v1`), `backend/routes/web.php` |
 | Laravel models | `backend/app/Models/` (`User`, `ResearchedDocument`, `File` so far) |
+| Laravel DTOs | `backend/app/Data/` (spatie/laravel-data; e.g. `ResearchedDocumentDetailData`, `FilePreviewData`) |
 | Laravel controllers | `backend/app/Http/Controllers/` (`Api/UploadController` so far) |
 | Migrations | `backend/database/migrations/` (framework tables + `create_initial_tables` domain schema) |
 | Backend tests | `backend/tests/Feature/`, `backend/tests/Unit/` (Pest) |
@@ -277,7 +278,7 @@ review), `/citations` (list per document, detail, `PATCH /citations/{citation}` 
 (generate/list/detail/delete — PDF only).
 
 Pagination: `page`, `per_page` (default 15, max 100). Invalid filters → `422`. Default sort:
-`created_at` descending unless documented otherwise.
+`createdAt` descending unless documented otherwise.
 
 ## 7. Authorization and Ownership — MANDATORY INVARIANTS
 
@@ -444,8 +445,10 @@ Be aware of what is scaffold vs. contract before promising behavior:
   `File`, the canonical domain migration (`database/migrations/*_create_initial_tables.php`),
   `routes/api.php` with the upload route under `/api/v1`, and the upload slice
   (`Http/Controllers/Api/UploadController`, `Http/Requests/UploadDocumentRequest`,
-  `Http/Resources/ResearchedDocumentResource`, `Services/DocumentUploadService`,
-  `Exceptions/DocumentUploadFailedException`). **Sanctum is not yet installed**; the rest of the
+  `Data/ResearchedDocumentDetailData` + `Data/FilePreviewData`, `Services/DocumentUploadService`,
+  `Exceptions/DocumentUploadFailedException`). API responses are shaped with
+  **`spatie/laravel-data`** DTOs in `app/Data/` (the former `Http/Resources` layer was replaced).
+  **Sanctum is not yet installed**; the rest of the
   endpoints, `AnalyzeDocumentJob`, the Crossref/inference clients, scoring and report generation
   do not exist yet. Adding them is expected work — follow the contracts while doing it. See
   `docs/ARCHITECTURE.md` §13 for the full status.
@@ -575,8 +578,12 @@ For the inference service, test the internal contract (`/health`, `/v1/extract`,
 
 - **PHP/Laravel:** follow `backend/AGENTS.md` (Laravel Boost guidelines) and existing code style:
   curly braces on all control structures, constructor property promotion, explicit return types /
-  param types, PHPDoc over inline comments. Use Eloquent API Resources for API responses. Use
-  `php artisan make:*` generators. Run Pint before finishing.
+  param types, PHPDoc over inline comments. Use **`spatie/laravel-data`** DTOs in `app/Data/` for
+  API response shaping (not Eloquent API Resources). Name them by entity and role:
+  `EntitySummaryData` (listing), `EntityDetailData` (detail page / action response) and
+  `EntityPreviewData` (embedded related data, e.g. `ResearchedDocumentDetailData` has a
+  `FilePreviewData`). Create a DTO only when an endpoint actually needs it; build it with a
+  `fromModel()` factory. Use `php artisan make:*` generators. Run Pint before finishing.
 - **Vue/TypeScript:** `<script setup>` + Composition API, Pinia stores, typed shared models in
   `src/types/`, shadcn-vue component patterns, Tailwind 4 utility classes, `cn()` from
   `lib/utils.ts`. Keep API access in stores/services — not inside view markup.

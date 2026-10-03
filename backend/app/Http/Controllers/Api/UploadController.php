@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Data\ResearchedDocument\ResearchedDocumentDetailData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UploadDocumentRequest;
-use App\Http\Resources\ResearchedDocumentResource;
 use App\Services\DocumentUploadService;
 use Illuminate\Http\JsonResponse;
 
@@ -18,12 +18,15 @@ use Illuminate\Http\JsonResponse;
  */
 class UploadController extends Controller
 {
-    public function upload(
-        UploadDocumentRequest $request,
-        DocumentUploadService $service,
-    ): JsonResponse {
+    public function __construct(
+        private DocumentUploadService $documentUploadService,
+    ) {}
+
+    public function upload(UploadDocumentRequest $request): JsonResponse
+    {
         $user = $request->user();
 
+        // TODO: Remove and use auth middleware after implementing auth routes
         if ($user === null) {
             return response()->json([
                 'error' => [
@@ -33,15 +36,17 @@ class UploadController extends Controller
             ], 401);
         }
 
-        $document = $service->handle(
+        $document = $this->documentUploadService->handle(
             user: $user,
             file: $request->file('file'),
             name: $request->validated('name'),
         );
 
-        return (new ResearchedDocumentResource($document->load('files')))
-            ->additional(['message' => 'Dokumen berhasil diunggah.'])
-            ->response()
-            ->setStatusCode(202);
+        $document->load('file');
+
+        return response()->json([
+            'data' => ResearchedDocumentDetailData::from($document),
+            'message' => 'Dokumen berhasil diunggah.',
+        ], 202);
     }
 }

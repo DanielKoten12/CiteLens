@@ -17,7 +17,7 @@ use Throwable;
  * Responsibilities:
  *   1. create the `researched_documents` row (status `pending`, step `queued`),
  *   2. store the PDF on the configured disk,
- *   3. attach the polymorphic `files` row.
+ *   3. attach the polymorphic `file` row.
  *
  * The operation is transactional: a failed database write removes the stored
  * file, and a failed file write rolls back the database changes.
@@ -26,28 +26,26 @@ class DocumentUploadService
 {
     public function handle(User $user, UploadedFile $file, ?string $name = null): ResearchedDocument
     {
-        $documentId = (string) Str::uuid();
         $storedPath = null;
 
         try {
-            return DB::transaction(function () use ($user, $file, $name, $documentId, &$storedPath): ResearchedDocument {
+            return DB::transaction(function () use ($user, $file, $name, &$storedPath): ResearchedDocument {
                 $document = $this->createDocument(
                     $user,
                     $name ?? $file->getClientOriginalName(),
-                    $documentId,
                 );
 
                 $storedPath = $file->storeAs(
-                    "documents/{$documentId}",
+                    "documents/{$document->id}",
                     $file->hashName(),
                     $this->diskName(),
                 );
 
-                if ($storedPath === false) {
+                if (!$storedPath) {
                     throw DocumentUploadFailedException::storageFailed();
                 }
 
-                $document->files()->create([
+                $document->file()->create([
                     'filename' => $file->getClientOriginalName(),
                     'path' => $storedPath,
                     'mime_type' => $file->getMimeType(),
@@ -69,11 +67,7 @@ class DocumentUploadService
         }
     }
 
-    /**
-     * Create the research document with a deterministic id so the stored file
-     * directory and the database row share the same identifier.
-     */
-    private function createDocument(User $user, string $name, string $documentId): ResearchedDocument
+    private function createDocument(User $user, string $name): ResearchedDocument
     {
         $document = new ResearchedDocument([
             'user_id' => $user->id,
@@ -83,7 +77,6 @@ class DocumentUploadService
             'analysis_step' => 'queued',
         ]);
 
-        $document->id = $documentId;
         $document->save();
 
         return $document;

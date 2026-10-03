@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 /**
  * An uploaded research document and its analysis lifecycle.
@@ -55,12 +55,12 @@ class ResearchedDocument extends Model
     }
 
     /**
-     * The polymorphic file records attached to this document.
+     * The single file attached to this document.
      *
-     * @return MorphMany<File, $this>
+     * @return MorphOne<File, $this>
      */
-    public function files(): MorphMany
+    public function file(): MorphOne
     {
-        return $this->morphMany(File::class, 'fileable');
+        return $this->morphOne(File::class, 'fileable');
     }
 }

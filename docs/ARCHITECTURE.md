@@ -45,7 +45,7 @@ deployment topology. The **public contract** is `docs/API_SPEC.md`; the **domain
 | String similarity (Jaro-Winkler, Levenshtein), exact matching | Laravel | Scoring stays server-side |
 | Document parsing, reference/citation extraction, coordinates | FastAPI + GROBID | Internal |
 | Semantic embeddings (SBERT) | FastAPI + SBERT | Internal, batched |
-| API response formatting, manual review, report orchestration | Laravel | Eloquent API Resources |
+| API response formatting, manual review, report orchestration | Laravel | spatie/laravel-data DTOs (`backend/app/Data/`) |
 | Rendering verdicts, highlights, history | Vue SPA | Never decides validity |
 
 Hard rules:
@@ -62,7 +62,7 @@ Hard rules:
 | Layer | Technology |
 |---|---|
 | Frontend | Vue 3 + TypeScript, Vite 6, Pinia, vue-router, Tailwind 4, shadcn-vue (`reka-ui`), `pdfjs-dist` |
-| Backend | PHP 8.3+ (local CLI 8.5), Laravel 13, Laravel Sanctum (planned), Pest 5, Pint |
+| Backend | PHP 8.3+ (local CLI 8.5), Laravel 13, spatie/laravel-data 4 (DTOs), Laravel Sanctum (planned), Pest 5, Pint |
 | Database | MySQL/Postgres (target); SQLite for local dev and tests |
 | Queue | Laravel queue (`QUEUE_CONNECTION=database` by default; `sync` in tests) |
 | Inference | Python 3.14, FastAPI (`fastapi[standard]`), uv-managed; GROBID + SBERT |
@@ -116,8 +116,12 @@ Conventions:
   `415 UNSUPPORTED_MEDIA_TYPE`, else `422 VALIDATION_ERROR`).
 - **Services** own transactions and cross-model invariants. `DocumentUploadService` writes the
   document + file transactionally and cleans up the stored file if the DB write fails.
-- **API Resources** own response shaping (`ResearchedDocumentResource`, etc.) so the envelope
-  stays consistent.
+- **Data DTOs** (`app/Data/`, **`spatie/laravel-data`**) own response shaping
+  (`ResearchedDocumentDetailData`, `FilePreviewData`, etc.) so the envelope stays consistent.
+  Name DTOs by entity and role — `EntitySummaryData` (lists), `EntityDetailData` (detail/action
+  responses), `EntityPreviewData` (related data embedded in another DTO) — and only add one when
+  an endpoint needs it. Use injectors, casts, castables, transformer when needed instead of manual
+  logic inside a FromModel static function.
 - **Exceptions** render the canonical envelope next to their definition
   (`DocumentUploadFailedException::render()`).
 
@@ -272,7 +276,7 @@ Never commit secrets, tokens or credentials.
 | Crossref | Outbound HTTPS from workers |
 
 Report and document files are stored on a private disk; access is via signed/temporary URLs
-(`ResearchedDocumentResource::fileUrl()`).
+(`FilePreviewData->url`).
 
 ---
 
@@ -282,7 +286,8 @@ Verified against the repository:
 
 - **Backend** is a Laravel 13 skeleton. Present: `User`, `ResearchedDocument`, `File` models; the
   canonical domain migration (`create_initial_tables`); `UploadController`,
-  `UploadDocumentRequest`, `ResearchedDocumentResource`, `DocumentUploadService`,
+  `UploadDocumentRequest`, `ResearchedDocumentDetailData` / `FilePreviewData`
+  (spatie/laravel-data), `DocumentUploadService`,
   `DocumentUploadFailedException`; and the upload route in `routes/api.php`. **Missing:**
   Sanctum, all other endpoints, `AnalyzeDocumentJob`, the Crossref client, scoring, the inference
   client, and report generation.
