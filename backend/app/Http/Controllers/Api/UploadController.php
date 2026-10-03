@@ -11,9 +11,10 @@ use Illuminate\Http\JsonResponse;
 /**
  * {@see DocumentUploadService}.
  *
- * TODO(integrasi): pasang middleware auth:sanctum pada route setelah Sanctum
- * terpasang.
- * TODO(integrasi): dispatch AnalyzeDocumentJob di sini. Saat ini endpoint hanya
+ * The route is protected by `auth:sanctum`, so the authenticated user is always
+ * present here.
+ *
+ * TODO(integrasi): dispatch AnalyzeDocumentJob. Saat ini endpoint hanya
  * menyimpan dokumen (status `pending`, step `queued`) tanpa menjalankan pipeline.
  */
 class UploadController extends Controller
@@ -24,20 +25,8 @@ class UploadController extends Controller
 
     public function upload(UploadDocumentRequest $request): JsonResponse
     {
-        $user = $request->user();
-
-        // TODO: Remove and use auth middleware after implementing auth routes
-        if ($user === null) {
-            return response()->json([
-                'error' => [
-                    'code' => 'UNAUTHENTICATED',
-                    'message' => 'Unauthenticated.',
-                ],
-            ], 401);
-        }
-
         $document = $this->documentUploadService->handle(
-            user: $user,
+            user: $request->user(),
             file: $request->file('file'),
             name: $request->validated('name'),
         );

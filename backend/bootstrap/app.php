@@ -1,9 +1,13 @@
 <?php
 
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -13,10 +17,52 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // API-only backend: never redirect guests to a web login route.
+        // Unauthenticated API requests render the canonical 401 envelope instead.
+        $middleware->redirectGuestsTo(null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
-        );
+        $shouldRenderAsApiError = fn (Request $request): bool => $request->is('api/*') || $request->expectsJson();
+
+        $exceptions->shouldRenderJsonWhen($shouldRenderAsApiError);
+
+        $exceptions->render(function (AuthenticationException $exception, Request $request) use ($shouldRenderAsApiError): ?JsonResponse {
+            if (! $shouldRenderAsApiError($request)) {
+                return null;
+            }
+
+            return response()->json([
+                'error' => [
+                    'code' => 'UNAUTHENTICATED',
+                    'message' => 'Unauthenticated.',
+                ],
+            ], 401);
+        });
+
+        $exceptions->render(function (ValidationException $exception, Request $request) use ($shouldRenderAsApiError): ?JsonResponse {
+            if (! $shouldRenderAsApiError($request)) {
+                return null;
+            }
+
+            return response()->json([
+                'error' => [
+                    'code' => 'VALIDATION_ERROR',
+                    'message' => 'The given data was invalid.',
+                    'details' => $exception->errors(),
+                ],
+            ], 422);
+        });
+
+        $exceptions->render(function (ThrottleRequestsException $exception, Request $request) use ($shouldRenderAsApiError): ?JsonResponse {
+            if (! $shouldRenderAsApiError($request)) {
+                return null;
+            }
+
+            return response()->json([
+                'error' => [
+                    'code' => 'RATE_LIMITED',
+                    'message' => 'Too many attempts. Please try again later.',
+                ],
+            ], 429, $exception->getHeaders());
+        });
     })->create();

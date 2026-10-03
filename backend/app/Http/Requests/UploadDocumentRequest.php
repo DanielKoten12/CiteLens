@@ -16,12 +16,6 @@ use Illuminate\Http\Exceptions\HttpResponseException;
  */
 class UploadDocumentRequest extends FormRequest
 {
-    public function authorize(): bool
-    {
-        // TODO(integrasi): aktifkan otorisasi setelah Sanctum terpasang.
-        return true;
-    }
-
     /**
      * @return array<string, array<int, string>>
      */
