@@ -171,7 +171,8 @@ it('returns 401 from /auth/me without a token', function () {
     $this->getJson('/api/v1/auth/me')
         ->assertUnauthorized()
         ->assertJsonPath('error.code', 'UNAUTHENTICATED')
-        ->assertJsonPath('error.message', 'Unauthenticated.');
+        ->assertJsonPath('error.message', 'Unauthenticated.')
+        ->assertJsonMissingPath('error.details');
 });
 
 it('revokes the current token on logout and rejects it afterwards', function () {
@@ -199,7 +200,8 @@ it('revokes the current token on logout and rejects it afterwards', function () 
 it('returns 401 when logging out without a token', function () {
     $this->postJson('/api/v1/auth/logout')
         ->assertUnauthorized()
-        ->assertJsonPath('error.code', 'UNAUTHENTICATED');
+        ->assertJsonPath('error.code', 'UNAUTHENTICATED')
+        ->assertJsonMissingPath('error.details');
 });
 
 it('throttles login after 5 attempts per minute with 429', function () {
@@ -218,5 +220,6 @@ it('throttles login after 5 attempts per minute with 429', function () {
     ])
         ->assertStatus(429)
         ->assertJsonPath('error.code', 'RATE_LIMITED')
-        ->assertJsonPath('error.message', 'Too many attempts. Please try again later.');
+        ->assertJsonPath('error.message', 'Too many attempts. Please try again later.')
+        ->assertJsonMissingPath('error.details');
 });

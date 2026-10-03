@@ -449,9 +449,9 @@ Be aware of what is scaffold vs. contract before promising behavior:
   `Exceptions/DocumentUploadFailedException`). API responses are shaped with
   **`spatie/laravel-data`** DTOs in `app/Data/` (the former `Http/Resources` layer was replaced).
   **Sanctum is installed** and the `/auth/*` endpoints (register, login, logout, me) are
-  implemented (`Http/Controllers/Api/AuthController`, `Http/Requests/Auth/*`,
-  `Data/Auth/AuthenticationData` + `Data/User/UserDetailData`, `Exceptions/InvalidCredentialsException`);
-  the rest of the endpoints, `AnalyzeDocumentJob`, the Crossref/inference clients, scoring and report
+  implemented (`Http/Controllers/Api/AuthController`, `Services/AuthService`, `Http/Requests/Auth/*`,
+  `Data/Auth/AuthenticationData` + `Data/User/UserDetailData`, `Data/Error/ErrorResponseData`,
+  `Exceptions/InvalidCredentialsException`); the rest of the endpoints, `AnalyzeDocumentJob`, the Crossref/inference clients, scoring and report
   generation do not exist yet. Adding them is expected work — follow the contracts while doing it.
   See `docs/ARCHITECTURE.md` §13 for the full status.
 - **`frontend/`** is a working Vue 3 + Vite 6 + TypeScript + Tailwind 4 + Pinia + vue-router SPA

@@ -2,6 +2,7 @@
 
 namespace App\Exceptions;
 
+use App\Data\Error\ErrorResponseData;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use RuntimeException;
@@ -25,13 +26,11 @@ class InvalidCredentialsException extends RuntimeException
     public function render(Request $request): JsonResponse
     {
         return response()->json([
-            'error' => [
-                'code' => 'VALIDATION_ERROR',
-                'message' => $this->getMessage(),
-                'details' => [
-                    'email' => ['These credentials do not match our records.'],
-                ],
-            ],
+            'error' => new ErrorResponseData(
+                code: 'VALIDATION_ERROR',
+                message: $this->getMessage(),
+                details: ['email' => ['These credentials do not match our records.']],
+            ),
         ], 422);
     }
 }

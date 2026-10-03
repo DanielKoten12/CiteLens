@@ -2,6 +2,7 @@
 
 namespace App\Exceptions;
 
+use App\Data\Error\ErrorResponseData;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use RuntimeException;
@@ -40,10 +41,10 @@ class DocumentUploadFailedException extends RuntimeException
     public function render(Request $request): JsonResponse
     {
         return response()->json([
-            'error' => [
-                'code' => 'SERVER_ERROR',
-                'message' => $this->getMessage(),
-            ],
+            'error' => new ErrorResponseData(
+                code: 'SERVER_ERROR',
+                message: $this->getMessage(),
+            ),
         ], 500);
     }
 }

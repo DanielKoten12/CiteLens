@@ -286,8 +286,8 @@ Verified against the repository:
 
 - **Backend** is a Laravel 13 app. Present: `User`, `ResearchedDocument`, `File` models; the
   canonical domain migration (`create_initial_tables`); Sanctum auth
-  (`AuthController`, `RegisterRequest` / `LoginRequest`, `AuthenticationData` /
-  `UserDetailData`, `InvalidCredentialsException`) with the `/auth/*` routes; and the upload slice
+  (`AuthController`, `AuthService`, `RegisterRequest` / `LoginRequest`, `AuthenticationData` /
+  `UserDetailData`, `ErrorResponseData`, `InvalidCredentialsException`) with the `/auth/*` routes; and the upload slice
   (`UploadController`, `UploadDocumentRequest`, `ResearchedDocumentDetailData` /
   `FilePreviewData`, `DocumentUploadService`, `DocumentUploadFailedException`) in
   `routes/api.php`. **Missing:** all other endpoints, `AnalyzeDocumentJob`, the Crossref client,

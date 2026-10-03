@@ -1,5 +1,6 @@
 <?php
 
+use App\Data\Error\ErrorResponseData;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -32,10 +33,10 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             return response()->json([
-                'error' => [
-                    'code' => 'UNAUTHENTICATED',
-                    'message' => 'Unauthenticated.',
-                ],
+                'error' => new ErrorResponseData(
+                    code: 'UNAUTHENTICATED',
+                    message: 'Unauthenticated.',
+                ),
             ], 401);
         });
 
@@ -45,11 +46,11 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             return response()->json([
-                'error' => [
-                    'code' => 'VALIDATION_ERROR',
-                    'message' => 'The given data was invalid.',
-                    'details' => $exception->errors(),
-                ],
+                'error' => new ErrorResponseData(
+                    code: 'VALIDATION_ERROR',
+                    message: 'The given data was invalid.',
+                    details: $exception->errors(),
+                ),
             ], 422);
         });
 
@@ -59,10 +60,10 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             return response()->json([
-                'error' => [
-                    'code' => 'RATE_LIMITED',
-                    'message' => 'Too many attempts. Please try again later.',
-                ],
+                'error' => new ErrorResponseData(
+                    code: 'RATE_LIMITED',
+                    message: 'Too many attempts. Please try again later.',
+                ),
             ], 429, $exception->getHeaders());
         });
     })->create();
