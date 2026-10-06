@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Document\ListDocumentsRequest;
 use App\Http\Responses\ApiResponse;
 use App\Models\ResearchedDocument;
+use App\Services\Document\DocumentLifecycleService;
 use App\Services\Document\DocumentQueryService;
 use App\Services\Document\DocumentSummaryService;
 use App\Services\Ownership\OwnedResourceFinder;
@@ -27,6 +28,7 @@ final class DocumentController extends Controller
     public function __construct(
         private readonly DocumentQueryService $queryService,
         private readonly DocumentSummaryService $summaryService,
+        private readonly DocumentLifecycleService $lifecycleService,
         private readonly OwnedResourceFinder $finder,
     ) {}
 
@@ -79,5 +81,20 @@ final class DocumentController extends Controller
         $model = $this->finder->document($request->user(), $document);
 
         return ApiResponse::single(ResearchedDocumentStatusData::from($model));
+    }
+
+    /**
+     * Re-run the analysis for a failed document (`POST /documents/{document}/retry`).
+     */
+    public function retry(Request $request, string $document): JsonResponse
+    {
+        $model = $this->finder->document($request->user(), $document);
+
+        $fresh = $this->lifecycleService->retry($model);
+
+        return ApiResponse::accepted(
+            data: ResearchedDocumentStatusData::from($fresh),
+            message: 'Analisis dijadwalkan ulang.',
+        );
     }
 }

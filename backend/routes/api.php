@@ -33,5 +33,9 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
             ->middleware('throttle:document-status')
             ->whereUuid('document')
             ->name('documents.status');
+
+        Route::post('/documents/{document}/retry', [DocumentController::class, 'retry'])
+            ->whereUuid('document')
+            ->name('documents.retry');
     });
 });
