@@ -2,8 +2,10 @@
 
 namespace App\Data\ResearchedDocument;
 
-use App\Data\ModelData;
 use App\Data\File\FilePreviewData;
+use App\Data\ModelData;
+use App\Enums\AnalysisStep;
+use App\Enums\DocumentStatus;
 use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Attributes\MapInputName;
 use Spatie\LaravelData\Attributes\MapName;
@@ -19,17 +21,22 @@ use Spatie\LaravelData\Mappers\SnakeCaseMapper;
 class ResearchedDocumentDetailData extends ModelData
 {
     public string $id;
+
     public string $name;
 
-    public string $status;
+    public DocumentStatus $status;
+
     #[MapInputName('analysis_progress')]
     public int $progress;
+
     #[MapInputName('analysis_step')]
-    public ?string $currentStep = null;
+    public ?AnalysisStep $currentStep = null;
+
     #[MapInputName('analysis_error')]
     public ?string $error = null;
 
     public ?CarbonImmutable $createdAt = null;
+
     public ?CarbonImmutable $updatedAt = null;
 
     public ?FilePreviewData $file = null;

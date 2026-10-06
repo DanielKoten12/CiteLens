@@ -87,18 +87,28 @@ same change.
 - Laravel 13 app (`laravel/framework ^13.17`, PHP `^8.3`), Pint/Pest 5, `spatie/laravel-data` 4.
 - Canonical domain migration `2026_09_26_135737_create_initial_tables.php` (all 9 domain tables,
   UUID PKs, FK cascades, unique indexes).
-- Models: only `User`, `ResearchedDocument`, `File` exist; factories: `UserFactory`, `ResearchedDocumentFactory`, `FileFactory`.
+- Models: all nine domain models (`User`, `ResearchedDocument`, `ResearchedDocumentReference`
+  `+ Location`, `ResearchedDocumentCitation` `+ Location`, `ReferenceFinding` `+ Candidate`,
+  `GeneratedDocumentReport`, `File`) with factories and states.
+- Enums: `app/Enums/` (`DocumentStatus`, `AnalysisStep`, `ReferenceFindingStatus`, `CitationStatus`,
+  `ReportStatus`, `FindingType`, `FindingSeverity`) plus pinned-value unit tests.
+- Foundation primitives (Phase 01): `ApiResponse`/`ApiError`, `ApiException` + framework renderers,
+  per-resource 404/409/503 exceptions, `OwnedResourceFinder` + `ScopesThroughDocument`,
+  `documents`/`document-status` rate limiters, `crossref`/`inference`/`scoring` config,
+  enforced morph map, `Tests\Support\DocumentTree`/`Fixtures` harness, OQ-14 unique-index migration.
 - Sanctum auth: `/api/v1/auth/{register,login,logout,me}` with `AuthController`, `AuthService`,
   FormRequests, `AuthenticationData`/`UserDetailData`, `InvalidCredentialsException`.
 - Upload slice: `POST /api/v1/documents` → `UploadController`, `UploadDocumentRequest`,
   `DocumentUploadService` (transactional document + file persistence), `ResearchedDocumentDetailData`
   + `FilePreviewData`.
-- Canonical error envelope renderers for `401`/`422`/`429` in `bootstrap/app.php` and
-  `ErrorResponseData`; custom exceptions render their own envelope
+- Canonical error envelope renderers for `401`/`422`/`429` (now centralized in
+  `ApiExceptionRenderer`) and `ErrorResponseData`; custom exceptions render their own envelope
   (`DocumentUploadFailedException`, `InvalidCredentialsException`).
-- Rate limiters `auth` (5/min/IP) and `api` (60/min/user) in `AppServiceProvider`.
-- Tests: `AuthTest`, `UploadDocumentTest`, `DomainSchemaTest` (Pest, SQLite `:memory:`,
-  sync queue).
+- Tests: `AuthTest`, `UploadDocumentTest`, `DomainSchemaTest`, `DomainModelTest`, `EnumTest`,
+  `ApiErrorTest`, `ApiResponseTest`, `ApiErrorEnvelopeTest`, `OwnershipIsolationTest`,
+  `RateLimitersTest`, `DocumentTreeTest`, `FixturesTest` (Pest, SQLite `:memory:`, sync queue).
+- Rate limiters `auth` (5/min/IP), `api` (60/min/user), `documents` (10/min/user) and
+  `document-status` (120/min/user) in `AppServiceProvider`.
 - Storage: default `local` disk rooted at `storage/app/private` with `serve => true`; the
   framework serves it through a **signed** route, which satisfies the private/temporary-URL rule.
 
@@ -108,13 +118,11 @@ same change.
 - `AnalyzeDocumentJob` and every pipeline step.
 - Inference HTTP client (internal FastAPI contract).
 - Crossref client, DOI normalization, candidate search, candidate ranking/scoring, findings.
-- Citation resolution and the single derived-citation-status implementation.
+- Citation resolution and the findings-feed resolver (the pure `CitationStatus::derive()` rule
+  exists; the endpoint-level resolver is Phase 05).
 - `/references`, `/citations`, `/findings` endpoints and manual review.
 - `/reports` endpoints and PDF generation.
-- Domain models/factories for references, locations, citations, findings, candidates, reports.
-- Enum types, per-resource 404/409/503 envelope handling, ownership scoping helpers, pagination
-  response helper, config for Crossref/inference/scoring.
-- Test coverage for everything above (see `docs/TEST_PLAN.md` §5 and §8).
+- Test coverage for the remaining endpoints/pipeline (see `docs/TEST_PLAN.md` §5 and §8).
 
 ### 3.3 Repo notes that affect the plan
 
@@ -334,7 +342,7 @@ Every new endpoint gets at least one ownership-isolation test (two users) per
 
 | Phase | Document | Objective | Depends on |
 |---|---|---|---|
-| 01 | [`01-foundation.md`](01-foundation.md) | Shared primitives: enums, error envelopes, ownership, response helper, models/factories, config, rate limits, route skeleton, test harness | — |
+| 01 | [`01-foundation.md`](01-foundation.md) → [`01-foundation-detail.md`](01-foundation-detail.md) | Shared primitives: enums, error envelopes, ownership, response helper, models/factories, config, rate limits, route skeleton, test harness | — |
 | 02 | [`02-document-lifecycle.md`](02-document-lifecycle.md) | `/documents` endpoints (list/detail/status/retry/delete/purge), summary counts, upload job dispatch, file cleanup | 01 |
 | 03 | [`03-analysis-pipeline.md`](03-analysis-pipeline.md) | `AnalyzeDocumentJob`, inference client, extraction persistence, progress/state machine, failure handling | 02 |
 | 04 | [`04-crossref-verification-and-scoring.md`](04-crossref-verification-and-scoring.md) | Crossref client, DOI/bibliographic lookup, candidate ranking, scoring, finding upsert | 03 |

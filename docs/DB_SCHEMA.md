@@ -26,6 +26,7 @@ Table files {
 
   fileable_id uuid [not null]
 
+  // Morph alias: 'researched_document' | 'generated_document_report' (OQ-15).
   fileable_type varchar [not null]
 
   filename varchar [not null]
@@ -298,7 +299,8 @@ Table reference_findings {
 
     researched_document_id
 
-    researched_document_reference_id
+    // One finding per reference (OQ-14).
+    researched_document_reference_id [unique]
 
   }
 

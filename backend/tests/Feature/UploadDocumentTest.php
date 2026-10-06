@@ -57,7 +57,7 @@ it('persists an uploaded PDF against the researched document schema', function (
     ]);
 
     $this->assertDatabaseHas('files', [
-        'fileable_type' => ResearchedDocument::class,
+        'fileable_type' => 'researched_document',
         'fileable_id' => $documentId,
         'filename' => 'laporan.pdf',
         'mime_type' => 'application/pdf',
