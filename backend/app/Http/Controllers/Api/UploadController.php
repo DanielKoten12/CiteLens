@@ -6,6 +6,7 @@ use App\Data\ResearchedDocument\ResearchedDocumentDetailData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UploadDocumentRequest;
 use App\Http\Responses\ApiResponse;
+use App\Jobs\AnalyzeDocumentJob;
 use App\Services\DocumentUploadService;
 use Illuminate\Http\JsonResponse;
 
@@ -13,10 +14,8 @@ use Illuminate\Http\JsonResponse;
  * {@see DocumentUploadService}.
  *
  * The route is protected by `auth:sanctum`, so the authenticated user is always
- * present here.
- *
- * TODO(integrasi): dispatch AnalyzeDocumentJob. Saat ini endpoint hanya
- * menyimpan dokumen (status `pending`, step `queued`) tanpa menjalankan pipeline.
+ * present here. The analysis pipeline is dispatched asynchronously after the
+ * upload commits; this endpoint never runs it inline (`docs/API_SPEC.md` §4/§10).
  */
 class UploadController extends Controller
 {
@@ -34,9 +33,11 @@ class UploadController extends Controller
 
         $document->load('file');
 
+        AnalyzeDocumentJob::dispatch($document->id)->afterCommit();
+
         return ApiResponse::accepted(
             data: ResearchedDocumentDetailData::from($document),
-            message: 'Dokumen berhasil diunggah.',
+            message: 'Dokumen berhasil diunggah. Analisis sedang diproses.',
         );
     }
 }

@@ -1,11 +1,18 @@
 <?php
 
+use App\Jobs\AnalyzeDocumentJob;
 use App\Models\File;
 use App\Models\ResearchedDocument;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+
+beforeEach(function () {
+    // Upload must never run the pipeline inline (`docs/API_SPEC.md` §4/§10).
+    Bus::fake();
+});
 
 it('persists an uploaded PDF against the researched document schema', function () {
     Storage::fake('local');
@@ -18,7 +25,7 @@ it('persists an uploaded PDF against the researched document schema', function (
 
     $response
         ->assertStatus(202)
-        ->assertJsonPath('message', 'Dokumen berhasil diunggah.')
+        ->assertJsonPath('message', 'Dokumen berhasil diunggah. Analisis sedang diproses.')
         ->assertJsonPath('data.name', 'laporan.pdf')
         ->assertJsonPath('data.status', 'pending')
         ->assertJsonPath('data.progress', 0)
@@ -67,6 +74,12 @@ it('persists an uploaded PDF against the researched document schema', function (
     $path = DB::table('files')->where('fileable_id', $documentId)->value('path');
 
     Storage::disk('local')->assertExists($path);
+
+    // T-DOC-09: the analysis is queued, not executed inline.
+    Bus::assertDispatched(
+        AnalyzeDocumentJob::class,
+        fn (AnalyzeDocumentJob $job): bool => $job->documentId === $documentId,
+    );
 });
 
 it('uses the provided name instead of the original filename', function () {
@@ -100,6 +113,8 @@ it('rejects uploads that are not PDF with 415', function () {
 
     expect(ResearchedDocument::query()->count())->toBe(0)
         ->and(File::query()->count())->toBe(0);
+
+    Bus::assertNothingDispatched();
 });
 
 it('rejects uploads larger than 20 MB with 413', function () {
@@ -114,6 +129,8 @@ it('rejects uploads larger than 20 MB with 413', function () {
         ->assertStatus(413)
         ->assertJsonPath('error.code', 'PAYLOAD_TOO_LARGE')
         ->assertJsonPath('error.message', 'Ukuran file melebihi batas 20 MB.');
+
+    Bus::assertNothingDispatched();
 });
 
 it('rejects a missing file with 422', function () {
@@ -126,6 +143,8 @@ it('rejects a missing file with 422', function () {
         ->assertStatus(422)
         ->assertJsonPath('error.code', 'VALIDATION_ERROR')
         ->assertJsonStructure(['error' => ['code', 'message', 'details' => ['file']]]);
+
+    Bus::assertNothingDispatched();
 });
 
 it('rejects an over-long document name with 422', function () {
@@ -141,6 +160,8 @@ it('rejects an over-long document name with 422', function () {
         ->assertStatus(422)
         ->assertJsonPath('error.code', 'VALIDATION_ERROR')
         ->assertJsonStructure(['error' => ['code', 'message', 'details' => ['name']]]);
+
+    Bus::assertNothingDispatched();
 });
 
 it('rejects unauthenticated uploads with 401', function () {
