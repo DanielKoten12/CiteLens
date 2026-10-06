@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Data\ResearchedDocument\ResearchedDocumentDetailData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UploadDocumentRequest;
+use App\Http\Responses\ApiResponse;
 use App\Services\DocumentUploadService;
 use Illuminate\Http\JsonResponse;
 
@@ -33,9 +34,9 @@ class UploadController extends Controller
 
         $document->load('file');
 
-        return response()->json([
-            'data' => ResearchedDocumentDetailData::from($document),
-            'message' => 'Dokumen berhasil diunggah.',
-        ], 202);
+        return ApiResponse::accepted(
+            data: ResearchedDocumentDetailData::from($document),
+            message: 'Dokumen berhasil diunggah.',
+        );
     }
 }

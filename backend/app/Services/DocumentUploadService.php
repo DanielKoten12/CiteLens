@@ -2,13 +2,14 @@
 
 namespace App\Services;
 
+use App\Enums\AnalysisStep;
+use App\Enums\DocumentStatus;
 use App\Exceptions\DocumentUploadFailedException;
 use App\Models\ResearchedDocument;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -41,7 +42,7 @@ class DocumentUploadService
                     $this->diskName(),
                 );
 
-                if (!$storedPath) {
+                if (! $storedPath) {
                     throw DocumentUploadFailedException::storageFailed();
                 }
 
@@ -72,9 +73,9 @@ class DocumentUploadService
         $document = new ResearchedDocument([
             'user_id' => $user->id,
             'name' => $name,
-            'status' => 'pending',
+            'status' => DocumentStatus::Pending,
             'analysis_progress' => 0,
-            'analysis_step' => 'queued',
+            'analysis_step' => AnalysisStep::Queued,
         ]);
 
         $document->save();

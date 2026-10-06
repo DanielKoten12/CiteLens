@@ -35,4 +35,28 @@ return [
         ],
     ],
 
+    /*
+    | Crossref REST API (`docs/API_SPEC.md` §1/§10). Unauthenticated: the polite
+    | pool is identified by the contact mailto and a descriptive User-Agent (OQ-11).
+    */
+    'crossref' => [
+        'base_url' => env('CROSSREF_BASE_URL', 'https://api.crossref.org'),
+        'mailto' => env('CROSSREF_MAILTO'),
+        'timeout' => (int) env('CROSSREF_TIMEOUT', 10),
+        'connect_timeout' => (int) env('CROSSREF_CONNECT_TIMEOUT', 5),
+        'rows' => (int) env('CROSSREF_ROWS', 5),
+        'cache_ttl' => (int) env('CROSSREF_CACHE_TTL', 86400),
+    ],
+
+    /*
+    | Internal FastAPI inference service (`docs/API_SPEC.md` §9). Private network only;
+    | never exposed to the frontend.
+    */
+    'inference' => [
+        'base_url' => env('INFERENCE_BASE_URL', 'http://inference:8000'),
+        'timeout' => (int) env('INFERENCE_TIMEOUT', 120),
+        'connect_timeout' => (int) env('INFERENCE_CONNECT_TIMEOUT', 5),
+        'embedding_batch_size' => (int) env('INFERENCE_EMBEDDING_BATCH_SIZE', 32),
+    ],
+
 ];

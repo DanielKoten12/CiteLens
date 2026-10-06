@@ -848,7 +848,7 @@ citations. Used by the document viewer to render the issue list and highlights.
 
 ### GET `/documents/{document}/findings`
 
-Filters: `type` (`reference_invalid|reference_suspicious|reference_not_found|citation_unreliable|citation_hallucination`),
+Filters: `type` (`reference_invalid|reference_suspicious|reference_not_found|reference_pending|citation_unreliable|citation_hallucination`),
 `severity` (`high|medium|low|info`). Paginated.
 
 **Success — `200`**

@@ -1,6 +1,10 @@
 <?php
 
+use App\Models\ReferenceFinding;
+use App\Models\ReferenceFindingCandidate;
+use App\Models\ResearchedDocumentReference;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -105,4 +109,36 @@ it('unpairs citations when their reference is deleted', function () {
 
     expect(DB::table('researched_document_citations')->where('id', $tree['citation'])->value('researched_document_reference_id'))
         ->toBeNull();
+});
+
+it('allows only one finding per reference', function () {
+    $reference = ResearchedDocumentReference::factory()->create();
+
+    ReferenceFinding::factory()->forReference($reference)->valid()->create();
+
+    expect(fn () => ReferenceFinding::factory()->forReference($reference)->valid()->create())
+        ->toThrow(QueryException::class);
+});
+
+it('cascades candidates when a finding is deleted', function () {
+    $reference = ResearchedDocumentReference::factory()->create();
+    $finding = ReferenceFinding::factory()->forReference($reference)->valid()->create();
+
+    ReferenceFindingCandidate::factory()->for($finding)->count(2)->create();
+
+    $finding->delete();
+
+    expect(ReferenceFindingCandidate::query()->count())->toBe(0);
+});
+
+it('nulls the selected candidate when its candidate row is deleted', function () {
+    $reference = ResearchedDocumentReference::factory()->create();
+    $finding = ReferenceFinding::factory()->forReference($reference)->valid()->create();
+    $candidate = ReferenceFindingCandidate::factory()->for($finding)->create();
+
+    $finding->update(['selected_candidate_id' => $candidate->getKey()]);
+
+    $candidate->delete();
+
+    expect($finding->fresh()->selected_candidate_id)->toBeNull();
 });

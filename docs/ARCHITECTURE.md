@@ -284,14 +284,21 @@ Report and document files are stored on a private disk; access is via signed/tem
 
 Verified against the repository:
 
-- **Backend** is a Laravel 13 app. Present: `User`, `ResearchedDocument`, `File` models; the
-  canonical domain migration (`create_initial_tables`); Sanctum auth
+- **Backend** is a Laravel 13 app. Present: the `User`, `ResearchedDocument`, `File` models plus
+  the domain models `ResearchedDocumentReference(-Location)`, `ResearchedDocumentCitation(-Location)`,
+  `ReferenceFinding(-Candidate)` and `GeneratedDocumentReport` with factories; canonical enums
+  (`app/Enums/`, `docs/API_SPEC.md` §2.6); the canonical domain migration (`create_initial_tables`)
+  plus the OQ-14 unique-index migration; the shared response/error-envelope layer
+  (`ApiResponse`, `ApiError`, `ApiException` + `ApiExceptionRenderer`, per-resource 404/409/503
+  exceptions); the `OwnedResourceFinder` ownership scoping; the `documents`/`document-status`
+  rate limiters; Crossref/inference/scoring config placeholders; the `DocumentTree`/`Fixtures`
+  test harness; the enforced morph map; Sanctum auth
   (`AuthController`, `AuthService`, `RegisterRequest` / `LoginRequest`, `AuthenticationData` /
   `UserDetailData`, `ErrorResponseData`, `InvalidCredentialsException`) with the `/auth/*` routes; and the upload slice
   (`UploadController`, `UploadDocumentRequest`, `ResearchedDocumentDetailData` /
   `FilePreviewData`, `DocumentUploadService`, `DocumentUploadFailedException`) in
-  `routes/api.php`. **Missing:** all other endpoints, `AnalyzeDocumentJob`, the Crossref client,
-  scoring, the inference client, and report generation.
+  `routes/api.php`. **Missing:** all other endpoints, `AnalyzeDocumentJob`, the Crossref/inference
+  clients, scoring/citation resolution, and report generation.
 - **Frontend** is a working Vue 3 + Vite SPA with mocked auth and prototype types; the API is not
   wired yet.
 - **Inference** is a FastAPI hello-world stub; `/health`, `/v1/extract`, `/v1/embeddings` are

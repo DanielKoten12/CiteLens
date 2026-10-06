@@ -8,6 +8,7 @@ use App\Data\User\UserDetailData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Responses\ApiResponse;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,35 +26,28 @@ class AuthController extends Controller
     {
         $formData = RegisterFormData::from($request);
 
-        return response()->json([
-            'data' => $this->authService->register($formData),
-            'message' => 'Registrasi berhasil.',
-        ], 201);
+        return ApiResponse::created(
+            data: $this->authService->register($formData),
+            message: 'Registrasi berhasil.',
+        );
     }
 
     public function login(LoginRequest $request): JsonResponse
     {
         $formData = LoginFormData::from($request);
 
-        return response()->json([
-            'data' => $this->authService->login($formData),
-        ]);
+        return ApiResponse::single($this->authService->login($formData));
     }
 
     public function logout(Request $request): JsonResponse
     {
         $this->authService->logout($request->user());
 
-        return response()->json([
-            'data' => null,
-            'message' => 'Logout berhasil.',
-        ]);
+        return ApiResponse::single(null, 'Logout berhasil.');
     }
 
     public function me(Request $request): JsonResponse
     {
-        return response()->json([
-            'data' => UserDetailData::from($request->user()),
-        ]);
+        return ApiResponse::single(UserDetailData::from($request->user()));
     }
 }

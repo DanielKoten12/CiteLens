@@ -173,7 +173,7 @@ Notes:
 |---|---|
 | Laravel HTTP bootstrap | `backend/bootstrap/app.php` |
 | Laravel routes | `backend/routes/api.php` (API under `/api/v1`), `backend/routes/web.php` |
-| Laravel models | `backend/app/Models/` (`User`, `ResearchedDocument`, `File` so far) |
+| Laravel models | `backend/app/Models/` (all nine domain models + `User`) |
 | Laravel DTOs | `backend/app/Data/` (spatie/laravel-data; e.g. `ResearchedDocumentDetailData`, `FilePreviewData`) |
 | Laravel controllers | `backend/app/Http/Controllers/` (`Api/UploadController` so far) |
 | Migrations | `backend/database/migrations/` (framework tables + `create_initial_tables` domain schema) |
@@ -441,9 +441,18 @@ documented production contract.
 Be aware of what is scaffold vs. contract before promising behavior:
 
 - **`backend/`** is a Laravel 13 app (`laravel/framework ^13.17`, PHP `^8.3`; local CLI is
-  PHP 8.5). It has the framework `User` model plus the domain models `ResearchedDocument` and
-  `File`, the canonical domain migration (`database/migrations/*_create_initial_tables.php`),
-  `routes/api.php` with the upload route under `/api/v1`, and the upload slice
+  PHP 8.5). It has the framework `User` model plus the domain models `ResearchedDocument`,
+  `ResearchedDocumentReference` (`+ Location`), `ResearchedDocumentCitation` (`+ Location`),
+  `ReferenceFinding` (`+ Candidate`), `GeneratedDocumentReport` and `File`, with factories; the
+  canonical enums in `app/Enums/`; the canonical domain migration
+  (`database/migrations/*_create_initial_tables.php`) plus the OQ-14 unique-index migration; the
+  shared response/error-envelope layer (`app/Http/Responses/{ApiResponse,ApiError}`,
+  `app/Exceptions/{ApiException,ApiExceptionRenderer}` + the per-resource 404/409/503
+  exceptions); ownership scoping via `app/Services/Ownership/OwnedResourceFinder` + the
+  `ScopesThroughDocument` trait; the `documents`/`document-status` rate limiters; the
+  `crossref`/`inference`/`scoring` config blocks; the enforced morph map (`user`,
+  `researched_document`, `generated_document_report`); `routes/api.php` with the upload route
+  under `/api/v1`, and the upload slice
   (`Http/Controllers/Api/UploadController`, `Http/Requests/UploadDocumentRequest`,
   `Data/ResearchedDocumentDetailData` + `Data/FilePreviewData`, `Services/DocumentUploadService`,
   `Exceptions/DocumentUploadFailedException`). API responses are shaped with
@@ -451,7 +460,7 @@ Be aware of what is scaffold vs. contract before promising behavior:
   **Sanctum is installed** and the `/auth/*` endpoints (register, login, logout, me) are
   implemented (`Http/Controllers/Api/AuthController`, `Services/AuthService`, `Http/Requests/Auth/*`,
   `Data/Auth/AuthenticationData` + `Data/User/UserDetailData`, `Data/Error/ErrorResponseData`,
-  `Exceptions/InvalidCredentialsException`); the rest of the endpoints, `AnalyzeDocumentJob`, the Crossref/inference clients, scoring and report
+  `Exceptions/InvalidCredentialsException`); the rest of the endpoints, `AnalyzeDocumentJob`, the Crossref/inference clients, scoring, citation resolution and report
   generation do not exist yet. Adding them is expected work — follow the contracts while doing it.
   See `docs/ARCHITECTURE.md` §13 for the full status.
 - **`frontend/`** is a working Vue 3 + Vite 6 + TypeScript + Tailwind 4 + Pinia + vue-router SPA
