@@ -39,7 +39,9 @@ return new class extends Migration
 
         Schema::create('researched_document_references', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('researched_document_id')->constrained()->cascadeOnDelete();
+            $table->foreignUuid('researched_document_id')
+                ->constrained(null, null, 'rdr_researched_document_id_fk')
+                ->cascadeOnDelete();
 
             $table->text('raw_text')->nullable();
             $table->string('doi')->nullable();
@@ -60,7 +62,9 @@ return new class extends Migration
 
         Schema::create('researched_document_reference_locations', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('researched_document_reference_id')->constrained()->cascadeOnDelete();
+            $table->foreignUuid('researched_document_reference_id')
+                ->constrained(null, null, 'rdrl_researched_document_reference_id_fk')
+                ->cascadeOnDelete();
 
             // 1-based page number.
             $table->integer('page_number');
@@ -81,7 +85,10 @@ return new class extends Migration
 
             $table->timestamps();
 
-            $table->unique(['researched_document_reference_id', 'location_index']);
+            $table->unique(
+                ['researched_document_reference_id', 'location_index'],
+                'rdrl_reference_location_unique'
+            );
             $table->index('page_number');
         });
 
@@ -90,7 +97,10 @@ return new class extends Migration
             $table->foreignUuid('researched_document_id')->constrained()->cascadeOnDelete();
 
             // null = unresolved citations.
-            $table->foreignUuid('researched_document_reference_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignUuid('researched_document_reference_id')
+                ->nullable()
+                ->constrained(null, null, 'rdc_researched_document_reference_id_fk')
+                ->nullOnDelete();
 
             // Citation as it appears in the PDF, e.g. "[3]", "(Smith, 2020)".
             $table->text('citation_text');
@@ -111,8 +121,14 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index('researched_document_id');
-            $table->index('researched_document_reference_id');
-            $table->unique(['researched_document_id', 'occurrence_index']);
+            $table->index(
+                'researched_document_reference_id',
+                'rdc_researched_document_reference_id_idx'
+            );
+            $table->unique(
+                ['researched_document_id', 'occurrence_index'],
+                'rdc_researched_document_occurrence_unique'
+            );
         });
 
         Schema::create('researched_document_citation_locations', function (Blueprint $table) {
@@ -188,7 +204,10 @@ return new class extends Migration
 
             $table->timestamps();
 
-            $table->unique(['reference_finding_id', 'rank']);
+            $table->unique(
+                ['reference_finding_id', 'rank'],
+                'rfc_reference_finding_rank_unique'
+            );
         });
 
         // Circular reference: reference_findings.selected_candidate_id -> candidates.id.
