@@ -23,6 +23,10 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
         // History list.
         Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
 
+        // Purge the entire history. Declared separately from the wildcard delete
+        // so it can never be shadowed by a future `{document}` pattern.
+        Route::delete('/documents', [DocumentController::class, 'purge'])->name('documents.purge');
+
         // Detail and status polling. The status route carries the tighter
         // `document-status` limiter (120/minute/user).
         Route::get('/documents/{document}', [DocumentController::class, 'show'])
@@ -37,5 +41,9 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
         Route::post('/documents/{document}/retry', [DocumentController::class, 'retry'])
             ->whereUuid('document')
             ->name('documents.retry');
+
+        Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])
+            ->whereUuid('document')
+            ->name('documents.destroy');
     });
 });

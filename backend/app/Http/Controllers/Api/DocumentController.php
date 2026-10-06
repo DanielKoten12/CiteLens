@@ -9,12 +9,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Document\ListDocumentsRequest;
 use App\Http\Responses\ApiResponse;
 use App\Models\ResearchedDocument;
+use App\Services\Document\DocumentDeletionService;
 use App\Services\Document\DocumentLifecycleService;
 use App\Services\Document\DocumentQueryService;
 use App\Services\Document\DocumentSummaryService;
 use App\Services\Ownership\OwnedResourceFinder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 /**
  * Document lifecycle endpoints (`docs/API_SPEC.md` §4).
@@ -29,6 +31,7 @@ final class DocumentController extends Controller
         private readonly DocumentQueryService $queryService,
         private readonly DocumentSummaryService $summaryService,
         private readonly DocumentLifecycleService $lifecycleService,
+        private readonly DocumentDeletionService $deletionService,
         private readonly OwnedResourceFinder $finder,
     ) {}
 
@@ -96,5 +99,27 @@ final class DocumentController extends Controller
             data: ResearchedDocumentStatusData::from($fresh),
             message: 'Analisis dijadwalkan ulang.',
         );
+    }
+
+    /**
+     * Hard-delete one document and its cascade (`DELETE /documents/{document}`).
+     */
+    public function destroy(Request $request, string $document): Response
+    {
+        $model = $this->finder->document($request->user(), $document);
+
+        $this->deletionService->delete($model);
+
+        return ApiResponse::noContent();
+    }
+
+    /**
+     * Hard-delete the authenticated user's entire history (`DELETE /documents`).
+     */
+    public function purge(Request $request): Response
+    {
+        $this->deletionService->purge($request->user());
+
+        return ApiResponse::noContent();
     }
 }

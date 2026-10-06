@@ -5,11 +5,12 @@ namespace App\Services;
 use App\Enums\AnalysisStep;
 use App\Enums\DocumentStatus;
 use App\Exceptions\DocumentUploadFailedException;
+use App\Exceptions\FileStorageException;
 use App\Models\ResearchedDocument;
 use App\Models\User;
+use App\Services\Document\DocumentFileManager;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 /**
@@ -17,53 +18,36 @@ use Throwable;
  *
  * Responsibilities:
  *   1. create the `researched_documents` row (status `pending`, step `queued`),
- *   2. store the PDF on the configured disk,
- *   3. attach the polymorphic `file` row.
+ *   2. store the PDF and its polymorphic `file` row through {@see DocumentFileManager}.
  *
- * The operation is transactional: a failed database write removes the stored
- * file, and a failed file write rolls back the database changes.
+ * The operation is transactional: a failed database write rolls back the document
+ * and a failed file-row write removes the stored object. Failures are mapped to
+ * the canonical upload error (storage vs. persistence).
  */
 class DocumentUploadService
 {
+    public function __construct(
+        private readonly DocumentFileManager $fileManager,
+    ) {}
+
     public function handle(User $user, UploadedFile $file, ?string $name = null): ResearchedDocument
     {
-        $storedPath = null;
-
         try {
-            return DB::transaction(function () use ($user, $file, $name, &$storedPath): ResearchedDocument {
+            return DB::transaction(function () use ($user, $file, $name): ResearchedDocument {
                 $document = $this->createDocument(
                     $user,
                     $name ?? $file->getClientOriginalName(),
                 );
 
-                $storedPath = $file->storeAs(
-                    "documents/{$document->id}",
-                    $file->hashName(),
-                    $this->diskName(),
-                );
-
-                if (! $storedPath) {
-                    throw DocumentUploadFailedException::storageFailed();
-                }
-
-                $document->file()->create([
-                    'filename' => $file->getClientOriginalName(),
-                    'path' => $storedPath,
-                    'mime_type' => $file->getMimeType(),
-                    'size' => $file->getSize(),
-                ]);
+                $this->fileManager->store($document, $file, $file->getClientOriginalName());
 
                 return $document;
             });
+        } catch (FileStorageException $exception) {
+            throw DocumentUploadFailedException::storageFailed();
+        } catch (DocumentUploadFailedException $exception) {
+            throw $exception;
         } catch (Throwable $exception) {
-            if ($storedPath !== null) {
-                Storage::disk($this->diskName())->delete($storedPath);
-            }
-
-            if ($exception instanceof DocumentUploadFailedException) {
-                throw $exception;
-            }
-
             throw DocumentUploadFailedException::persistenceFailed($exception);
         }
     }
@@ -81,13 +65,5 @@ class DocumentUploadService
         $document->save();
 
         return $document;
-    }
-
-    /**
-     * The filesystem disk used for stored documents.
-     */
-    private function diskName(): string
-    {
-        return (string) config('filesystems.default');
     }
 }
