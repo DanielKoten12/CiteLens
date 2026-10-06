@@ -71,6 +71,41 @@ it('scopes child queries to the owner', function () {
         ->and($this->other->researchedDocuments()->count())->toBe(0);
 });
 
+it('returns 404 for every document endpoint accessed by another user', function () {
+    $id = $this->document->getKey();
+
+    $this->actingAs($this->other)->getJson("/api/v1/documents/{$id}")
+        ->assertStatus(404)->assertJsonPath('error.code', 'NOT_FOUND')
+        ->assertJsonPath('error.message', 'Dokumen tidak ditemukan.');
+
+    $this->actingAs($this->other)->getJson("/api/v1/documents/{$id}/status")
+        ->assertStatus(404)->assertJsonPath('error.message', 'Dokumen tidak ditemukan.');
+
+    $this->actingAs($this->other)->postJson("/api/v1/documents/{$id}/retry")
+        ->assertStatus(404)->assertJsonPath('error.message', 'Dokumen tidak ditemukan.');
+
+    $this->actingAs($this->other)->deleteJson("/api/v1/documents/{$id}")
+        ->assertStatus(404)->assertJsonPath('error.message', 'Dokumen tidak ditemukan.');
+
+    expect(ResearchedDocument::query()->whereKey($id)->exists())->toBeTrue();
+});
+
+it('does not disclose whether a foreign document exists', function () {
+    $foreign = $this->actingAs($this->other)->getJson("/api/v1/documents/{$this->document->getKey()}");
+    $missing = $this->actingAs($this->other)->getJson('/api/v1/documents/'.fake()->uuid());
+
+    expect($foreign->json())->toBe($missing->json());
+});
+
+it('purges only the acting user documents', function () {
+    $otherDocument = ResearchedDocument::factory()->for($this->other)->create();
+
+    $this->actingAs($this->other)->deleteJson('/api/v1/documents')->assertNoContent();
+
+    expect(ResearchedDocument::query()->whereKey($this->document->getKey())->exists())->toBeTrue()
+        ->and(ResearchedDocument::query()->whereKey($otherDocument->getKey())->exists())->toBeFalse();
+});
+
 function captureException(callable $callback): Throwable
 {
     try {

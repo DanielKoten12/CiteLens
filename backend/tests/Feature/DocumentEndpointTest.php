@@ -7,6 +7,9 @@ use App\Models\ResearchedDocument;
 use App\Models\ResearchedDocumentCitation;
 use App\Models\ResearchedDocumentReference;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Storage;
 
 it('lists documents with pagination meta and a derived summary', function () {
     $user = User::factory()->create();
@@ -116,6 +119,34 @@ it('returns 404 for a malformed uuid', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)->getJson('/api/v1/documents/not-a-uuid')->assertStatus(404);
+});
+
+it('walks the document lifecycle end to end', function () {
+    Storage::fake('local');
+    Bus::fake();
+
+    $user = User::factory()->create();
+
+    $id = $this->actingAs($user)->post('/api/v1/documents', [
+        'file' => UploadedFile::fake()->create('laporan.pdf', 10, 'application/pdf'),
+    ])->assertStatus(202)->json('data.id');
+
+    $this->actingAs($user)->getJson('/api/v1/documents')
+        ->assertOk()
+        ->assertJsonPath('data.0.id', $id)
+        ->assertJsonPath('data.0.summary', null);
+
+    $this->actingAs($user)->getJson("/api/v1/documents/{$id}/status")
+        ->assertOk()
+        ->assertJsonPath('data.status', DocumentStatus::Pending->value);
+
+    $this->actingAs($user)->getJson("/api/v1/documents/{$id}")
+        ->assertOk()
+        ->assertJsonPath('data.summary', null);
+
+    $this->actingAs($user)->deleteJson("/api/v1/documents/{$id}")->assertNoContent();
+
+    $this->actingAs($user)->getJson("/api/v1/documents/{$id}")->assertStatus(404);
 });
 
 /**
