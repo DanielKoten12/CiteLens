@@ -36,7 +36,7 @@ class UploadController extends Controller
         AnalyzeDocumentJob::dispatch($document->id)->afterCommit();
 
         return ApiResponse::accepted(
-            data: ResearchedDocumentDetailData::from($document),
+            data: ResearchedDocumentDetailData::forDocument($document),
             message: 'Dokumen berhasil diunggah. Analisis sedang diproses.',
         );
     }
