@@ -1,6 +1,6 @@
 # Phase 02 — Document Lifecycle Endpoints (Detailed Implementation Plan)
 
-> **Status:** detailed plan — **not yet implemented**
+> **Status:** detailed plan — **implemented** (Phase 02 complete; `php artisan test` → 146 passed)
 > **Parent:** [`02-document-lifecycle.md`](02-document-lifecycle.md)
 > **Depends on:** [Phase 01](01-foundation-detail.md) (implemented) · **Unblocks:** Phases 03–07
 > Canonical references: `docs/API_SPEC.md` §2.5/§2.6/§2.8/§2.9/§4/§10/§11,

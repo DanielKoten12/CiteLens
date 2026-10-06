@@ -1,6 +1,6 @@
 # Phase 02 — Document Lifecycle Endpoints
 
-> **Status:** broad plan · **Depends on:** Phase 01 · **Unblocks:** Phase 03
+> **Status:** implemented via [`02-document-lifecycle-detail.md`](02-document-lifecycle-detail.md) · **Depends on:** Phase 01 · **Unblocks:** Phase 03
 > Canonical references: `docs/API_SPEC.md` §4/§2.8/§2.9, `docs/DB_SCHEMA.md` (`researched_documents`,
 > `files`), `docs/TEST_PLAN.md` T-DOC / T-OWN, `AGENTS.md` §8.
 

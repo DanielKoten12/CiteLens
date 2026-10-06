@@ -291,21 +291,28 @@ Verified against the repository:
   plus the OQ-14 unique-index migration; the shared response/error-envelope layer
   (`ApiResponse`, `ApiError`, `ApiException` + `ApiExceptionRenderer`, per-resource 404/409/503
   exceptions); the `OwnedResourceFinder` ownership scoping; the `documents`/`document-status`
-  rate limiters; Crossref/inference/scoring config placeholders; the `DocumentTree`/`Fixtures`
-  test harness; the enforced morph map; Sanctum auth
+  rate limiters; Crossref/inference/scoring config placeholders plus `config/analysis.php`; the
+  `DocumentTree`/`Fixtures` test harness; the enforced morph map; Sanctum auth
   (`AuthController`, `AuthService`, `RegisterRequest` / `LoginRequest`, `AuthenticationData` /
-  `UserDetailData`, `ErrorResponseData`, `InvalidCredentialsException`) with the `/auth/*` routes; and the upload slice
-  (`UploadController`, `UploadDocumentRequest`, `ResearchedDocumentDetailData` /
-  `FilePreviewData`, `DocumentUploadService`, `DocumentUploadFailedException`) in
-  `routes/api.php`. **Missing:** all other endpoints, `AnalyzeDocumentJob`, the Crossref/inference
-  clients, scoring/citation resolution, and report generation.
+  `UserDetailData`, `ErrorResponseData`, `InvalidCredentialsException`) with the `/auth/*` routes;
+  the upload slice (`UploadController`, `UploadDocumentRequest`, `DocumentUploadService`,
+  `DocumentUploadFailedException`); and the **full `/documents` lifecycle** (`DocumentController` +
+  `ListDocumentsRequest`; `DocumentQueryService`, `DocumentSummaryService`,
+  `DocumentLifecycleService`, `DocumentAnalysisStateService`, `DocumentAnalysisResetService`,
+  `DocumentDeletionService`, `DocumentFileManager`, `CitationStatusResolver`; summary/status/detail
+  DTOs) including list/detail/status/retry/delete/purge. Upload dispatches `AnalyzeDocumentJob`
+  after commit through the `RunsDocumentAnalysis` seam (the job envelope exists; the pipeline
+  binding is Phase 03). **Missing:** the analysis pipeline internals (extraction, Crossref client,
+  scoring, citation resolution), the `/references` / `/citations` / `/findings` endpoints, report
+  generation, and the inference service implementation.
 - **Frontend** is a working Vue 3 + Vite SPA with mocked auth and prototype types; the API is not
   wired yet.
 - **Inference** is a FastAPI hello-world stub; `/health`, `/v1/extract`, `/v1/embeddings` are
   specified but unimplemented.
 
 Everything described as "the pipeline", "scoring" or "reports" above is the **target** design;
-only the upload slice exists today.
+the document lifecycle endpoints and the upload→job dispatch seam exist today, while the analysis
+steps themselves do not.
 
 ---
 
