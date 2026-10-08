@@ -89,9 +89,11 @@ final class ValidateReferencesStep implements PipelineStep
             // Best-effort bibliographic search whenever there is data to search on
             // (D-04-02): it supplies the correct-publication candidate for a
             // conflicting/non-resolving DOI and the candidates for a no-DOI entry.
-            if ($reference->title !== null || $reference->authors !== null) {
+            $searchQuery = ReferenceQuery::fromReference($reference);
+
+            if ($searchQuery->bibliographic !== '') {
                 try {
-                    $search = $this->client->searchBibliographic(ReferenceQuery::fromReference($reference));
+                    $search = $this->client->searchBibliographic($searchQuery);
                     $receivedAnyResponse = true;
                     $candidates = $this->merge($candidates, $search);
                 } catch (CrossrefUnavailableException $exception) {
