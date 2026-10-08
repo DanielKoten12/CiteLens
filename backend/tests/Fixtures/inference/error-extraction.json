@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "EXTRACTION_FAILED",
+    "message": "GROBID could not process the document."
+  }
+}
