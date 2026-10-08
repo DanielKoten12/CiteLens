@@ -32,7 +32,19 @@ final class DocumentSummaryService
             return null;
         }
 
-        return $this->forDocuments([$document])[$document->getKey()] ?? null;
+        return $this->summariesForIds([$document->getKey()])[$document->getKey()] ?? null;
+    }
+
+    /**
+     * Derived counts for one document regardless of status.
+     *
+     * Used by the pipeline's finalization step for observability; the API-facing
+     * `forDocument()` keeps the `null`-until-completed contract (OQ-10).
+     */
+    public function countsFor(ResearchedDocument $document): DocumentAnalysisSummaryData
+    {
+        return $this->summariesForIds([$document->getKey()])[$document->getKey()]
+            ?? DocumentAnalysisSummaryData::forCounts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     }
 
     /**
@@ -51,6 +63,15 @@ final class DocumentSummaryService
             }
         }
 
+        return $this->summariesForIds($ids);
+    }
+
+    /**
+     * @param  list<string>  $ids
+     * @return array<string, DocumentAnalysisSummaryData>
+     */
+    private function summariesForIds(array $ids): array
+    {
         if ($ids === []) {
             return [];
         }
