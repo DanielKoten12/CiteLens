@@ -27,13 +27,13 @@ XML_NS = "http://www.w3.org/XML/1998/namespace"
 # 1. SEND PDF TO GROBID /api/processReferences
 # ============================================================
 
-def process_references(pdf_file):
+def process_fulltext(pdf_file):
     """
-    Upload PDF ke GROBID /api/processReferences
-    dan mengembalikan TEI XML sebagai string.
+    Process entire PDF with GROBID and request coordinates
+    for in-text citations and bibliography references.
     """
 
-    url = f"{GROBID_URL}/api/processReferences"
+    url = f"{GROBID_URL}/api/processFulltextDocument"
 
     pdf_path = Path(pdf_file)
 
@@ -54,9 +54,17 @@ def process_references(pdf_file):
             )
         }
 
+        # IMPORTANT:
+        # Send each teiCoordinates as a separate field.
+        data = [
+            ("teiCoordinates", "ref"),
+            ("teiCoordinates", "biblStruct"),
+        ]
+
         response = requests.post(
             url,
             files=files,
+            data=data,
             timeout=300
         )
 
@@ -84,6 +92,54 @@ def process_references(pdf_file):
     )
 
     return tei_xml
+
+def parse_coords(coords_string):
+    """
+    Convert GROBID coords into Python dictionaries.
+
+    Example:
+        10,317.03,183.61,223.16,7.55;
+        10,317.03,192.57,223.21,7.55
+    """
+
+    if not coords_string:
+        return []
+
+    boxes = []
+
+    for item in coords_string.split(";"):
+
+        item = item.strip()
+
+        if not item:
+            continue
+
+        parts = item.split(",")
+
+        if len(parts) != 5:
+            continue
+
+        try:
+
+            page = int(parts[0])
+
+            x = float(parts[1])
+            y = float(parts[2])
+            width = float(parts[3])
+            height = float(parts[4])
+
+            boxes.append({
+                "page": page,
+                "x": x,
+                "y": y,
+                "width": width,
+                "height": height
+            })
+
+        except ValueError:
+            continue
+
+    return boxes
 
 
 # ============================================================
@@ -508,11 +564,158 @@ def get_notes(bibl):
     return notes
 
 
+def extract_citation_coordinates(root):
+
+    citations = []
+
+    for ref in root.findall(
+        ".//tei:ref",
+        TEI_NS
+    ):
+
+        ref_type = ref.get("type")
+
+        # We only want bibliographical citations.
+        if ref_type != "bibr":
+            continue
+
+        coords = parse_coords(
+            ref.get("coords")
+        )
+
+        text = clean_text(ref)
+
+        target = ref.get("target")
+
+        citations.append({
+
+            "text": text,
+
+            "target": target,
+
+            "coords": coords
+
+        })
+
+    return citations
+
+def extract_reference_coordinates(root):
+
+    references = []
+
+    bibl_structs = root.findall(
+        ".//tei:listBibl/tei:biblStruct",
+        TEI_NS
+    )
+
+    for index, bibl in enumerate(
+        bibl_structs,
+        start=1
+    ):
+
+        xml_id = bibl.get(
+            f"{{{XML_NS}}}id"
+        )
+
+        coords = parse_coords(
+            bibl.get("coords")
+        )
+
+        text = clean_text(bibl)
+
+        references.append({
+
+            "index": index,
+
+            "xml_id": xml_id,
+
+            "text": text,
+
+            "coords": coords
+
+        })
+
+    return references
+
+def extract_coordinates(root):
+    """
+    Extract citation and bibliography coordinates.
+    """
+
+    citations = extract_citation_coordinates(root)
+
+    references = extract_reference_coordinates(root)
+
+    return citations, references
+
+def attach_citations_to_references(
+    citations,
+    references
+):
+    """
+    Connect:
+
+        citation target="#b12"
+
+    with:
+
+        reference xml:id="b12"
+    """
+
+    reference_map = {}
+
+    # --------------------------------------------------------
+    # Create:
+    #
+    # b12 -> reference
+    # --------------------------------------------------------
+
+    for reference in references:
+
+        xml_id = reference.get(
+            "xml_id"
+        )
+
+        if xml_id:
+
+            reference_map[xml_id] = reference
+
+    # --------------------------------------------------------
+    # Attach citations
+    # --------------------------------------------------------
+
+    for citation in citations:
+
+        target = citation.get(
+            "target"
+        )
+
+        if not target:
+            continue
+
+        target_id = target.lstrip("#")
+
+        reference = reference_map.get(
+            target_id
+        )
+
+        if reference is None:
+            continue
+
+        if "citations" not in reference:
+
+            reference["citations"] = []
+
+        reference["citations"].append(
+            citation
+        )
+
+    return references
 # ============================================================
 # 10. PARSE ONE REFERENCE
 # ============================================================
 
-def parse_reference(bibl, index):
+def parse_reference(bibl, index, coordinates=None):
 
     titles = get_titles(bibl)
 
@@ -520,7 +723,12 @@ def parse_reference(bibl, index):
 
     publication = get_publication_info(bibl)
 
+    if coordinates is None:
+        coordinates = []
+
     return {
+
+        
 
         "reference_index": index,
 
@@ -600,7 +808,13 @@ def parse_reference(bibl, index):
 
         "notes": get_notes(
             bibl
-        )
+        ),
+        "reference_text": clean_text(
+            bibl
+        ),
+        "reference_coords" : coordinates,
+
+        "citations": []
     }
 
 
@@ -610,11 +824,22 @@ def parse_reference(bibl, index):
 
 def parse_tei(tei_xml):
 
-    root = ET.fromstring(
-        tei_xml
+    root = ET.fromstring(tei_xml)
+
+    # ========================================================
+    # 1. EXTRACT CITATIONS
+    # ========================================================
+
+    citations = extract_citation_coordinates(root)
+
+    print(
+        f"[INFO] Ditemukan "
+        f"{len(citations)} citation occurrences"
     )
 
-    references = []
+    # ========================================================
+    # 2. EXTRACT REFERENCES
+    # ========================================================
 
     bibl_structs = root.findall(
         ".//tei:listBibl/tei:biblStruct",
@@ -626,29 +851,55 @@ def parse_tei(tei_xml):
         f"{len(bibl_structs)} reference"
     )
 
+    references = []
+
+    # ========================================================
+    # 3. PARSE REFERENCES
+    # ========================================================
+
     for index, bibl in enumerate(
         bibl_structs,
         start=1
     ):
 
+        coords = parse_coords(
+            bibl.get("coords")
+        )
+
         reference = parse_reference(
             bibl,
-            index
+            index,
+            coords
         )
 
         references.append(
             reference
         )
 
-    return references
+    # ========================================================
+    # 4. CONNECT CITATIONS TO REFERENCES
+    # ========================================================
 
+    references = attach_citations_to_references(
+        citations,
+        references
+    )
+
+    # ========================================================
+    # 5. RETURN BOTH
+    # ========================================================
+
+    return {
+        "citations": citations,
+        "references": references
+    }
 
 # ============================================================
 # 12. SAVE JSON
 # ============================================================
 
 def save_json(
-    references,
+    data,
     output_file
 ):
 
@@ -659,7 +910,7 @@ def save_json(
     ) as f:
 
         json.dump(
-            references,
+            data,
             f,
             ensure_ascii=False,
             indent=2
@@ -676,21 +927,19 @@ def save_json(
 def main():
 
     print("=" * 60)
-    print("GROBID REFERENCE EXTRACTION")
+    print("GROBID PDF REFERENCE EXTRACTION")
     print("=" * 60)
 
     # --------------------------------------------------------
-    # STEP 1
-    # PDF -> GROBID -> TEI
+    # 1. PDF -> GROBID -> TEI
     # --------------------------------------------------------
 
-    tei_xml = process_references(
+    tei_xml = process_fulltext(
         PDF_FILE
     )
 
     # --------------------------------------------------------
-    # STEP 2
-    # Save raw TEI
+    # 2. Save raw TEI
     # --------------------------------------------------------
 
     save_tei(
@@ -699,27 +948,35 @@ def main():
     )
 
     # --------------------------------------------------------
-    # STEP 3
-    # TEI -> metadata
+    # 3. TEI -> everything
     # --------------------------------------------------------
 
-    references = parse_tei(
+    data = parse_tei(
         tei_xml
     )
 
     # --------------------------------------------------------
-    # STEP 4
-    # JSON
+    # 4. Save ONE JSON
     # --------------------------------------------------------
 
     save_json(
-        references,
+        data,
         OUTPUT_JSON
     )
 
     print("=" * 60)
     print("SELESAI")
     print("=" * 60)
+
+    print(
+        f"[INFO] Citations: "
+        f"{len(data['citations'])}"
+    )
+
+    print(
+        f"[INFO] References: "
+        f"{len(data['references'])}"
+    )
 
 
 if __name__ == "__main__":
