@@ -99,8 +99,18 @@ same change.
 - Sanctum auth: `/api/v1/auth/{register,login,logout,me}` with `AuthController`, `AuthService`,
   FormRequests, `AuthenticationData`/`UserDetailData`, `InvalidCredentialsException`.
 - Upload slice: `POST /api/v1/documents` → `UploadController`, `UploadDocumentRequest`,
-  `DocumentUploadService` (transactional document + file persistence), `ResearchedDocumentDetailData`
-  + `FilePreviewData`.
+  `DocumentUploadService` (transactional document + file persistence via `DocumentFileManager`),
+  `ResearchedDocumentDetailData` + `FilePreviewData`; upload dispatches `AnalyzeDocumentJob`
+  after commit through the `RunsDocumentAnalysis` seam (`config/analysis.php`).
+- Document lifecycle (Phase 02): `DocumentController` + `ListDocumentsRequest` implementing
+  `GET /documents`, `GET /documents/{document}`, `GET /documents/{document}/status`,
+  `POST /documents/{document}/retry`, `DELETE /documents/{document}`, `DELETE /documents`;
+  `DocumentQueryService`, `DocumentSummaryService` (batched aggregate counts),
+  `DocumentLifecycleService`, `DocumentAnalysisStateService`, `DocumentAnalysisResetService`,
+  `DocumentDeletionService`, `DocumentFileManager`, `CitationStatusResolver`;
+  `ResearchedDocumentSummaryData`/`ResearchedDocumentStatusData`/`DocumentAnalysisSummaryData`.
+- Jobs: `AnalyzeDocumentJob` envelope (`ShouldQueue`, status guard, `failed()` safety net);
+  the pipeline implementation is bound in Phase 03.
 - Canonical error envelope renderers for `401`/`422`/`429` (now centralized in
   `ApiExceptionRenderer`) and `ErrorResponseData`; custom exceptions render their own envelope
   (`DocumentUploadFailedException`, `InvalidCredentialsException`).
@@ -114,13 +124,13 @@ same change.
 
 ### 3.2 What is missing (the work this plan covers)
 
-- All `/documents` lifecycle endpoints except upload; upload does not dispatch a job yet.
-- `AnalyzeDocumentJob` and every pipeline step.
+- `AnalyzeDocumentJob`'s pipeline collaborator: bind `RunsDocumentAnalysis` to the concrete
+  `AnalysisPipeline` and implement every pipeline step (Phase 03).
 - Inference HTTP client (internal FastAPI contract).
 - Crossref client, DOI normalization, candidate search, candidate ranking/scoring, findings.
-- Citation resolution and the findings-feed resolver (the pure `CitationStatus::derive()` rule
-  exists; the endpoint-level resolver is Phase 05).
-- `/references`, `/citations`, `/findings` endpoints and manual review.
+- Citation resolution and the findings-feed resolver (the pure `CitationStatus::derive()` rule and
+  the shared `CitationStatusResolver` SQL expression exist; the endpoint-level resolver and
+  `/references` / `/citations` / `/findings` endpoints are Phase 05).
 - `/reports` endpoints and PDF generation.
 - Test coverage for the remaining endpoints/pipeline (see `docs/TEST_PLAN.md` §5 and §8).
 
@@ -131,9 +141,9 @@ same change.
   a separate, explicit decision.
 - `bootstrap/cache/*` is untracked (only `.gitignore` is committed) — treat `php artisan` output
   there as local state.
-- Existing tests assert the current upload message `"Dokumen berhasil diunggah."`; the canonical
-  spec message is `"Dokumen berhasil diunggah. Analisis sedang diproses."` — Phase 02 changes it
-  and updates the test (contract wins).
+- Existing tests assert the canonical upload message
+  `"Dokumen berhasil diunggah. Analisis sedang diproses."` (Phase 02 changed it from the earlier
+  `"Dokumen berhasil diunggah."`).
 - `files` is polymorphic with **no FK** on `fileable_id`; deleting a document/report does **not**
   cascade the `files` row. File cleanup must be explicit (Phase 02/06).
 - `generated_document_reports.file_id` exists in the migration as a plain nullable UUID (no FK),
@@ -368,13 +378,13 @@ test harness.
 | Endpoint (`docs/API_SPEC.md` §12) | Spec § | Phase | Status |
 |---|---|---|---|
 | `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` | 3 | 01 (verify/harden) | implemented |
-| `POST /documents` | 4 | 02 | implemented, needs dispatch + message fix |
-| `GET /documents` | 4 | 02 | planned |
-| `GET /documents/{document}` | 4 | 02 | planned |
-| `GET /documents/{document}/status` | 4 | 02 | planned |
-| `POST /documents/{document}/retry` | 4 | 02 | planned |
-| `DELETE /documents/{document}` | 4 | 02 | planned |
-| `DELETE /documents` | 4 | 02 | planned |
+| `POST /documents` | 4 | 02 | implemented (dispatches `AnalyzeDocumentJob`; pipeline internals Phase 03) |
+| `GET /documents` | 4 | 02 | implemented |
+| `GET /documents/{document}` | 4 | 02 | implemented |
+| `GET /documents/{document}/status` | 4 | 02 | implemented |
+| `POST /documents/{document}/retry` | 4 | 02 | implemented |
+| `DELETE /documents/{document}` | 4 | 02 | implemented |
+| `DELETE /documents` | 4 | 02 | implemented |
 | `GET /documents/{document}/references` | 5 | 05 | planned |
 | `GET /references/{reference}` | 5 | 05 | planned |
 | `PATCH /references/{reference}/finding` | 5 | 05 | planned |

@@ -174,8 +174,8 @@ Notes:
 | Laravel HTTP bootstrap | `backend/bootstrap/app.php` |
 | Laravel routes | `backend/routes/api.php` (API under `/api/v1`), `backend/routes/web.php` |
 | Laravel models | `backend/app/Models/` (all nine domain models + `User`) |
-| Laravel DTOs | `backend/app/Data/` (spatie/laravel-data; e.g. `ResearchedDocumentDetailData`, `FilePreviewData`) |
-| Laravel controllers | `backend/app/Http/Controllers/` (`Api/UploadController` so far) |
+| Laravel DTOs | `backend/app/Data/` (spatie/laravel-data; e.g. `ResearchedDocument/ResearchedDocumentDetailData`, `ResearchedDocument/ResearchedDocumentSummaryData`, `File/FilePreviewData`) |
+| Laravel controllers | `backend/app/Http/Controllers/Api/` (`AuthController`, `UploadController`, `DocumentController`) |
 | Migrations | `backend/database/migrations/` (framework tables + `create_initial_tables` domain schema) |
 | Backend tests | `backend/tests/Feature/`, `backend/tests/Unit/` (Pest) |
 | Frontend API/auth state | `frontend/src/stores/auth.ts` (mock) |
@@ -450,19 +450,24 @@ Be aware of what is scaffold vs. contract before promising behavior:
   `app/Exceptions/{ApiException,ApiExceptionRenderer}` + the per-resource 404/409/503
   exceptions); ownership scoping via `app/Services/Ownership/OwnedResourceFinder` + the
   `ScopesThroughDocument` trait; the `documents`/`document-status` rate limiters; the
-  `crossref`/`inference`/`scoring` config blocks; the enforced morph map (`user`,
-  `researched_document`, `generated_document_report`); `routes/api.php` with the upload route
-  under `/api/v1`, and the upload slice
+  `crossref`/`inference`/`scoring` config blocks plus `config/analysis.php`; the enforced morph map
+  (`user`, `researched_document`, `generated_document_report`); the **full `/documents` lifecycle**
+  in `routes/api.php` (`DocumentController` + `ListDocumentsRequest`; list/detail/status/retry/
+  delete/purge; `DocumentQueryService`, `DocumentSummaryService`, `DocumentLifecycleService`,
+  `DocumentAnalysisStateService`, `DocumentAnalysisResetService`, `DocumentDeletionService`,
+  `DocumentFileManager`, `CitationStatusResolver`); and the upload slice
   (`Http/Controllers/Api/UploadController`, `Http/Requests/UploadDocumentRequest`,
-  `Data/ResearchedDocumentDetailData` + `Data/FilePreviewData`, `Services/DocumentUploadService`,
-  `Exceptions/DocumentUploadFailedException`). API responses are shaped with
+  `Data/ResearchedDocument/*`, `Services/DocumentUploadService`,
+  `Exceptions/DocumentUploadFailedException`) which dispatches `AnalyzeDocumentJob` after commit
+  via the `RunsDocumentAnalysis` seam. API responses are shaped with
   **`spatie/laravel-data`** DTOs in `app/Data/` (the former `Http/Resources` layer was replaced).
   **Sanctum is installed** and the `/auth/*` endpoints (register, login, logout, me) are
   implemented (`Http/Controllers/Api/AuthController`, `Services/AuthService`, `Http/Requests/Auth/*`,
   `Data/Auth/AuthenticationData` + `Data/User/UserDetailData`, `Data/Error/ErrorResponseData`,
-  `Exceptions/InvalidCredentialsException`); the rest of the endpoints, `AnalyzeDocumentJob`, the Crossref/inference clients, scoring, citation resolution and report
-  generation do not exist yet. Adding them is expected work — follow the contracts while doing it.
-  See `docs/ARCHITECTURE.md` §13 for the full status.
+  `Exceptions/InvalidCredentialsException`); the analysis pipeline internals (extraction, Crossref
+  client, scoring, citation resolution), the `/references` / `/citations` / `/findings` endpoints,
+  and report generation do not exist yet. Adding them is expected work — follow the contracts while
+  doing it. See `docs/ARCHITECTURE.md` §13 for the full status.
 - **`frontend/`** is a working Vue 3 + Vite 6 + TypeScript + Tailwind 4 + Pinia + vue-router SPA
   with shadcn-vue (`reka-ui`) components. **`src/stores/auth.ts` is mocked** (setTimeout, no API
   calls) and `src/types/index.ts` uses prototype types (`valid | warning | halu`, numeric ids,

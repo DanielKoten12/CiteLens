@@ -1,9 +1,13 @@
 <?php
 
+use App\Models\ResearchedDocument;
 use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * The limiter names and values are the contract in `docs/API_SPEC.md` §2.9.
@@ -52,3 +56,37 @@ function resolveLimit(string $name, ?User $user, string $ip = '127.0.0.1'): Limi
 
     return $limit;
 }
+
+it('enforces the upload rate limit at 10 per minute per user', function () {
+    Storage::fake('local');
+    Bus::fake();
+
+    $user = User::factory()->create();
+
+    foreach (range(1, 10) as $index) {
+        $this->actingAs($user)->post('/api/v1/documents', [
+            'file' => UploadedFile::fake()->create("laporan-{$index}.pdf", 10, 'application/pdf'),
+        ])->assertStatus(202);
+    }
+
+    $this->actingAs($user)->post('/api/v1/documents', [
+        'file' => UploadedFile::fake()->create('laporan-11.pdf', 10, 'application/pdf'),
+    ])->assertStatus(429)
+        ->assertJsonPath('error.code', 'RATE_LIMITED');
+});
+
+it('enforces the status polling rate limit at 120 per minute per user', function () {
+    $user = User::factory()->create();
+    $document = ResearchedDocument::factory()->for($user)->create();
+
+    foreach (range(1, 120) as $index) {
+        $this->actingAs($user)
+            ->getJson("/api/v1/documents/{$document->getKey()}/status")
+            ->assertOk();
+    }
+
+    $this->actingAs($user)
+        ->getJson("/api/v1/documents/{$document->getKey()}/status")
+        ->assertStatus(429)
+        ->assertJsonPath('error.code', 'RATE_LIMITED');
+});
