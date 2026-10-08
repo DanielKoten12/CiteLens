@@ -1,0 +1,133 @@
+{
+  "data": {
+    "references": [
+      {
+        "raw_text": "LeCun, Y., Bengio, Y., & Hinton, G. (2015). Deep learning. Nature, 521(7553), 436-444. https://doi.org/10.1038/nature14539",
+        "title": "Deep learning",
+        "authors": "LeCun, Y., Bengio, Y., & Hinton, G.",
+        "publication_name": "Nature",
+        "publication_year": 2015,
+        "doi": "https://doi.org/10.1038/NATURE14539",
+        "text_start_offset": 8120,
+        "text_end_offset": 8295,
+        "locations": [
+          {
+            "page_number": 12,
+            "x": 72.0,
+            "y": 210.4,
+            "width": 451.2,
+            "height": 24.0,
+            "page_width": 595.0,
+            "page_height": 842.0
+          },
+          {
+            "page_number": 13,
+            "x": 72.0,
+            "y": 40.0,
+            "width": 451.2,
+            "height": 12.0,
+            "page_width": 595.0,
+            "page_height": 842.0
+          }
+        ]
+      },
+      {
+        "raw_text": "Koten, D. (2023). Sistem deteksi plagiarisme. Jurnal Teknologi Informasi, 8(2), 110-120.",
+        "title": "Sistem deteksi plagiarisme",
+        "authors": "Koten, D.",
+        "publication_name": "Jurnal Teknologi Informasi",
+        "publication_year": 2023,
+        "doi": null,
+        "text_start_offset": 8400,
+        "text_end_offset": 8560,
+        "locations": [
+          {
+            "page_number": 13,
+            "x": 72.0,
+            "y": 80.0,
+            "width": 451.2,
+            "height": 12.0,
+            "page_width": 595.0,
+            "page_height": 842.0
+          }
+        ]
+      },
+      {
+        "raw_text": "Tani, B. (2021). Broken reference. doi:not-a-doi",
+        "title": "Broken reference",
+        "authors": "Tani, B.",
+        "publication_name": null,
+        "publication_year": 2021,
+        "doi": "doi:not-a-doi",
+        "text_start_offset": 8600,
+        "text_end_offset": 8700,
+        "locations": []
+      }
+    ],
+    "citations": [
+      {
+        "citation_text": "(LeCun et al., 2015)",
+        "citation_marker": "LeCun et al., 2015",
+        "context_before": "Convolutional models ",
+        "context_after": " have reshaped the field.",
+        "text_start_offset": 2150,
+        "text_end_offset": 2171,
+        "occurrence_index": 0,
+        "reference_index": 0,
+        "locations": [
+          {
+            "page_number": 3,
+            "x": 120.5,
+            "y": 640.2,
+            "width": 48.0,
+            "height": 11.0,
+            "page_width": 595.0,
+            "page_height": 842.0
+          }
+        ]
+      },
+      {
+        "citation_text": "(Koten, 2023)",
+        "citation_marker": "Koten, 2023",
+        "context_before": "Sebelumnya, ",
+        "context_after": " melaporkan hal serupa.",
+        "text_start_offset": 3200,
+        "text_end_offset": 3214,
+        "occurrence_index": 0,
+        "reference_index": 1,
+        "locations": [
+          {
+            "page_number": 4,
+            "x": 200.0,
+            "y": 500.0,
+            "width": 44.0,
+            "height": 11.0,
+            "page_width": 595.0,
+            "page_height": 842.0
+          }
+        ]
+      },
+      {
+        "citation_text": "(Tanpa rujukan, 2022)",
+        "citation_marker": "Tanpa rujukan, 2022",
+        "context_before": "Tidak ada padanan. ",
+        "context_after": " Pernyataan ini tidak terverifikasi.",
+        "text_start_offset": null,
+        "text_end_offset": null,
+        "occurrence_index": null,
+        "reference_index": null,
+        "locations": [
+          {
+            "page_number": 7,
+            "x": 90.0,
+            "y": 300.0,
+            "width": 60.0,
+            "height": 11.0,
+            "page_width": 595.0,
+            "page_height": 842.0
+          }
+        ]
+      }
+    ]
+  }
+}

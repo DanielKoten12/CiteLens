@@ -459,14 +459,20 @@ Be aware of what is scaffold vs. contract before promising behavior:
   (`Http/Controllers/Api/UploadController`, `Http/Requests/UploadDocumentRequest`,
   `Data/ResearchedDocument/*`, `Services/DocumentUploadService`,
   `Exceptions/DocumentUploadFailedException`) which dispatches `AnalyzeDocumentJob` after commit
-  via the `RunsDocumentAnalysis` seam. API responses are shaped with
+  via the `RunsDocumentAnalysis` seam. Phase 03 binds that seam to `AnalysisPipeline`: the canonical
+  step machine (`AnalysisStepRegistry`, `AnalysisProgress`, `AnalysisFailureHandler`,
+  `AnalysisContext`), the implemented steps (`ExtractDocumentStep`, `PersistExtractionStep`,
+  `FinalizeAnalysisStep`), the internal inference client (`Services/Inference/InferenceClient` +
+  `Data/Inference/*` DTOs + `ExtractionFailedException`), `Services/Crossref/DoiNormalizer`, the
+  `WithoutOverlapping` job middleware and the inference fixtures/fakes (`tests/Support/InferenceFake`,
+  `AnalysisHarness`). API responses are shaped with
   **`spatie/laravel-data`** DTOs in `app/Data/` (the former `Http/Resources` layer was replaced).
   **Sanctum is installed** and the `/auth/*` endpoints (register, login, logout, me) are
   implemented (`Http/Controllers/Api/AuthController`, `Services/AuthService`, `Http/Requests/Auth/*`,
   `Data/Auth/AuthenticationData` + `Data/User/UserDetailData`, `Data/Error/ErrorResponseData`,
-  `Exceptions/InvalidCredentialsException`); the analysis pipeline internals (extraction, Crossref
-  client, scoring, citation resolution), the `/references` / `/citations` / `/findings` endpoints,
-  and report generation do not exist yet. Adding them is expected work — follow the contracts while
+  `Exceptions/InvalidCredentialsException`); the Crossref client and scoring (Phase 04), citation
+  resolution (Phase 05), the `/references` / `/citations` / `/findings` endpoints, and report
+  generation do not exist yet. Adding them is expected work — follow the contracts while
   doing it. See `docs/ARCHITECTURE.md` §13 for the full status.
 - **`frontend/`** is a working Vue 3 + Vite 6 + TypeScript + Tailwind 4 + Pinia + vue-router SPA
   with shadcn-vue (`reka-ui`) components. **`src/stores/auth.ts` is mocked** (setTimeout, no API
