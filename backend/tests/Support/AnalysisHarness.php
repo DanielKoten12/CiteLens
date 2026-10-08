@@ -6,9 +6,12 @@ use App\Enums\AnalysisStep;
 use App\Models\File;
 use App\Services\Analysis\AnalysisStepRegistry;
 use App\Services\Analysis\Contracts\PipelineStep;
+use App\Services\Analysis\Steps\EmbedReferencesStep;
 use App\Services\Analysis\Steps\ExtractDocumentStep;
 use App\Services\Analysis\Steps\FinalizeAnalysisStep;
 use App\Services\Analysis\Steps\PersistExtractionStep;
+use App\Services\Analysis\Steps\ScoreReferencesStep;
+use App\Services\Analysis\Steps\ValidateReferencesStep;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -40,8 +43,9 @@ final class AnalysisHarness
     }
 
     /**
-     * The production step list plus test doubles for the not-yet-implemented
-     * canonical steps, so the full sequence and progress range can be exercised.
+     * The production step list plus a test double for the one not-yet-implemented
+     * canonical step (citation resolution is Phase 05), so the full sequence and
+     * progress range can be exercised.
      *
      * @return list<PipelineStep>
      */
@@ -50,9 +54,9 @@ final class AnalysisHarness
         return [
             app(ExtractDocumentStep::class),
             app(PersistExtractionStep::class),
-            StubPipelineStep::for(AnalysisStep::CrossrefValidation),
-            StubPipelineStep::for(AnalysisStep::Embedding),
-            StubPipelineStep::for(AnalysisStep::Scoring),
+            app(ValidateReferencesStep::class),
+            app(EmbedReferencesStep::class),
+            app(ScoreReferencesStep::class),
             StubPipelineStep::for(AnalysisStep::ResolvingCitations),
             app(FinalizeAnalysisStep::class),
         ];
