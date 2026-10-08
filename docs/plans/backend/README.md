@@ -120,6 +120,14 @@ same change.
 - Internal inference client (Phase 03): `Services/Inference/InferenceClient` calling
   `/health`, `/v1/extract`, `/v1/embeddings`; `Data/Inference/*` DTOs; `ExtractionFailedException`,
   `InferenceClientException`; `Services/Crossref/DoiNormalizer`.
+- Crossref verification and scoring (Phase 04): `Services/Crossref/*` (`CrossrefClient`,
+  `CrossrefQueryBuilder`, `CrossrefResultMapper`, `CrossrefWorkData`, `ReferenceQuery`, `DoiLookup`,
+  `CrossrefUnavailableException`); the pure `Services/Scoring/*` engine (`StringSimilarity`,
+  `AuthorMatcher`, `SemanticSimilarity`, `LocalVenueDetector`, `MatchReasonBuilder`,
+  `ReferenceScorer`, `VerdictDecider`, `ScoringConfig` + value objects); the
+  `ValidateReferencesStep` / `EmbedReferencesStep` / `ScoreReferencesStep` pipeline steps and the
+  `ReferenceFindingWriter` single writer; `config/scoring.php` `semantic.title_blend` and the
+  `services.crossref` retry/back-off/User-Agent keys.
 - Canonical error envelope renderers for `401`/`422`/`429` (now centralized in
   `ApiExceptionRenderer`) and `ErrorResponseData`; custom exceptions render their own envelope
   (`DocumentUploadFailedException`, `InvalidCredentialsException`).
@@ -136,8 +144,6 @@ same change.
 
 ### 3.2 What is missing (the work this plan covers)
 
-- Crossref client, bibliographic search, candidate ranking/scoring and finding persistence
-  (Phase 04).
 - Citation resolution and the findings-feed resolver (the pure `CitationStatus::derive()` rule and
   the shared `CitationStatusResolver` SQL expression exist; the endpoint-level resolver and
   `/references` / `/citations` / `/findings` endpoints are Phase 05).
@@ -365,7 +371,7 @@ Every new endpoint gets at least one ownership-isolation test (two users) per
 | 01 | [`01-foundation.md`](01-foundation.md) → [`01-foundation-detail.md`](01-foundation-detail.md) | Shared primitives: enums, error envelopes, ownership, response helper, models/factories, config, rate limits, route skeleton, test harness | — |
 | 02 | [`02-document-lifecycle.md`](02-document-lifecycle.md) | `/documents` endpoints (list/detail/status/retry/delete/purge), summary counts, upload job dispatch, file cleanup | 01 |
 | 03 | [`03-analysis-pipeline.md`](03-analysis-pipeline.md) | `AnalyzeDocumentJob`, inference client, extraction persistence, progress/state machine, failure handling | 02 |
-| 04 | [`04-crossref-verification-and-scoring.md`](04-crossref-verification-and-scoring.md) | Crossref client, DOI/bibliographic lookup, candidate ranking, scoring, finding upsert | 03 |
+| 04 | [`04-crossref-verification-and-scoring.md`](04-crossref-verification-and-scoring.md) → [`04-crossref-verification-detail.md`](04-crossref-verification-detail.md) | Crossref client, DOI/bibliographic lookup, candidate ranking, scoring, finding upsert | 03 |
 | 05 | [`05-citation-resolution-and-review.md`](05-citation-resolution-and-review.md) | Citation resolution + derived status, references/citations/findings endpoints, manual review | 04 |
 | 06 | [`06-reports.md`](06-reports.md) | Async PDF report generation + `/reports` endpoints + file lifecycle | 02 (shell), 05 (content) |
 | 07 | [`07-hardening-and-evaluation.md`](07-hardening-and-evaluation.md) | Full test matrix, evaluation harness, performance, docs sync, e2e verification | 01–06 |
