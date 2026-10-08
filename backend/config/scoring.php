@@ -32,6 +32,8 @@ return [
 
     'semantic' => [
         'enabled' => (bool) env('SCORING_SEMANTIC_ENABLED', true),
+        // Weight of the SBERT semantic term inside the title signal (rest is string similarity).
+        'title_blend' => (float) env('SCORING_SEMANTIC_TITLE_BLEND', 0.6),
     ],
 
     'year_tolerance' => (int) env('SCORING_YEAR_TOLERANCE', 1),
