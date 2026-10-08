@@ -1,0 +1,5 @@
+ppip install requests
+
+"tested on grobid 0.9.1-full"
+
+"untuk test memakai artikel.pdf"
