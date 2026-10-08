@@ -109,14 +109,26 @@ same change.
   `DocumentLifecycleService`, `DocumentAnalysisStateService`, `DocumentAnalysisResetService`,
   `DocumentDeletionService`, `DocumentFileManager`, `CitationStatusResolver`;
   `ResearchedDocumentSummaryData`/`ResearchedDocumentStatusData`/`DocumentAnalysisSummaryData`.
-- Jobs: `AnalyzeDocumentJob` envelope (`ShouldQueue`, status guard, `failed()` safety net);
-  the pipeline implementation is bound in Phase 03.
+- Jobs: `AnalyzeDocumentJob` (`ShouldQueue`, status guard, `WithoutOverlapping`, `failed()`
+  safety net).
+- Analysis pipeline (Phase 03): `AnalysisPipeline` bound to `RunsDocumentAnalysis` via
+  `AnalysisServiceProvider`; canonical step machine (`AnalysisStepRegistry`, `AnalysisProgress`,
+  `AnalysisContext`, `AnalysisFailureHandler`); implemented steps `ExtractDocumentStep`,
+  `PersistExtractionStep` (idempotent, schema-normalizing) and `FinalizeAnalysisStep`;
+  `config/analysis.php` carries the queue/timeout/lock buffer, the progress map and extraction
+  bounds.
+- Internal inference client (Phase 03): `Services/Inference/InferenceClient` calling
+  `/health`, `/v1/extract`, `/v1/embeddings`; `Data/Inference/*` DTOs; `ExtractionFailedException`,
+  `InferenceClientException`; `Services/Crossref/DoiNormalizer`.
 - Canonical error envelope renderers for `401`/`422`/`429` (now centralized in
   `ApiExceptionRenderer`) and `ErrorResponseData`; custom exceptions render their own envelope
   (`DocumentUploadFailedException`, `InvalidCredentialsException`).
 - Tests: `AuthTest`, `UploadDocumentTest`, `DomainSchemaTest`, `DomainModelTest`, `EnumTest`,
   `ApiErrorTest`, `ApiResponseTest`, `ApiErrorEnvelopeTest`, `OwnershipIsolationTest`,
-  `RateLimitersTest`, `DocumentTreeTest`, `FixturesTest` (Pest, SQLite `:memory:`, sync queue).
+  `RateLimitersTest`, `DocumentTreeTest`, `FixturesTest`, plus the Phase 03 suites
+  (`InferenceDataTest`, `InferenceClientTest`, `AnalysisProgressTest`, `AnalysisFailureHandlerTest`,
+  `ExtractionPersistenceTest`, `AnalysisPipelineTest`, `AnalysisEndToEndTest`, `DoiNormalizerTest`)
+  (Pest, SQLite `:memory:`, sync queue).
 - Rate limiters `auth` (5/min/IP), `api` (60/min/user), `documents` (10/min/user) and
   `document-status` (120/min/user) in `AppServiceProvider`.
 - Storage: default `local` disk rooted at `storage/app/private` with `serve => true`; the
@@ -124,10 +136,8 @@ same change.
 
 ### 3.2 What is missing (the work this plan covers)
 
-- `AnalyzeDocumentJob`'s pipeline collaborator: bind `RunsDocumentAnalysis` to the concrete
-  `AnalysisPipeline` and implement every pipeline step (Phase 03).
-- Inference HTTP client (internal FastAPI contract).
-- Crossref client, DOI normalization, candidate search, candidate ranking/scoring, findings.
+- Crossref client, bibliographic search, candidate ranking/scoring and finding persistence
+  (Phase 04).
 - Citation resolution and the findings-feed resolver (the pure `CitationStatus::derive()` rule and
   the shared `CitationStatusResolver` SQL expression exist; the endpoint-level resolver and
   `/references` / `/citations` / `/findings` endpoints are Phase 05).

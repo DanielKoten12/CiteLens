@@ -301,18 +301,24 @@ Verified against the repository:
   `DocumentLifecycleService`, `DocumentAnalysisStateService`, `DocumentAnalysisResetService`,
   `DocumentDeletionService`, `DocumentFileManager`, `CitationStatusResolver`; summary/status/detail
   DTOs) including list/detail/status/retry/delete/purge. Upload dispatches `AnalyzeDocumentJob`
-  after commit through the `RunsDocumentAnalysis` seam (the job envelope exists; the pipeline
-  binding is Phase 03). **Missing:** the analysis pipeline internals (extraction, Crossref client,
-  scoring, citation resolution), the `/references` / `/citations` / `/findings` endpoints, report
-  generation, and the inference service implementation.
+  after commit through the `RunsDocumentAnalysis` seam, which Phase 03 now binds to
+  `AnalysisPipeline`: the canonical step machine (`AnalysisStepRegistry`, `AnalysisProgress`,
+  `AnalysisFailureHandler`, `AnalysisContext`), the implemented steps (`ExtractDocumentStep`,
+  `PersistExtractionStep`, `FinalizeAnalysisStep`), the internal inference client
+  (`Services/Inference/InferenceClient` + `Data/Inference/*` DTOs + `ExtractionFailedException`),
+  `DoiNormalizer`, the `WithoutOverlapping` job middleware and the inference contract fixtures/fakes
+  (`tests/Support/InferenceFake`, `AnalysisHarness`). **Missing:** Crossref lookup and scoring
+  (Phase 04), citation resolution (Phase 05), the `/references` / `/citations` / `/findings`
+  endpoints, report generation, and the inference service implementation.
 - **Frontend** is a working Vue 3 + Vite SPA with mocked auth and prototype types; the API is not
   wired yet.
 - **Inference** is a FastAPI hello-world stub; `/health`, `/v1/extract`, `/v1/embeddings` are
   specified but unimplemented.
 
 Everything described as "the pipeline", "scoring" or "reports" above is the **target** design;
-the document lifecycle endpoints and the upload→job dispatch seam exist today, while the analysis
-steps themselves do not.
+the document lifecycle endpoints, the upload→job dispatch seam and the extraction/persistence half
+of the pipeline (Phase 03) exist today, while Crossref verification, citation resolution and report
+generation do not.
 
 ---
 
