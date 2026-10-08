@@ -41,6 +41,8 @@ it('persists references, citations and locations with normalized fields', functi
 
     expect($references[0]->doi)->toBe('10.1038/nature14539')
         ->and($references[0]->publication_year)->toBe(2015)
+        ->and($references[0]->created_at)->not->toBeNull()
+        ->and($references[0]->updated_at)->not->toBeNull()
         ->and($references[1]->doi)->toBeNull()
         ->and($references[2]->doi)->toBe('not-a-doi');
 

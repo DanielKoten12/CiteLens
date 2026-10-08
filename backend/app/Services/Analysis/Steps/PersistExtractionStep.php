@@ -8,10 +8,15 @@ use App\Data\Inference\ExtractedReferenceData;
 use App\Enums\AnalysisStep;
 use App\Exceptions\ExtractionFailedException;
 use App\Models\ResearchedDocument;
+use App\Models\ResearchedDocumentCitation;
+use App\Models\ResearchedDocumentCitationLocation;
+use App\Models\ResearchedDocumentReference;
+use App\Models\ResearchedDocumentReferenceLocation;
 use App\Services\Analysis\AnalysisContext;
 use App\Services\Analysis\Contracts\PipelineStep;
 use App\Services\Crossref\DoiNormalizer;
 use App\Services\Document\DocumentAnalysisResetService;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -26,6 +31,11 @@ use Illuminate\Support\Str;
  * semantically implausible values are sanitized deterministically.
  *
  * Citation `researched_document_reference_id` stays `null`: pairing is Phase 05.
+ *
+ * Rows are written with chunked bulk inserts through the Eloquent models
+ * ({@see insert()}) rather than a `create()` loop: one PDF can produce thousands
+ * of reference/citation/location rows, and a per-row insert inside the step
+ * transaction would multiply round trips and lock time.
  */
 final class PersistExtractionStep implements PipelineStep
 {
@@ -55,12 +65,12 @@ final class PersistExtractionStep implements PipelineStep
             $this->resetService->reset($document);
 
             $references = $this->referenceRows($document, $extraction->references);
-            $this->insert('researched_document_references', $references['rows']);
-            $this->insert('researched_document_reference_locations', $references['locations']);
+            $this->insert(ResearchedDocumentReference::class, $references['rows']);
+            $this->insert(ResearchedDocumentReferenceLocation::class, $references['locations']);
 
             $citations = $this->citationRows($document, $extraction->citations);
-            $this->insert('researched_document_citations', $citations['rows']);
-            $this->insert('researched_document_citation_locations', $citations['locations']);
+            $this->insert(ResearchedDocumentCitation::class, $citations['rows']);
+            $this->insert(ResearchedDocumentCitationLocation::class, $citations['locations']);
         });
     }
 
@@ -72,7 +82,6 @@ final class PersistExtractionStep implements PipelineStep
     {
         $rows = [];
         $locations = [];
-        $now = now();
 
         foreach ($references as $reference) {
             $referenceId = (string) Str::uuid();
@@ -90,8 +99,6 @@ final class PersistExtractionStep implements PipelineStep
                 'publication_year' => $this->year($reference->publicationYear),
                 'text_start_offset' => $startOffset,
                 'text_end_offset' => $endOffset,
-                'created_at' => $now,
-                'updated_at' => $now,
             ];
 
             foreach ($this->locationRows($reference->locations, 'researched_document_reference_id', $referenceId) as $location) {
@@ -110,7 +117,6 @@ final class PersistExtractionStep implements PipelineStep
     {
         $rows = [];
         $locations = [];
-        $now = now();
         $occurrenceIndexes = $this->occurrenceIndexes($citations);
 
         foreach ($citations as $index => $citation) {
@@ -134,8 +140,6 @@ final class PersistExtractionStep implements PipelineStep
                 'text_start_offset' => $startOffset,
                 'text_end_offset' => $endOffset,
                 'occurrence_index' => $occurrenceIndexes[$index],
-                'created_at' => $now,
-                'updated_at' => $now,
             ];
 
             foreach ($this->locationRows($citation->locations, 'citation_id', $citationId) as $location) {
@@ -153,7 +157,6 @@ final class PersistExtractionStep implements PipelineStep
     private function locationRows(array $locations, string $foreignKey, string $parentId): array
     {
         $rows = [];
-        $now = now();
 
         foreach ($locations as $index => $location) {
             if ($location->pageNumber < 1) {
@@ -161,7 +164,6 @@ final class PersistExtractionStep implements PipelineStep
             }
 
             $rows[] = [
-                'id' => (string) Str::uuid(),
                 $foreignKey => $parentId,
                 'page_number' => $location->pageNumber,
                 'x' => $this->coordinate($location->x),
@@ -172,8 +174,6 @@ final class PersistExtractionStep implements PipelineStep
                 'page_height' => $this->coordinate($location->pageHeight),
                 'coordinate_system' => self::COORDINATE_SYSTEM,
                 'location_index' => $index,
-                'created_at' => $now,
-                'updated_at' => $now,
             ];
         }
 
@@ -285,16 +285,37 @@ final class PersistExtractionStep implements PipelineStep
     }
 
     /**
+     * Chunked bulk insert for a model, with the model providing the table and
+     * connection (no hand-written table strings in the step).
+     *
+     * Bulk insert is deliberate (see the class docblock). Each row is stamped
+     * with `id`/`created_at`/`updated_at` here so the row builders stay focused
+     * on extraction data; a caller-supplied `id` (a parent linking its children)
+     * wins over the generated one.
+     *
+     * @param  class-string<Model>  $model
      * @param  list<array<string, mixed>>  $rows
      */
-    private function insert(string $table, array $rows): void
+    private function insert(string $model, array $rows): void
     {
         if ($rows === []) {
             return;
         }
 
+        $instance = new $model;
+        $timestamp = $instance->freshTimestampString();
+
+        $rows = array_map(static function (array $row) use ($timestamp): array {
+            return [
+                'id' => $row['id'] ?? (string) Str::uuid(),
+                'created_at' => $timestamp,
+                'updated_at' => $timestamp,
+                ...$row,
+            ];
+        }, $rows);
+
         foreach (array_chunk($rows, self::INSERT_CHUNK) as $chunk) {
-            DB::table($table)->insert($chunk);
+            $instance->newQuery()->insert($chunk);
         }
     }
 }
