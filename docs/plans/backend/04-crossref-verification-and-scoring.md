@@ -1,6 +1,7 @@
 # Phase 04 — Crossref Verification, Candidate Ranking & Scoring
 
-> **Status:** broad plan · **Depends on:** Phase 03 · **Unblocks:** Phase 05
+> **Status:** broad plan — **implemented**; see [`04-crossref-verification-detail.md`](04-crossref-verification-detail.md)
+> for the executable plan (all recommendations/defaults adopted there). · **Depends on:** Phase 03 · **Unblocks:** Phase 05
 > Canonical references: `docs/API_SPEC.md` §2.6/§10/§11, `docs/ARCHITECTURE.md` §7.1,
 > `docs/PRODUCT_REQUIREMENTS.md` §6.3/§9, `docs/TEST_PLAN.md` T-REF-07/08 / T-SCORE / T-PIPE-03.
 

@@ -2,6 +2,7 @@
 
 use App\Enums\AnalysisStep;
 use App\Enums\DocumentStatus;
+use App\Exceptions\CrossrefUnavailableException;
 use App\Exceptions\ExtractionFailedException;
 use App\Exceptions\InferenceUnavailableException;
 use App\Models\ResearchedDocument;
@@ -80,6 +81,16 @@ it('logs the raw exception with document, step and correlation id', function () 
                 && $context['correlation_id'] !== ''
                 && $context['exception'] instanceof RuntimeException;
         });
+});
+
+it('maps a crossref outage to the safe crossref message', function () {
+    $document = DocumentTree::create()->document;
+
+    $this->handler->handle($document, CrossrefUnavailableException::serviceUnavailable(), AnalysisStep::CrossrefValidation);
+
+    expect($document->refresh())
+        ->status->toBe(DocumentStatus::Failed)
+        ->analysis_error->toBe('Validasi Crossref tidak tersedia. Coba lagi nanti.');
 });
 
 it('keeps the safe inference message identical to the exception message', function () {

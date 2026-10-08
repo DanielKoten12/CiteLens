@@ -34,6 +34,10 @@ Laravel API  ── autentikasi, dokumen, referensi, sitasi, temuan, laporan, DB
 Laravel adalah sumber kebenaran. Algoritma GROBID/SBERT **tidak pernah** diekspos sebagai endpoint
 publik.
 
+> **Catatan (OQ-11):** REST API Crossref tidak memerlukan autentikasi pada v1; Laravel
+> mengidentifikasi dirinya melalui `CROSSREF_MAILTO` dan `User-Agent` kontak. Tidak ada
+> `CROSSREF_API_KEY` yang digunakan.
+
 ---
 
 ## 2. Konvensi
@@ -146,6 +150,13 @@ Setiap respons non-2xx memakai bentuk yang sama:
 | `suspicious` | Cocok tetapi confidence rendah / sebagian tidak cocok |
 | `invalid` | Kecocokan ditemukan tetapi metadata bertentangan |
 | `not_found` | Tidak ada kandidat ditemukan di Crossref |
+
+> **Catatan (OQ-02):** DOI yang ada di dokumen tetapi tidak dapat diresolusi di Crossref berstatus
+> `invalid` dengan alasan `"DOI tidak ditemukan di Crossref."` (DOI rusak bertentangan dengan klaim
+> dokumen itu sendiri). `not_found` hanya untuk referensi tanpa DOI dan tanpa kandidat Crossref;
+> DOI dengan format tidak valid berstatus `invalid` dengan alasan `"Format DOI tidak valid."`
+> `suspicious` mencakup kecocokan lemah/sebagian, termasuk kemungkinan venue lokal yang tidak
+> terindeks.
 
 **Status sitasi** (derived, tidak disimpan — dihitung ulang dari pasangan dan temuan referensi)
 

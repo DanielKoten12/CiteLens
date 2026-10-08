@@ -33,6 +33,9 @@ Laravel API  ── auth, documents, references, citations, findings, reports, D
 
 Laravel is the source of truth. GROBID/SBERT algorithms are **never** exposed as public endpoints.
 
+> **Note (OQ-11):** the Crossref REST API is unauthenticated in v1; Laravel identifies itself
+> through `CROSSREF_MAILTO` and a contact `User-Agent`. No `CROSSREF_API_KEY` is used.
+
 ---
 
 ## 2. Conventions
@@ -144,6 +147,12 @@ Every non-2xx response uses the same shape:
 | `suspicious` | Matched but low confidence / partial mismatch |
 | `invalid` | Match found but metadata conflicts |
 | `not_found` | No candidate found in Crossref |
+
+> **Note (OQ-02):** a DOI present in the document that does not resolve in Crossref is `invalid`
+> with reason `"DOI tidak ditemukan di Crossref."` (a broken DOI contradicts the document's own
+> claim). `not_found` is reserved for a reference with no DOI and no Crossref candidate; a DOI
+> with an invalid shape is `invalid` with reason `"Format DOI tidak valid."`
+> `suspicious` covers a partial/weak match, including likely non-indexed local venues.
 
 **Citation status** (derived, not stored — recomputed from the pairing and the reference finding)
 

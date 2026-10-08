@@ -307,9 +307,16 @@ Verified against the repository:
   `PersistExtractionStep`, `FinalizeAnalysisStep`), the internal inference client
   (`Services/Inference/InferenceClient` + `Data/Inference/*` DTOs + `ExtractionFailedException`),
   `DoiNormalizer`, the `WithoutOverlapping` job middleware and the inference contract fixtures/fakes
-  (`tests/Support/InferenceFake`, `AnalysisHarness`). **Missing:** Crossref lookup and scoring
-  (Phase 04), citation resolution (Phase 05), the `/references` / `/citations` / `/findings`
-  endpoints, report generation, and the inference service implementation.
+  (`tests/Support/InferenceFake`, `AnalysisHarness`). Phase 04 adds the Crossref layer
+  (`Services/Crossref/CrossrefClient` + query builder/result mapper/value objects +
+  `CrossrefUnavailableException`), the pure scoring engine (`Services/Scoring/*`: string/author/
+  semantic similarity, local-venue detection, reason building, `ReferenceScorer`,
+  `VerdictDecider`), the `crossref_validation`/`embedding`/`scoring` steps
+  (`ValidateReferencesStep`, `EmbedReferencesStep`, `ScoreReferencesStep`), the transient
+  `ReferenceVerificationBatch`/`EmbeddingIndex` context artifacts and the single automated writer
+  (`Services/ReferenceFinding/ReferenceFindingWriter`). **Missing:** citation resolution (Phase 05),
+  the `/references` / `/citations` / `/findings` endpoints, report generation, and the inference
+  service implementation.
 - **Frontend** is a working Vue 3 + Vite SPA with mocked auth and prototype types; the API is not
   wired yet.
 - **Inference** is a FastAPI hello-world stub; `/health`, `/v1/extract`, `/v1/embeddings` are

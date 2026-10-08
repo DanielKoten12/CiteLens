@@ -46,6 +46,9 @@ return [
         'connect_timeout' => (int) env('CROSSREF_CONNECT_TIMEOUT', 5),
         'rows' => (int) env('CROSSREF_ROWS', 5),
         'cache_ttl' => (int) env('CROSSREF_CACHE_TTL', 86400),
+        'retries' => (int) env('CROSSREF_RETRIES', 2),
+        'retry_backoff_ms' => (int) env('CROSSREF_RETRY_BACKOFF_MS', 200),
+        'user_agent' => env('CROSSREF_USER_AGENT'),
     ],
 
     /*

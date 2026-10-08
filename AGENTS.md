@@ -465,15 +465,22 @@ Be aware of what is scaffold vs. contract before promising behavior:
   `FinalizeAnalysisStep`), the internal inference client (`Services/Inference/InferenceClient` +
   `Data/Inference/*` DTOs + `ExtractionFailedException`), `Services/Crossref/DoiNormalizer`, the
   `WithoutOverlapping` job middleware and the inference fixtures/fakes (`tests/Support/InferenceFake`,
-  `AnalysisHarness`). API responses are shaped with
+  `AnalysisHarness`). Phase 04 adds the Crossref layer (`Services/Crossref/CrossrefClient` + query
+  builder/result mapper/value objects + `Exceptions/CrossrefUnavailableException`), the pure
+  scoring engine (`Services/Scoring/*`: string/author/semantic similarity, local-venue detection,
+  reason building, `ReferenceScorer`, `VerdictDecider`), the
+  `crossref_validation`/`embedding`/`scoring` steps (`ValidateReferencesStep`,
+  `EmbedReferencesStep`, `ScoreReferencesStep`), the transient
+  `ReferenceVerificationBatch`/`EmbeddingIndex` context artifacts and the single automated writer
+  (`Services/ReferenceFinding/ReferenceFindingWriter`). API responses are shaped with
   **`spatie/laravel-data`** DTOs in `app/Data/` (the former `Http/Resources` layer was replaced).
   **Sanctum is installed** and the `/auth/*` endpoints (register, login, logout, me) are
   implemented (`Http/Controllers/Api/AuthController`, `Services/AuthService`, `Http/Requests/Auth/*`,
   `Data/Auth/AuthenticationData` + `Data/User/UserDetailData`, `Data/Error/ErrorResponseData`,
-  `Exceptions/InvalidCredentialsException`); the Crossref client and scoring (Phase 04), citation
-  resolution (Phase 05), the `/references` / `/citations` / `/findings` endpoints, and report
-  generation do not exist yet. Adding them is expected work — follow the contracts while
-  doing it. See `docs/ARCHITECTURE.md` §13 for the full status.
+  `Exceptions/InvalidCredentialsException`); citation resolution (Phase 05), the `/references` /
+  `/citations` / `/findings` endpoints, and report generation do not exist yet. Adding them is
+  expected work — follow the contracts while doing it. See `docs/ARCHITECTURE.md` §13 for the full
+  status.
 - **`frontend/`** is a working Vue 3 + Vite 6 + TypeScript + Tailwind 4 + Pinia + vue-router SPA
   with shadcn-vue (`reka-ui`) components. **`src/stores/auth.ts` is mocked** (setTimeout, no API
   calls) and `src/types/index.ts` uses prototype types (`valid | warning | halu`, numeric ids,

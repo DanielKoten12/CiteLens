@@ -1,0 +1,9 @@
+{
+    "status": "ok",
+    "message-type": "work",
+    "message-version": "1.0.0",
+    "message": {
+        "DOI": "10.9999/malformed.1",
+        "type": "journal-article"
+    }
+}

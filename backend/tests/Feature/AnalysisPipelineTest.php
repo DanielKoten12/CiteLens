@@ -14,6 +14,7 @@ use App\Services\Analysis\Steps\FinalizeAnalysisStep;
 use App\Services\Analysis\Steps\PersistExtractionStep;
 use App\Services\Document\DocumentAnalysisStateService;
 use Tests\Support\AnalysisHarness;
+use Tests\Support\CrossrefFake;
 use Tests\Support\DocumentTree;
 use Tests\Support\InferenceFake;
 use Tests\Support\StubPipelineStep;
@@ -49,8 +50,10 @@ it('rejects duplicate and unknown steps', function () {
     expect(fn () => $duplicate->ordered())->toThrow(InvalidArgumentException::class);
 });
 
-it('completes a document through the real extraction and persistence steps', function () {
+it('completes a document through the real extraction, crossref and scoring steps', function () {
     InferenceFake::extraction();
+    InferenceFake::embeddingsFromText();
+    CrossrefFake::forExtractFixture();
 
     $tree = AnalysisHarness::document();
 
@@ -68,7 +71,7 @@ it('completes a document through the real extraction and persistence steps', fun
 
     expect(ResearchedDocumentReference::query()->count())->toBe(3)
         ->and(ResearchedDocumentCitation::query()->count())->toBe(3)
-        ->and(ReferenceFinding::query()->count())->toBe(0);
+        ->and(ReferenceFinding::query()->count())->toBe(3);
 });
 
 it('keeps progress monotonic and reaches 100 only on completion', function () {
@@ -170,13 +173,17 @@ it('recovers from a partial failure on a clean re-run', function () {
     expect($tree->document->refresh()->status)->toBe(DocumentStatus::Failed)
         ->and(ResearchedDocumentReference::query()->count())->toBe(3);
 
+    InferenceFake::embeddingsFromText();
+    CrossrefFake::forExtractFixture();
+
     AnalysisHarness::useSteps(AnalysisHarness::fullSteps());
 
     app(AnalysisPipeline::class)->run($tree->document);
 
     expect($tree->document->refresh()->status)->toBe(DocumentStatus::Completed)
         ->and(ResearchedDocumentReference::query()->count())->toBe(3)
-        ->and(ResearchedDocumentCitation::query()->count())->toBe(3);
+        ->and(ResearchedDocumentCitation::query()->count())->toBe(3)
+        ->and(ReferenceFinding::query()->count())->toBe(3);
 });
 
 it('aborts quietly when the document is deleted mid-run', function () {
@@ -217,6 +224,8 @@ it('starts a document resumed from a failure without decreasing progress', funct
 
 it('is idempotent when the pipeline runs twice on the same document', function () {
     InferenceFake::extraction();
+    InferenceFake::embeddingsFromText();
+    CrossrefFake::forExtractFixture();
 
     $tree = AnalysisHarness::document();
 
@@ -228,5 +237,6 @@ it('is idempotent when the pipeline runs twice on the same document', function (
 
     expect($tree->document->refresh()->status)->toBe(DocumentStatus::Completed)
         ->and(ResearchedDocumentReference::query()->count())->toBe(3)
-        ->and(ResearchedDocumentCitation::query()->count())->toBe(3);
+        ->and(ResearchedDocumentCitation::query()->count())->toBe(3)
+        ->and(ReferenceFinding::query()->count())->toBe(3);
 });

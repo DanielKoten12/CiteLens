@@ -3,6 +3,7 @@
 use App\Enums\AnalysisStep;
 use App\Enums\DocumentStatus;
 use App\Jobs\AnalyzeDocumentJob;
+use App\Models\ReferenceFinding;
 use App\Models\ResearchedDocumentCitation;
 use App\Models\ResearchedDocumentReference;
 use App\Models\User;
@@ -11,10 +12,13 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 use Tests\Support\AnalysisHarness;
+use Tests\Support\CrossrefFake;
 use Tests\Support\InferenceFake;
 
 it('drives a document to completed through the queued job', function () {
     InferenceFake::extraction();
+    InferenceFake::embeddingsFromText();
+    CrossrefFake::forExtractFixture();
 
     $tree = AnalysisHarness::document();
 
@@ -27,7 +31,8 @@ it('drives a document to completed through the queued job', function () {
         ->analysis_error->toBeNull();
 
     expect(ResearchedDocumentReference::query()->count())->toBe(3)
-        ->and(ResearchedDocumentCitation::query()->count())->toBe(3);
+        ->and(ResearchedDocumentCitation::query()->count())->toBe(3)
+        ->and(ReferenceFinding::query()->count())->toBe(3);
 });
 
 it('never runs the pipeline synchronously during upload', function () {
