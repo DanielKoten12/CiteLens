@@ -10,6 +10,7 @@ use App\Services\Analysis\Steps\EmbedReferencesStep;
 use App\Services\Analysis\Steps\ExtractDocumentStep;
 use App\Services\Analysis\Steps\FinalizeAnalysisStep;
 use App\Services\Analysis\Steps\PersistExtractionStep;
+use App\Services\Analysis\Steps\ResolveCitationsStep;
 use App\Services\Analysis\Steps\ScoreReferencesStep;
 use App\Services\Analysis\Steps\ValidateReferencesStep;
 use App\Services\Scoring\ScoringConfig;
@@ -41,7 +42,7 @@ final class AnalysisServiceProvider extends ServiceProvider
             $app->make(ValidateReferencesStep::class),
             $app->make(EmbedReferencesStep::class),
             $app->make(ScoreReferencesStep::class),
-            // Phase 05 appends: ResolveCitationsStep.
+            $app->make(ResolveCitationsStep::class),   // resolving_citations (Phase 05)
             $app->make(FinalizeAnalysisStep::class),
         ]));
 
