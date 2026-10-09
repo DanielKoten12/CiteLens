@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CitationController;
 use App\Http\Controllers\Api\DocumentController;
+use App\Http\Controllers\Api\FindingsController;
 use App\Http\Controllers\Api\ReferenceController;
 use App\Http\Controllers\Api\UploadController;
 use Illuminate\Support\Facades\Route;
@@ -78,5 +79,9 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
         Route::patch('/citations/{citation}', [CitationController::class, 'update'])
             ->whereUuid('citation')
             ->name('citations.update');
+
+        Route::get('/documents/{document}/findings', [FindingsController::class, 'index'])
+            ->whereUuid('document')
+            ->name('documents.findings.index');
     });
 });
