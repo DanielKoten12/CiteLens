@@ -38,6 +38,13 @@ return [
 
     'year_tolerance' => (int) env('SCORING_YEAR_TOLERANCE', 1),
 
+    // Citation resolution (Phase 05). Year tolerance is shared with reference
+    // scoring so the two matchers cannot drift.
+    'citation_matching' => [
+        // Minimum Jaro-Winkler surname similarity for an APA citation to pair.
+        'surname_threshold' => (float) env('SCORING_CITATION_SURNAME_THRESHOLD', 0.85),
+    ],
+
     // Conservative defaults for likely non-indexed/local venues; tuned in Phase 07.
     'local_venue_keywords' => [
         // 'jurnal lokal',
