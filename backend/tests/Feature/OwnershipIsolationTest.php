@@ -106,6 +106,66 @@ it('purges only the acting user documents', function () {
         ->and(ResearchedDocument::query()->whereKey($otherDocument->getKey())->exists())->toBeFalse();
 });
 
+it('returns 404 for every verification endpoint accessed by another user', function () {
+    $document = $this->document->getKey();
+
+    foreach ([
+        "/api/v1/documents/{$document}/references",
+        "/api/v1/documents/{$document}/citations",
+        "/api/v1/documents/{$document}/findings",
+    ] as $path) {
+        $this->actingAs($this->other)->getJson($path)
+            ->assertStatus(404)
+            ->assertJsonPath('error.code', 'NOT_FOUND')
+            ->assertJsonPath('error.message', 'Dokumen tidak ditemukan.');
+    }
+
+    $this->actingAs($this->other)->getJson("/api/v1/references/{$this->reference->getKey()}")
+        ->assertStatus(404)
+        ->assertJsonPath('error.message', 'Referensi tidak ditemukan.');
+
+    $this->actingAs($this->other)->patchJson("/api/v1/references/{$this->reference->getKey()}/finding", ['status' => 'valid'])
+        ->assertStatus(404)
+        ->assertJsonPath('error.message', 'Referensi tidak ditemukan.');
+
+    $this->actingAs($this->other)->getJson("/api/v1/citations/{$this->citation->getKey()}")
+        ->assertStatus(404)
+        ->assertJsonPath('error.message', 'Sitasi tidak ditemukan.');
+
+    $this->actingAs($this->other)->patchJson("/api/v1/citations/{$this->citation->getKey()}", [
+        'researched_document_reference_id' => null,
+    ])
+        ->assertStatus(404)
+        ->assertJsonPath('error.message', 'Sitasi tidak ditemukan.');
+
+    // A foreign review must not mutate the finding or the citation.
+    expect($this->finding->refresh()->is_manual)->toBeFalse()
+        ->and($this->finding->reviewed_by)->toBeNull()
+        ->and($this->citation->refresh()->researched_document_reference_id)->toBe($this->reference->getKey());
+});
+
+it('does not disclose whether foreign verification resources exist', function () {
+    $pairs = [
+        [
+            "/api/v1/documents/{$this->document->getKey()}/references",
+            '/api/v1/documents/'.fake()->uuid().'/references',
+        ],
+        [
+            "/api/v1/references/{$this->reference->getKey()}",
+            '/api/v1/references/'.fake()->uuid(),
+        ],
+        [
+            "/api/v1/citations/{$this->citation->getKey()}",
+            '/api/v1/citations/'.fake()->uuid(),
+        ],
+    ];
+
+    foreach ($pairs as [$foreign, $missing]) {
+        expect($this->actingAs($this->other)->getJson($foreign)->json())
+            ->toBe($this->actingAs($this->other)->getJson($missing)->json());
+    }
+});
+
 function captureException(callable $callback): Throwable
 {
     try {
