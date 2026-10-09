@@ -128,6 +128,16 @@ same change.
   `ValidateReferencesStep` / `EmbedReferencesStep` / `ScoreReferencesStep` pipeline steps and the
   `ReferenceFindingWriter` single writer; `config/scoring.php` `semantic.title_blend` and the
   `services.crossref` retry/back-off/User-Agent keys.
+- Citation resolution and review (Phase 05): `Services/Citations/*` (`CitationMarkerParser`,
+  `CitationResolver`, `CitationMatchConfig`, `CitationReference`/`CitationResolution` value
+  objects) and the `ResolveCitationsStep`; `Services/Reference/ReferenceQueryService`,
+  `Services/Citation/{CitationQueryService,CitationPairingService}`, the shared
+  `Data/Location/LocationPreviewData` and the reference/citation/finding DTOs; the manual writers
+  `ReferenceFindingReviewService` and `CitationPairingService`; the `/references` /
+  `/citations` / `/findings` endpoints (`ReferenceController`, `CitationController`,
+  `FindingsController`) and the derived feed
+  (`Services/Findings/{FindingsFeedQuery,FindingsFeedComposer}`); `config/scoring.php`
+  `citation_matching.surname_threshold`.
 - Canonical error envelope renderers for `401`/`422`/`429` (now centralized in
   `ApiExceptionRenderer`) and `ErrorResponseData`; custom exceptions render their own envelope
   (`DocumentUploadFailedException`, `InvalidCredentialsException`).
@@ -144,11 +154,9 @@ same change.
 
 ### 3.2 What is missing (the work this plan covers)
 
-- Citation resolution and the findings-feed resolver (the pure `CitationStatus::derive()` rule and
-  the shared `CitationStatusResolver` SQL expression exist; the endpoint-level resolver and
-  `/references` / `/citations` / `/findings` endpoints are Phase 05).
-- `/reports` endpoints and PDF generation.
+- `/reports` endpoints and PDF generation (Phase 06).
 - Test coverage for the remaining endpoints/pipeline (see `docs/TEST_PLAN.md` §5 and §8).
+- The FastAPI inference service implementation (separate effort, OQ-13).
 
 ### 3.3 Repo notes that affect the plan
 
@@ -372,7 +380,7 @@ Every new endpoint gets at least one ownership-isolation test (two users) per
 | 02 | [`02-document-lifecycle.md`](02-document-lifecycle.md) | `/documents` endpoints (list/detail/status/retry/delete/purge), summary counts, upload job dispatch, file cleanup | 01 |
 | 03 | [`03-analysis-pipeline.md`](03-analysis-pipeline.md) | `AnalyzeDocumentJob`, inference client, extraction persistence, progress/state machine, failure handling | 02 |
 | 04 | [`04-crossref-verification-and-scoring.md`](04-crossref-verification-and-scoring.md) → [`04-crossref-verification-detail.md`](04-crossref-verification-detail.md) | Crossref client, DOI/bibliographic lookup, candidate ranking, scoring, finding upsert | 03 |
-| 05 | [`05-citation-resolution-and-review.md`](05-citation-resolution-and-review.md) | Citation resolution + derived status, references/citations/findings endpoints, manual review | 04 |
+| 05 | [`05-citation-resolution-and-review.md`](05-citation-resolution-and-review.md) → [`05-citation-resolution-and-review-detail.md`](05-citation-resolution-and-review-detail.md) | Citation resolution + derived status, references/citations/findings endpoints, manual review | 04 |
 | 06 | [`06-reports.md`](06-reports.md) | Async PDF report generation + `/reports` endpoints + file lifecycle | 02 (shell), 05 (content) |
 | 07 | [`07-hardening-and-evaluation.md`](07-hardening-and-evaluation.md) | Full test matrix, evaluation harness, performance, docs sync, e2e verification | 01–06 |
 
@@ -401,13 +409,13 @@ test harness.
 | `POST /documents/{document}/retry` | 4 | 02 | implemented |
 | `DELETE /documents/{document}` | 4 | 02 | implemented |
 | `DELETE /documents` | 4 | 02 | implemented |
-| `GET /documents/{document}/references` | 5 | 05 | planned |
-| `GET /references/{reference}` | 5 | 05 | planned |
-| `PATCH /references/{reference}/finding` | 5 | 05 | planned |
-| `GET /documents/{document}/citations` | 6 | 05 | planned |
-| `GET /citations/{citation}` | 6 | 05 | planned |
-| `PATCH /citations/{citation}` | 6 | 05 | planned |
-| `GET /documents/{document}/findings` | 7 | 05 | planned |
+| `GET /documents/{document}/references` | 5 | 05 | implemented |
+| `GET /references/{reference}` | 5 | 05 | implemented |
+| `PATCH /references/{reference}/finding` | 5 | 05 | implemented |
+| `GET /documents/{document}/citations` | 6 | 05 | implemented |
+| `GET /citations/{citation}` | 6 | 05 | implemented |
+| `PATCH /citations/{citation}` | 6 | 05 | implemented |
+| `GET /documents/{document}/findings` | 7 | 05 | implemented |
 | `POST /documents/{document}/reports` | 8 | 06 | planned |
 | `GET /documents/{document}/reports` | 8 | 06 | planned |
 | `GET /reports/{report}` | 8 | 06 | planned |

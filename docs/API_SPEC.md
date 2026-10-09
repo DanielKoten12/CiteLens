@@ -533,6 +533,10 @@ in `reference_findings`; candidates live in `reference_finding_candidates`.
 
 Filters: `status` (finding status), `has_doi` (bool). Paginated.
 
+> **Note:** ordering is document position (`text_start_offset` ASC, nulls last, then `id`). The
+> `status=pending` filter also matches references whose finding row does not exist yet. `has_doi`
+> accepts `true/false` and `1/0`.
+
 **Success — `200`**
 
 ```json
@@ -672,6 +676,12 @@ Manual review override. Lets a user change the verdict and/or pick another candi
 Rules: `status` required, one of `valid|suspicious|invalid|not_found`; `selected_candidate_id`
 nullable, must belong to this finding; `reason` nullable string.
 
+> **Note:** a review while the document is `processing` returns `409 CONFLICT`
+> (`"Status referensi tidak dapat diubah saat analisis sedang berjalan."`), so a running pipeline is
+> never overwritten. A `selected_candidate_id` that does not belong to this finding returns `422`
+> with `details: { "selected_candidate_id": ["Kandidat yang dipilih tidak valid untuk temuan ini."] }`.
+> A reference without a finding gets a manual finding (confidence `null`).
+
 **Success — `200`**
 
 ```json
@@ -716,6 +726,10 @@ locations (`researched_document_citation_locations`).
 ### GET `/documents/{document}/citations`
 
 Filters: `status` (`valid|unreliable|pending|hallucination`), `reference_id`. Paginated.
+
+> **Note:** ordering is document position (`text_start_offset` ASC, nulls last, then `id`).
+> `reference_id` must belong to the same document, otherwise `422`; a foreign or missing reference
+> id is not disclosed.
 
 **Success — `200`**
 
@@ -821,6 +835,10 @@ Manually pair a `hallucination` citation with a reference, or clear the pairing.
 
 Rules: field nullable; when present the reference must belong to the same document.
 
+> **Note:** the field must be present in the body: an explicit `null` clears the pairing and
+> responds with `"Tautan sitasi berhasil dilepaskan."` (derived status `hallucination`); a UUID
+> pairs the citation and responds with `"Sitasi berhasil ditautkan."`.
+
 **Success — `200`**
 
 ```json
@@ -859,6 +877,12 @@ citations. Used by the document viewer to render the issue list and highlights.
 
 Filters: `type` (`reference_invalid|reference_suspicious|reference_not_found|reference_pending|citation_unreliable|citation_hallucination`),
 `severity` (`high|medium|low|info`). Paginated.
+
+> **Note:** ordering is document position (`text_start_offset` ASC, nulls last, then `id`). The feed
+> is built from existing reference findings (a reference with no finding row is not synthesized) and
+> from citations whose derived status is `unreliable`/`hallucination`. A citation marker that
+> references several publications (`[3], [5]`, `[3–5]`, `(A, 2020; B, 2021)`) is paired with the
+> first/lowest item only: the schema stores at most one reference per citation row (v1 limitation).
 
 **Success — `200`**
 
