@@ -33,6 +33,9 @@ Table files {
 
   path text [not null]
 
+  // Private filesystem disk the object lives on; backfilled from the app default (D-06-02).
+  disk varchar [not null]
+
   mime_type varchar
 
   size bigint
@@ -403,6 +406,7 @@ Table generated_document_reports {
   // Nullable because reports are generated at document level.
   reference_finding_id uuid
 
+  // Nullable canonical pointer to the stored PDF; nulled when the file row is deleted (OQ-06).
   file_id uuid
 
   status varchar [not null, default: 'pending']
@@ -451,6 +455,8 @@ Ref: reference_finding_candidates.reference_finding_id > reference_findings.id
 Ref: generated_document_reports.researched_document_id > researched_documents.id
 
 Ref: generated_document_reports.reference_finding_id > reference_findings.id
+
+Ref: generated_document_reports.file_id > files.id
 
 Ref: "generated_document_reports"."id" <? "files"."fileable_id"
 
