@@ -138,6 +138,12 @@ same change.
   `FindingsController`) and the derived feed
   (`Services/Findings/{FindingsFeedQuery,FindingsFeedComposer}`); `config/scoring.php`
   `citation_matching.surname_threshold`.
+- Citation resolution robustness (Phase 05.1): `AuthorName` + `AuthorMatcher::names()`,
+  `CitationCandidateScorer`, `CitationDecisionPolicy`, `CitationBatchResolver`, `ParsedAuthorYear`,
+  the extended `CitationMarkerParser` (all APA pairs/ordinals, initials), `CitationExtractionHints`
+  (validated GROBID `reference_index` prior), `CitationResolutionWriter` + `citation_resolution_candidates`
+  persistence, `CitationResolutionState`/`CitationResolutionMethod`, the `unresolved` derived status,
+  and the `citations:evaluate` harness + seed dataset.
 - Canonical error envelope renderers for `401`/`422`/`429` (now centralized in
   `ApiExceptionRenderer`) and `ErrorResponseData`; custom exceptions render their own envelope
   (`DocumentUploadFailedException`, `InvalidCredentialsException`).
@@ -381,6 +387,7 @@ Every new endpoint gets at least one ownership-isolation test (two users) per
 | 03 | [`03-analysis-pipeline.md`](03-analysis-pipeline.md) | `AnalyzeDocumentJob`, inference client, extraction persistence, progress/state machine, failure handling | 02 |
 | 04 | [`04-crossref-verification-and-scoring.md`](04-crossref-verification-and-scoring.md) → [`04-crossref-verification-detail.md`](04-crossref-verification-detail.md) | Crossref client, DOI/bibliographic lookup, candidate ranking, scoring, finding upsert | 03 |
 | 05 | [`05-citation-resolution-and-review.md`](05-citation-resolution-and-review.md) → [`05-citation-resolution-and-review-detail.md`](05-citation-resolution-and-review-detail.md) | Citation resolution + derived status, references/citations/findings endpoints, manual review | 04 |
+| 05.1 | [`05-1-citation-resolution-robustness-detail.md`](05-1-citation-resolution-robustness-detail.md) | Resolution robustness: hints, initials, soft year, ambiguity/`unresolved`, candidates, provenance, evaluation harness | 05 |
 | 06 | [`06-reports.md`](06-reports.md) | Async PDF report generation + `/reports` endpoints + file lifecycle | 02 (shell), 05 (content) |
 | 07 | [`07-hardening-and-evaluation.md`](07-hardening-and-evaluation.md) | Full test matrix, evaluation harness, performance, docs sync, e2e verification | 01–06 |
 

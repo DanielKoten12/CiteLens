@@ -322,7 +322,14 @@ Verified against the repository:
   (`ReferenceFindingReviewService`, `CitationPairingService`) and the `/references` /
   `/citations` / `/findings` endpoints (`ReferenceController`, `CitationController`,
   `FindingsController`; the derived feed in `Services/Findings/{FindingsFeedQuery,FindingsFeedComposer}`).
-  **Missing:** report generation (Phase 06) and the inference service implementation.
+  Phase 05.1 hardens citation resolution: `CitationMarkerParser` retains every APA pair/ordinal,
+  `AuthorMatcher::names()` adds initials, `CitationCandidateScorer`/`CitationDecisionPolicy`/
+  `CitationBatchResolver` implement soft-year scoring, ambiguity detection and cross-citation
+  evidence consolidation, the GROBID `reference_index` is consumed as a validated prior, resolution
+  provenance (`resolution_state`/`resolution_method`/`resolution_confidence`/
+  `extraction_reference_index`) and `citation_resolution_candidates` are persisted, `unresolved` is a
+  fifth derived status (severity `medium`), and `citations:evaluate` provides a seed evaluation
+  harness. **Missing:** report generation (Phase 06) and the inference service implementation.
 - **Frontend** is a working Vue 3 + Vite SPA with mocked auth and prototype types; the API is not
   wired yet.
 - **Inference** is a FastAPI hello-world stub; `/health`, `/v1/extract`, `/v1/embeddings` are

@@ -1,6 +1,7 @@
 # Phase 05.1 — Citation Resolution Robustness (Detailed Implementation Plan)
 
-> **Status:** detailed plan — ready to implement (decisions Q1–Q9 resolved; see §4)
+> **Status:** implemented (all workstreams W1/W2; seed evaluation baseline recorded in
+> `tests/Feature/CitationResolutionEvaluatorTest.php`)
 > **Parent:** [`05-citation-resolution-and-review-detail.md`](05-citation-resolution-and-review-detail.md)
 > **Depends on:** Phase 05 (implemented) · **Unblocks:** Phase 06/07
 > Canonical references: `docs/API_SPEC.md` §2.6/§4/§5/§6/§7/§12, `docs/DB_SCHEMA.md` (first DBML

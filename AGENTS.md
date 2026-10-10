@@ -480,7 +480,14 @@ Be aware of what is scaffold vs. contract before promising behavior:
   writers (`Services/ReferenceFinding/ReferenceFindingReviewService`,
   `Services/Citation/CitationPairingService`) and the `/references` / `/citations` / `/findings`
   endpoints (`ReferenceController`, `CitationController`, `FindingsController`; derived feed in
-  `Services/Findings/{FindingsFeedQuery,FindingsFeedComposer}`). API responses are shaped with
+  `Services/Findings/{FindingsFeedQuery,FindingsFeedComposer}`). Phase 05.1 hardens citation
+  resolution: `CitationMarkerParser` retains every APA pair/ordinal, `AuthorMatcher::names()` adds
+  initials, `CitationCandidateScorer`/`CitationDecisionPolicy`/`CitationBatchResolver` implement
+  soft-year scoring, ambiguity detection and cross-citation evidence consolidation, the GROBID
+  `reference_index` is consumed as a validated prior, resolution provenance
+  (`resolution_state`/`resolution_method`/`resolution_confidence`/`extraction_reference_index`) and
+  `citation_resolution_candidates` are persisted, `unresolved` is a fifth derived status (severity
+  `medium`), and `citations:evaluate` provides a seed evaluation harness. API responses are shaped with
   **`spatie/laravel-data`** DTOs in `app/Data/` (the former `Http/Resources` layer was replaced).
   **Sanctum is installed** and the `/auth/*` endpoints (register, login, logout, me) are
   implemented (`Http/Controllers/Api/AuthController`, `Services/AuthService`, `Http/Requests/Auth/*`,
