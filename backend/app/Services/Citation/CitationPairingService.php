@@ -2,6 +2,8 @@
 
 namespace App\Services\Citation;
 
+use App\Enums\CitationResolutionMethod;
+use App\Enums\CitationResolutionState;
 use App\Models\ResearchedDocument;
 use App\Models\ResearchedDocumentCitation;
 use App\Models\ResearchedDocumentReference;
@@ -11,7 +13,9 @@ use Illuminate\Validation\ValidationException;
  * Manual pairing of an in-text citation
  * (`PATCH /citations/{citation}`, `docs/API_SPEC.md` §6).
  *
- * The same-document rule is enforced here, after ownership has been resolved by
+ * Manual pairing/unpairing is a separate writer from the automated pipeline
+ * ({@see CitationResolutionWriter}). The same-document
+ * rule is enforced here, after ownership has been resolved by
  * `OwnedResourceFinder`, so a foreign reference id and a non-existent one are
  * indistinguishable (`422`, no existence disclosure — D-05-10).
  */
@@ -29,7 +33,14 @@ final class CitationPairingService
             ]);
         }
 
-        $citation->update(['researched_document_reference_id' => $referenceId]);
+        $citation->update([
+            'researched_document_reference_id' => $referenceId,
+            'resolution_state' => $referenceId === null
+                ? CitationResolutionState::Unmatched
+                : CitationResolutionState::Paired,
+            'resolution_method' => CitationResolutionMethod::Manual,
+            'resolution_confidence' => null,
+        ]);
 
         return $citation;
     }

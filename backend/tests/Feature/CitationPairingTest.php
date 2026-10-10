@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\CitationResolutionMethod;
+use App\Enums\CitationResolutionState;
 use App\Models\ReferenceFinding;
 use Tests\Support\DocumentTree;
 
@@ -19,10 +21,13 @@ it('pairs an unpaired citation with a same-document reference', function () {
         ->assertOk()
         ->assertJsonPath('data.id', $citation->getKey())
         ->assertJsonPath('data.status', 'valid')
+        ->assertJsonPath('data.resolution_method', 'manual')
         ->assertJsonPath('data.reference.id', $reference->getKey())
         ->assertJsonPath('message', 'Sitasi berhasil ditautkan.');
 
-    expect($citation->refresh()->researched_document_reference_id)->toBe($reference->getKey());
+    expect($citation->refresh()->researched_document_reference_id)->toBe($reference->getKey())
+        ->and($citation->resolution_state)->toBe(CitationResolutionState::Paired)
+        ->and($citation->resolution_method)->toBe(CitationResolutionMethod::Manual);
 });
 
 it('derives unreliable when pairing with an invalid reference', function () {
@@ -66,10 +71,13 @@ it('unpairs a citation back to hallucination', function () {
     ])
         ->assertOk()
         ->assertJsonPath('data.status', 'hallucination')
+        ->assertJsonPath('data.resolution_method', 'manual')
         ->assertJsonPath('data.reference', null)
         ->assertJsonPath('message', 'Tautan sitasi berhasil dilepaskan.');
 
-    expect($citation->refresh()->researched_document_reference_id)->toBeNull();
+    expect($citation->refresh()->researched_document_reference_id)->toBeNull()
+        ->and($citation->resolution_state)->toBe(CitationResolutionState::Unmatched)
+        ->and($citation->resolution_method)->toBe(CitationResolutionMethod::Manual);
 });
 
 it('rejects a body without the pairing field', function () {

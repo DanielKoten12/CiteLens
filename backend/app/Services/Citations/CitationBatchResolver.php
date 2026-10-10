@@ -74,7 +74,8 @@ final class CitationBatchResolver
         foreach ($inputs as $input) {
             $resolution = $resolutions[$input->citationId] ?? null;
 
-            if ($resolution?->state !== CitationResolutionState::Unmatched) {
+            if ($resolution?->state !== CitationResolutionState::Unmatched
+                && $resolution?->state !== CitationResolutionState::Unresolved) {
                 continue;
             }
 

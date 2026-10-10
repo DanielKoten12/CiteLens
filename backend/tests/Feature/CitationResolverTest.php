@@ -61,18 +61,18 @@ it('penalizes a year outside the window instead of hard-rejecting', function () 
         citationReferences([['ref-1', 'Koten, D.', 2023]]),
     );
 
-    expect($resolution->state)->toBe(CitationResolutionState::Unmatched)
-        ->and($resolution->candidates)->not->toBe([]);
+    expect($resolution->state)->toBe(CitationResolutionState::Unresolved)
+        ->and($resolution->candidates)->toHaveCount(1);
 });
 
-it('accepts a preprint/published year gap within the window', function () {
+it('leaves a preprint/published year gap unresolved', function () {
     $resolution = $this->resolver->resolve(
         $this->parser->parse('(Koten, 2020)'),
         citationReferences([['ref-1', 'Koten, D.', 2023]]),
     );
 
-    // 0.7 * 1.0 + 0.3 * (1 - 3/5) = 0.82 → below commit; but candidates exist.
-    expect($resolution->state)->toBe(CitationResolutionState::Unmatched)
+    // 0.7 * 1.0 + 0.3 * (1 - 3/5) = 0.82 → below commit, above proposal.
+    expect($resolution->state)->toBe(CitationResolutionState::Unresolved)
         ->and($resolution->candidates)->toHaveCount(1);
 });
 
@@ -95,7 +95,7 @@ it('leaves a low-similarity answer unmatched', function () {
         ->and($resolution->candidates)->toBe([]);
 });
 
-it('breaks a tie with the earliest bibliography position', function () {
+it('treats an exact tie as unresolved and orders candidates by bibliography position', function () {
     $resolution = $this->resolver->resolve(
         $this->parser->parse('(Koten, 2023)'),
         citationReferences([
@@ -104,7 +104,10 @@ it('breaks a tie with the earliest bibliography position', function () {
         ]),
     );
 
-    expect($resolution->referenceId)->toBe('ref-earliest');
+    expect($resolution->state)->toBe(CitationResolutionState::Unresolved)
+        ->and($resolution->referenceId)->toBeNull()
+        ->and($resolution->candidates[0]->referenceId)->toBe('ref-earliest')
+        ->and($resolution->candidates[1]->referenceId)->toBe('ref-later');
 });
 
 it('uses initials to disambiguate same-surname authors', function () {
@@ -119,7 +122,7 @@ it('uses initials to disambiguate same-surname authors', function () {
     expect($resolution->referenceId)->toBe('ref-andi');
 });
 
-it('orders references by their bibliography index regardless of input order', function () {
+it('orders candidates by their bibliography index regardless of input order', function () {
     $matcher = new AuthorMatcher(new StringSimilarity);
 
     $references = [
@@ -129,7 +132,8 @@ it('orders references by their bibliography index regardless of input order', fu
 
     $resolution = $this->resolver->resolve($this->parser->parse('(Koten, 2023)'), $references);
 
-    expect($resolution->referenceId)->toBe('ref-a');
+    expect($resolution->candidates[0]->referenceId)->toBe('ref-a')
+        ->and($resolution->candidates[1]->referenceId)->toBe('ref-b');
 });
 
 it('resolves an ieee ordinal to the bibliography position', function () {
@@ -187,7 +191,7 @@ it('penalizes a cited author the reference does not carry', function () {
         citationReferences([['ref-1', 'Koten, D.', 2023]]),
     );
 
-    expect($resolution->state)->toBe(CitationResolutionState::Unmatched);
+    expect($resolution->state)->toBe(CitationResolutionState::Unresolved);
 });
 
 it('does not penalize an et al. citation with fewer surnames than the reference', function () {

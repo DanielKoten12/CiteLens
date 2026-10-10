@@ -63,4 +63,22 @@ final class CitationResolution
             candidates: $candidates,
         );
     }
+
+    /**
+     * @param  list<CitationCandidate>  $candidates
+     */
+    public static function unresolved(
+        ?float $confidence,
+        ?CitationResolutionMethod $method = null,
+        ?int $hintIndex = null,
+        array $candidates = [],
+    ): self {
+        return new self(
+            state: CitationResolutionState::Unresolved,
+            confidence: $confidence,
+            method: $method,
+            hintIndex: $hintIndex,
+            candidates: $candidates,
+        );
+    }
 }

@@ -30,6 +30,7 @@ it('lists documents with pagination meta and a derived summary', function () {
         ->assertJsonPath('data.1.summary.valid', 1)
         ->assertJsonPath('data.1.summary.total_citations', 1)
         ->assertJsonPath('data.1.summary.valid_citations', 1)
+        ->assertJsonPath('data.1.summary.unresolved_citations', 0)
         ->assertJsonPath('data.1.summary.hallucination_citations', 0)
         ->assertJsonPath('meta.total', 2);
 });

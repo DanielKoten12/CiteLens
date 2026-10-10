@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\CitationResolutionState;
 use App\Enums\CitationStatus;
 use App\Models\ReferenceFinding;
 use App\Models\ResearchedDocumentCitation;
@@ -40,6 +41,12 @@ it('agrees between the php resolver and the sql scope for every status', functio
             'text_start_offset' => 300,
             'text_end_offset' => 310,
         ])->getKey(),
+        CitationStatus::Unresolved->value => $tree->citation(null, [
+            'citation_text' => '(Kandidat, 2020)',
+            'resolution_state' => CitationResolutionState::Unresolved,
+            'text_start_offset' => 350,
+            'text_end_offset' => 360,
+        ])->getKey(),
         CitationStatus::Hallucination->value => $tree->citation(null, [
             'citation_text' => '(Halu, 2020)',
             'text_start_offset' => 400,
@@ -56,7 +63,7 @@ it('agrees between the php resolver and the sql scope for every status', functio
         ->get()
         ->mapWithKeys(fn (ResearchedDocumentCitation $citation): array => [
             $citation->getKey() => $resolver->resolve(
-                $citation->researched_document_reference_id !== null,
+                $citation->resolution_state,
                 $citation->reference?->finding?->status,
             ),
         ]);
@@ -78,9 +85,10 @@ it('agrees between the php resolver and the sql scope for every status', functio
     // The grouped aggregate summary uses the same SQL expression.
     $summary = app(DocumentSummaryService::class)->countsFor($tree->document);
 
-    expect($summary->totalCitations)->toBe(4)
+    expect($summary->totalCitations)->toBe(5)
         ->and($summary->validCitations)->toBe(1)
         ->and($summary->unreliableCitations)->toBe(1)
         ->and($summary->pendingCitations)->toBe(1)
+        ->and($summary->unresolvedCitations)->toBe(1)
         ->and($summary->hallucinationCitations)->toBe(1);
 });

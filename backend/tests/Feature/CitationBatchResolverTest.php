@@ -59,7 +59,7 @@ it('does not consolidate when the paired siblings disagree on the year', functio
         ],
     );
 
-    expect($resolutions['c3']->state)->toBe(CitationResolutionState::Unmatched);
+    expect($resolutions['c3']->state)->toBe(CitationResolutionState::Unresolved);
 });
 
 it('does not consolidate without a paired sibling', function () {
@@ -68,7 +68,7 @@ it('does not consolidate without a paired sibling', function () {
         [batchInput('c1', '(Hartini)')],
     );
 
-    expect($resolutions['c1']->state)->toBe(CitationResolutionState::Unmatched);
+    expect($resolutions['c1']->state)->toBe(CitationResolutionState::Unresolved);
 });
 
 it('never weakens a pair committed in the first pass', function () {
@@ -96,5 +96,5 @@ it('does not propagate evidence from a different candidate', function () {
         ],
     );
 
-    expect($resolutions['c2']->state)->toBe(CitationResolutionState::Unmatched);
+    expect($resolutions['c2']->state)->toBe(CitationResolutionState::Unresolved);
 });

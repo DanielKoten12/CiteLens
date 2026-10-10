@@ -41,7 +41,7 @@ final class CitationQueryService
             ->with('reference.finding');
 
         if ($status !== null) {
-            $derived = $this->resolver->sqlExpression('c.researched_document_reference_id', 'f.status');
+            $derived = $this->resolver->sqlExpression('c.resolution_state', 'f.status');
 
             $query->whereRaw("({$derived}) = ?", [$status->value]);
         }

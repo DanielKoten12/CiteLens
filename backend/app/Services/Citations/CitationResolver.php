@@ -3,6 +3,7 @@
 namespace App\Services\Citations;
 
 use App\Enums\CitationResolutionMethod;
+use App\Enums\CitationResolutionState;
 
 /**
  * Pairs one parsed citation marker with at most one reference of the same
@@ -32,6 +33,7 @@ final class CitationResolver
     public function __construct(
         private readonly CitationMatchConfig $config,
         private readonly CitationCandidateScorer $scorer,
+        private readonly CitationDecisionPolicy $policy,
     ) {}
 
     /**
@@ -160,18 +162,8 @@ final class CitationResolver
             );
         }
 
-        // The parser contradicts the hint; the parser result wins when it commits.
-        if ($best->confidence >= $this->config->commitThreshold()) {
-            return CitationResolution::paired(
-                $best->referenceId,
-                $best->confidence,
-                CitationResolutionMethod::Apa,
-                $hintIndex,
-                $scored,
-            );
-        }
-
-        return CitationResolution::unmatched($hintIndex, $scored);
+        // The parser contradicts the hint; the parser result decides.
+        return $this->decideFromCandidates($scored, $hintIndex);
     }
 
     /**
@@ -179,19 +171,32 @@ final class CitationResolver
      */
     private function resolveFromCandidates(array $scored, ?int $hintIndex): CitationResolution
     {
+        return $this->decideFromCandidates($scored, $hintIndex);
+    }
+
+    /**
+     * @param  list<CitationCandidate>  $scored
+     */
+    private function decideFromCandidates(array $scored, ?int $hintIndex): CitationResolution
+    {
         $best = $scored[0] ?? null;
 
-        if ($best !== null && $best->confidence >= $this->config->commitThreshold()) {
-            return CitationResolution::paired(
+        return match ($this->policy->stateFor($scored)) {
+            CitationResolutionState::Paired => CitationResolution::paired(
                 $best->referenceId,
                 $best->confidence,
                 CitationResolutionMethod::Apa,
                 $hintIndex,
                 $scored,
-            );
-        }
-
-        return CitationResolution::unmatched($hintIndex, $scored);
+            ),
+            CitationResolutionState::Unresolved => CitationResolution::unresolved(
+                $best?->confidence,
+                CitationResolutionMethod::Apa,
+                $hintIndex,
+                $scored,
+            ),
+            CitationResolutionState::Unmatched => CitationResolution::unmatched($hintIndex, $scored),
+        };
     }
 
     /**

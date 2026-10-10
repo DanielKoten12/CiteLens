@@ -40,7 +40,7 @@ it('pins the canonical reference finding status values', function () {
 
 it('pins the canonical citation status values', function () {
     expect(array_column(CitationStatus::cases(), 'value'))
-        ->toBe(['valid', 'unreliable', 'pending', 'hallucination']);
+        ->toBe(['valid', 'unreliable', 'pending', 'unresolved', 'hallucination']);
 });
 
 it('pins the canonical report status values', function () {
@@ -56,6 +56,7 @@ it('pins the canonical finding type values', function () {
             'reference_not_found',
             'reference_pending',
             'citation_unreliable',
+            'citation_unresolved',
             'citation_hallucination',
         ]);
 });

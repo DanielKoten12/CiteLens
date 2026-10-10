@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\CitationResolutionState;
 use App\Enums\CitationStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\ReferenceFindingStatus;
@@ -74,10 +75,10 @@ it('resolves in-text citations to their bibliography references', function () {
     // Derived status comes from pairing + the reference verdict.
     $resolver = app(CitationStatusResolver::class);
 
-    expect($resolver->resolve(true, ReferenceFinding::query()
+    expect($resolver->resolve(CitationResolutionState::Paired, ReferenceFinding::query()
         ->where('researched_document_reference_id', $leCunReference->getKey())
         ->firstOrFail()->status))->toBe(CitationStatus::Valid)
-        ->and($resolver->resolve(false, null))->toBe(CitationStatus::Hallucination);
+        ->and($resolver->resolve(CitationResolutionState::Unmatched, null))->toBe(CitationStatus::Hallucination);
 });
 
 it('keeps candidate ranks unique and ordered for every finding', function () {

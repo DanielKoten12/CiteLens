@@ -9,13 +9,13 @@ use App\Services\Analysis\AnalysisContext;
 use App\Services\Analysis\AnalysisProgress;
 use App\Services\Analysis\CitationExtractionHints;
 use App\Services\Analysis\Contracts\PipelineStep;
+use App\Services\Citation\CitationResolutionWriter;
 use App\Services\Citations\CitationBatchResolver;
 use App\Services\Citations\CitationMarkerParser;
 use App\Services\Citations\CitationReference;
 use App\Services\Citations\CitationResolution;
 use App\Services\Citations\CitationResolutionInput;
 use App\Services\Scoring\AuthorMatcher;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -28,14 +28,15 @@ use Illuminate\Support\Facades\Log;
  *   (cross-citation evidence consolidation);
  * - the step rewrites pairings in one transaction so it stays idempotent.
  *
- * W1 persists only `researched_document_reference_id`; the resolution
- * state/method/confidence/hint provenance is persisted by the W2 writer.
+ * W1 consumes the extraction hint transiently; W2 persists the resolution
+ * state/method/confidence/hint provenance through {@see CitationResolutionWriter}.
  */
 final class ResolveCitationsStep implements PipelineStep
 {
     public function __construct(
         private readonly CitationMarkerParser $parser,
         private readonly CitationBatchResolver $batchResolver,
+        private readonly CitationResolutionWriter $writer,
         private readonly AuthorMatcher $authorMatcher,
         private readonly AnalysisProgress $progress,
     ) {}
@@ -59,9 +60,11 @@ final class ResolveCitationsStep implements PipelineStep
         $hints = $context->hasExtractionHints() ? $context->extractionHints() : CitationExtractionHints::empty();
 
         $inputs = [];
+        $hintIndexes = [];
 
         foreach ($citations as $citation) {
             $hintIndex = $hints->hintForCitation($citation->getKey());
+            $hintIndexes[$citation->getKey()] = $hintIndex;
 
             $inputs[] = new CitationResolutionInput(
                 citationId: $citation->getKey(),
@@ -73,7 +76,7 @@ final class ResolveCitationsStep implements PipelineStep
 
         $resolutions = $this->batchResolver->resolve($references, $inputs);
 
-        $this->persist($document, $resolutions);
+        $this->writer->persistBatch($document, $resolutions, $hintIndexes);
         $this->progress->report($document, $this->step(), $citations->count(), $citations->count());
         $this->logResolution($document, $resolutions);
     }
@@ -98,35 +101,6 @@ final class ResolveCitationsStep implements PipelineStep
                 bibliographyIndex: $index + 1,
             ))
             ->all();
-    }
-
-    /**
-     * @param  array<string, CitationResolution>  $resolutions
-     */
-    private function persist(ResearchedDocument $document, array $resolutions): void
-    {
-        DB::transaction(function () use ($document, $resolutions): void {
-            // Reset first so a removed pairing cannot survive a re-run.
-            ResearchedDocumentCitation::query()
-                ->where('researched_document_id', $document->getKey())
-                ->update(['researched_document_reference_id' => null]);
-
-            $citationIdsByReference = [];
-
-            foreach ($resolutions as $citationId => $resolution) {
-                if ($resolution->referenceId === null) {
-                    continue;
-                }
-
-                $citationIdsByReference[$resolution->referenceId][] = $citationId;
-            }
-
-            foreach ($citationIdsByReference as $referenceId => $citationIds) {
-                ResearchedDocumentCitation::query()
-                    ->whereIn('id', $citationIds)
-                    ->update(['researched_document_reference_id' => $referenceId]);
-            }
-        });
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\CitationResolutionState;
 use App\Models\ResearchedDocument;
 use App\Models\ResearchedDocumentCitation;
 use App\Models\ResearchedDocumentReference;
@@ -25,6 +26,7 @@ class ResearchedDocumentCitationFactory extends Factory
         return [
             'researched_document_id' => ResearchedDocument::factory(),
             'researched_document_reference_id' => null,
+            'resolution_state' => CitationResolutionState::Unmatched->value,
             'citation_text' => '(Smith, 2020)',
             'citation_marker' => null,
             'context_before' => null,
@@ -44,6 +46,7 @@ class ResearchedDocumentCitationFactory extends Factory
         return $this->state(fn (): array => [
             'researched_document_id' => $reference->researched_document_id,
             'researched_document_reference_id' => $reference->getKey(),
+            'resolution_state' => CitationResolutionState::Paired->value,
         ]);
     }
 }

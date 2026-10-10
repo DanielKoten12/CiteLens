@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\CitationResolutionState;
 use App\Enums\CitationStatus;
 use App\Models\ReferenceFinding;
 use App\Services\Citation\CitationQueryService;
@@ -48,6 +49,12 @@ function citationStatusFixture(): array
             'text_start_offset' => 300,
             'text_end_offset' => 310,
         ])->getKey(),
+        'unresolved' => $tree->citation(null, [
+            'citation_text' => '(Kandidat, 2020)',
+            'resolution_state' => CitationResolutionState::Unresolved,
+            'text_start_offset' => 350,
+            'text_end_offset' => 360,
+        ])->getKey(),
     ];
 
     return ['tree' => $tree, 'citations' => $citations, 'reference' => $reference->getKey()];
@@ -86,6 +93,7 @@ it('orders citations by document position with nulls last', function () {
         $fixture['citations']['valid'],
         $fixture['citations']['pending'],
         $fixture['citations']['unreliable'],
+        $fixture['citations']['unresolved'],
         $fixture['citations']['hallucination'],
     ]);
 });

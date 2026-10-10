@@ -1,5 +1,8 @@
 <?php
 
+use App\Enums\CitationResolutionMethod;
+use App\Enums\CitationResolutionState;
+use App\Models\CitationResolutionCandidate;
 use App\Models\ReferenceFinding;
 use Tests\Support\DocumentTree;
 
@@ -27,7 +30,7 @@ it('lists citations with the derived status and reference filters', function () 
     $this->actingAs($this->user)->getJson($this->base)
         ->assertOk()
         ->assertJsonStructure([
-            'data' => [['id', 'citation_text', 'citation_marker', 'context_before', 'context_after', 'text_start_offset', 'text_end_offset', 'occurrence_index', 'status', 'reference']],
+            'data' => [['id', 'citation_text', 'citation_marker', 'context_before', 'context_after', 'text_start_offset', 'text_end_offset', 'occurrence_index', 'status', 'resolution_method', 'reference']],
             'meta' => ['current_page', 'per_page', 'total', 'last_page'],
         ])
         ->assertJsonPath('meta.total', 2)
@@ -75,8 +78,37 @@ it('returns the citation detail with locations', function () {
         ->assertJsonPath('data.id', $citation->getKey())
         ->assertJsonPath('data.status', 'hallucination')
         ->assertJsonPath('data.reference', null)
+        ->assertJsonPath('data.resolution.state', 'unmatched')
+        ->assertJsonPath('data.resolution.method', null)
+        ->assertJsonPath('data.candidates', [])
         ->assertJsonPath('data.locations.0.coordinate_system', 'pdf_points_top_left')
         ->assertJsonCount(2, 'data.locations');
+});
+
+it('returns the resolution detail and candidates for an unresolved citation', function () {
+    $reference = $this->tree->reference(['title' => 'Kandidat utama']);
+    $citation = $this->tree->citation(null, [
+        'citation_text' => '(Hartini)',
+        'resolution_state' => CitationResolutionState::Unresolved,
+        'resolution_method' => CitationResolutionMethod::Apa,
+        'resolution_confidence' => 0.88,
+    ]);
+
+    CitationResolutionCandidate::factory()->for($citation, 'citation')->for($reference, 'reference')->create([
+        'rank' => 1,
+        'confidence' => 0.88,
+        'method' => CitationResolutionMethod::Apa,
+    ]);
+
+    $this->actingAs($this->user)->getJson("/api/v1/citations/{$citation->getKey()}")
+        ->assertOk()
+        ->assertJsonPath('data.status', 'unresolved')
+        ->assertJsonPath('data.resolution.state', 'unresolved')
+        ->assertJsonPath('data.resolution.method', 'apa')
+        ->assertJsonPath('data.resolution.confidence', 0.88)
+        ->assertJsonPath('data.candidates.0.rank', 1)
+        ->assertJsonPath('data.candidates.0.reference.id', $reference->getKey())
+        ->assertJsonPath('data.candidates.0.reference.title', 'Kandidat utama');
 });
 
 it('propagates a finding change to every paired citation immediately', function () {

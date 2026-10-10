@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\CitationResolutionState;
+use App\Models\CitationResolutionCandidate;
 use App\Models\ReferenceFinding;
 use Tests\Support\DocumentTree;
 
@@ -198,4 +200,40 @@ it('never emits a valid reference or citation', function () {
 
     expect($types)->not->toContain('reference_valid')
         ->and($types)->not->toContain('citation_valid');
+});
+
+it('emits unresolved citations as medium severity', function () {
+    $tree = DocumentTree::create();
+    $reference = $tree->reference(['text_start_offset' => 100, 'text_end_offset' => 150]);
+    $citation = $tree->citation(null, [
+        'citation_text' => '(Hartini)',
+        'resolution_state' => CitationResolutionState::Unresolved,
+        'text_start_offset' => 200,
+        'text_end_offset' => 210,
+    ]);
+
+    CitationResolutionCandidate::factory()->for($citation, 'citation')->for($reference, 'reference')->create([
+        'rank' => 1,
+        'confidence' => 0.88,
+    ]);
+
+    $base = "/api/v1/documents/{$tree->document->getKey()}/findings";
+
+    $this->actingAs($tree->user)->getJson($base)
+        ->assertOk()
+        ->assertJsonPath('meta.total', 1)
+        ->assertJsonPath('data.0.id', "citation:{$citation->getKey()}")
+        ->assertJsonPath('data.0.type', 'citation_unresolved')
+        ->assertJsonPath('data.0.severity', 'medium')
+        ->assertJsonPath('data.0.message', 'Sitasi belum dapat ditautkan secara pasti ke referensi.')
+        ->assertJsonPath('data.0.reference_id', null)
+        ->assertJsonPath('data.0.citation_id', $citation->getKey());
+
+    $this->actingAs($tree->user)->getJson($base.'?type=citation_unresolved')
+        ->assertOk()
+        ->assertJsonPath('meta.total', 1);
+
+    $this->actingAs($tree->user)->getJson($base.'?severity=medium')
+        ->assertOk()
+        ->assertJsonPath('meta.total', 1);
 });

@@ -3,6 +3,7 @@
 namespace App\Data\Citation;
 
 use App\Data\BaseData;
+use App\Enums\CitationResolutionMethod;
 use App\Enums\CitationStatus;
 use App\Models\ResearchedDocumentCitation;
 use Spatie\LaravelData\Attributes\MapName;
@@ -28,6 +29,7 @@ final class CitationSummaryData extends BaseData
         public ?int $textEndOffset,
         public ?int $occurrenceIndex,
         public CitationStatus $status,
+        public ?CitationResolutionMethod $resolutionMethod = null,
         public ?CitationReferencePreviewData $reference = null,
     ) {}
 
@@ -43,6 +45,7 @@ final class CitationSummaryData extends BaseData
             textEndOffset: $citation->text_end_offset,
             occurrenceIndex: $citation->occurrence_index,
             status: $status,
+            resolutionMethod: $citation->resolution_method,
             reference: $citation->reference === null
                 ? null
                 : CitationReferencePreviewData::fromModel($citation->reference),

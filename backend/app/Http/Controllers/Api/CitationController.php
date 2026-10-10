@@ -67,7 +67,7 @@ final class CitationController extends Controller
     public function show(Request $request, string $citation): JsonResponse
     {
         $model = $this->finder->citation($request->user(), $citation);
-        $model->load(['reference.finding', 'locations']);
+        $model->load(['reference.finding', 'locations', 'candidates.reference']);
 
         return ApiResponse::single(CitationDetailData::forCitation($model, $this->statusFor($model)));
     }
@@ -98,7 +98,7 @@ final class CitationController extends Controller
     private function statusFor(ResearchedDocumentCitation $citation): CitationStatus
     {
         return $this->resolver->resolve(
-            $citation->researched_document_reference_id !== null,
+            $citation->resolution_state,
             $citation->reference?->finding?->status,
         );
     }

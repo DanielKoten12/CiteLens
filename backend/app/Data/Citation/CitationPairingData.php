@@ -3,6 +3,7 @@
 namespace App\Data\Citation;
 
 use App\Data\BaseData;
+use App\Enums\CitationResolutionMethod;
 use App\Enums\CitationStatus;
 use App\Models\ResearchedDocumentCitation;
 use Spatie\LaravelData\Attributes\MapName;
@@ -18,6 +19,7 @@ final class CitationPairingData extends BaseData
     public function __construct(
         public string $id,
         public CitationStatus $status,
+        public ?CitationResolutionMethod $resolutionMethod = null,
         public ?CitationReferencePreviewData $reference = null,
     ) {}
 
@@ -26,6 +28,7 @@ final class CitationPairingData extends BaseData
         return new self(
             id: $citation->getKey(),
             status: $status,
+            resolutionMethod: $citation->resolution_method,
             reference: $citation->reference === null
                 ? null
                 : CitationReferencePreviewData::fromModel($citation->reference),

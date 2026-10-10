@@ -36,6 +36,8 @@ final class FindingsFeedQuery
 
     private const string UNRELIABLE_MESSAGE = 'Sitasi merujuk pada referensi yang tidak berhasil diverifikasi (invalid/not_found).';
 
+    private const string UNRESOLVED_MESSAGE = 'Sitasi belum dapat ditautkan secara pasti ke referensi.';
+
     private const string HALLUCINATION_MESSAGE = 'Sitasi tidak memiliki pasangan referensi (hallucination).';
 
     public function __construct(
@@ -101,30 +103,38 @@ final class FindingsFeedQuery
 
     private function citationSide(ResearchedDocument $document): Builder
     {
-        $derived = $this->resolver->sqlExpression('c.researched_document_reference_id', 'f.status');
+        $derived = $this->resolver->sqlExpression('c.resolution_state', 'f.status');
         $hallucination = CitationStatus::Hallucination->value;
+        $unresolved = CitationStatus::Unresolved->value;
         $unreliable = CitationStatus::Unreliable->value;
 
         $typeCase = "CASE WHEN ({$derived}) = '{$hallucination}'"
             ." THEN '".FindingType::CitationHallucination->value."'"
+            ." WHEN ({$derived}) = '{$unresolved}'"
+            ." THEN '".FindingType::CitationUnresolved->value."'"
             ." ELSE '".FindingType::CitationUnreliable->value."' END";
 
         // `unreliable` inherits the paired finding's severity (always `high`
-        // under the canonical mapping, but kept generic);
-        // `hallucination` is always high.
+        // under the canonical mapping, but kept generic); `unresolved` is the
+        // medium-confidence bucket and `hallucination` is always high.
         $severityCase = "CASE WHEN ({$derived}) = '{$hallucination}'"
             ." THEN '".FindingSeverity::High->value."'"
-            .' ELSE ('.$this->severityCase($this->problemStatuses()).') END';
+            ." WHEN ({$derived}) = '{$unresolved}'"
+            ." THEN '".FindingSeverity::Medium->value."'"
+            ." WHEN f.status IN ('".ReferenceFindingStatus::Invalid->value."','".ReferenceFindingStatus::NotFound->value."') THEN '".FindingSeverity::High->value."'"
+            ." ELSE '".FindingSeverity::Info->value."' END";
 
         $messageCase = "CASE WHEN ({$derived}) = '{$hallucination}'"
             ." THEN '".self::HALLUCINATION_MESSAGE."'"
+            ." WHEN ({$derived}) = '{$unresolved}'"
+            ." THEN '".self::UNRESOLVED_MESSAGE."'"
             ." ELSE '".self::UNRELIABLE_MESSAGE."' END";
 
         return DB::table('researched_document_citations as c')
             ->leftJoin('researched_document_references as r', 'r.id', '=', 'c.researched_document_reference_id')
             ->leftJoin('reference_findings as f', 'f.researched_document_reference_id', '=', 'r.id')
             ->where('c.researched_document_id', $document->getKey())
-            ->whereRaw("({$derived}) IN ('{$unreliable}', '{$hallucination}')")
+            ->whereRaw("({$derived}) IN ('{$unreliable}', '{$unresolved}', '{$hallucination}')")
             ->select([
                 DB::raw("'citation' as source"),
                 'c.id as entity_id',

@@ -4,6 +4,7 @@ namespace App\Data\Citation;
 
 use App\Data\BaseData;
 use App\Data\Location\LocationPreviewData;
+use App\Enums\CitationResolutionMethod;
 use App\Enums\CitationStatus;
 use App\Models\ResearchedDocumentCitation;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
@@ -20,6 +21,10 @@ final class CitationDetailData extends BaseData
     /**
      * @param  list<LocationPreviewData>  $locations
      */
+    /**
+     * @param  list<LocationPreviewData>  $locations
+     * @param  list<CitationResolutionCandidatePreviewData>  $candidates
+     */
     public function __construct(
         public string $id,
         public string $citationText,
@@ -30,13 +35,21 @@ final class CitationDetailData extends BaseData
         public ?int $textEndOffset,
         public ?int $occurrenceIndex,
         public CitationStatus $status,
+        public ?CitationResolutionMethod $resolutionMethod = null,
         public ?CitationReferencePreviewData $reference = null,
+        public ?CitationResolutionData $resolution = null,
         #[DataCollectionOf(LocationPreviewData::class)]
         public array $locations = [],
+        #[DataCollectionOf(CitationResolutionCandidatePreviewData::class)]
+        public array $candidates = [],
     ) {}
 
     public static function forCitation(ResearchedDocumentCitation $citation, CitationStatus $status): self
     {
+        $candidates = $citation->relationLoaded('candidates')
+            ? $citation->candidates
+            : $citation->candidates()->with('reference')->get();
+
         return new self(
             id: $citation->getKey(),
             citationText: $citation->citation_text,
@@ -47,11 +60,17 @@ final class CitationDetailData extends BaseData
             textEndOffset: $citation->text_end_offset,
             occurrenceIndex: $citation->occurrence_index,
             status: $status,
+            resolutionMethod: $citation->resolution_method,
             reference: $citation->reference === null
                 ? null
                 : CitationReferencePreviewData::fromModel($citation->reference),
+            resolution: CitationResolutionData::fromModel($citation),
             locations: $citation->locations
                 ->map(static fn ($location): LocationPreviewData => LocationPreviewData::fromModel($location))
+                ->values()
+                ->all(),
+            candidates: $candidates
+                ->map(static fn ($candidate): CitationResolutionCandidatePreviewData => CitationResolutionCandidatePreviewData::fromModel($candidate))
                 ->values()
                 ->all(),
         );
