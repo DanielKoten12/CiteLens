@@ -166,6 +166,58 @@ it('does not disclose whether foreign verification resources exist', function ()
     }
 });
 
+it('returns 404 for every report endpoint accessed by another user', function () {
+    $document = $this->document->getKey();
+    $report = $this->report->getKey();
+
+    $this->actingAs($this->other)->getJson("/api/v1/documents/{$document}/reports")
+        ->assertStatus(404)
+        ->assertJsonPath('error.code', 'NOT_FOUND')
+        ->assertJsonPath('error.message', 'Dokumen tidak ditemukan.');
+
+    $this->actingAs($this->other)->postJson("/api/v1/documents/{$document}/reports")
+        ->assertStatus(404)
+        ->assertJsonPath('error.code', 'NOT_FOUND')
+        ->assertJsonPath('error.message', 'Dokumen tidak ditemukan.');
+
+    $this->actingAs($this->other)->getJson("/api/v1/reports/{$report}")
+        ->assertStatus(404)
+        ->assertJsonPath('error.code', 'NOT_FOUND')
+        ->assertJsonPath('error.message', 'Laporan tidak ditemukan.');
+
+    $this->actingAs($this->other)->deleteJson("/api/v1/reports/{$report}")
+        ->assertStatus(404)
+        ->assertJsonPath('error.code', 'NOT_FOUND')
+        ->assertJsonPath('error.message', 'Laporan tidak ditemukan.');
+
+    // A foreign delete must never touch the report row.
+    expect(GeneratedDocumentReport::query()->whereKey($report)->exists())->toBeTrue();
+});
+
+it('does not disclose whether foreign report resources exist', function () {
+    $document = $this->document->getKey();
+    $missingDocument = '/api/v1/documents/'.fake()->uuid();
+
+    $pairs = [
+        [
+            "/api/v1/documents/{$document}/reports",
+            "{$missingDocument}/reports",
+        ],
+        [
+            "/api/v1/reports/{$this->report->getKey()}",
+            '/api/v1/reports/'.fake()->uuid(),
+        ],
+    ];
+
+    foreach ($pairs as [$foreign, $missing]) {
+        expect($this->actingAs($this->other)->getJson($foreign)->json())
+            ->toBe($this->actingAs($this->other)->getJson($missing)->json());
+    }
+
+    expect($this->actingAs($this->other)->postJson("/api/v1/documents/{$document}/reports")->json())
+        ->toBe($this->actingAs($this->other)->postJson("{$missingDocument}/reports")->json());
+});
+
 function captureException(callable $callback): Throwable
 {
     try {
