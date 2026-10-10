@@ -62,4 +62,14 @@ return [
         'embedding_batch_size' => (int) env('INFERENCE_EMBEDDING_BATCH_SIZE', 32),
     ],
 
+    /*
+    | Gotenberg HTML→PDF rendering (`docs/API_SPEC.md` §8). Internal service on the
+    | private network, exactly like inference: never exposed, never called by the browser.
+    */
+    'gotenberg' => [
+        'base_url' => env('GOTENBERG_URL', 'http://gotenberg:3000'),
+        'timeout' => (int) env('GOTENBERG_TIMEOUT', 60),
+        'connect_timeout' => (int) env('GOTENBERG_CONNECT_TIMEOUT', 5),
+    ],
+
 ];

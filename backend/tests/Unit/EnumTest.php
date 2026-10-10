@@ -48,6 +48,22 @@ it('pins the canonical report status values', function () {
         ->toBe(['pending', 'processing', 'completed', 'failed']);
 });
 
+it('labels every reference finding status', function () {
+    expect(ReferenceFindingStatus::Pending->label())->toBe('Menunggu penilaian')
+        ->and(ReferenceFindingStatus::Valid->label())->toBe('Valid')
+        ->and(ReferenceFindingStatus::Suspicious->label())->toBe('Perlu ditinjau')
+        ->and(ReferenceFindingStatus::Invalid->label())->toBe('Tidak valid')
+        ->and(ReferenceFindingStatus::NotFound->label())->toBe('Tidak ditemukan');
+});
+
+it('labels every citation status', function () {
+    expect(CitationStatus::Valid->label())->toBe('Valid')
+        ->and(CitationStatus::Unreliable->label())->toBe('Tidak dapat diandalkan')
+        ->and(CitationStatus::Pending->label())->toBe('Menunggu')
+        ->and(CitationStatus::Unresolved->label())->toBe('Belum tertaut')
+        ->and(CitationStatus::Hallucination->label())->toBe('Tidak ada referensi');
+});
+
 it('pins the canonical finding type values', function () {
     expect(array_column(FindingType::cases(), 'value'))
         ->toBe([

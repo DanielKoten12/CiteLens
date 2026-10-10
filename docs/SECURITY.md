@@ -175,21 +175,27 @@ development easier.
 
 - `inference/` (FastAPI + GROBID + SBERT) is an **internal inference server**, reachable only by
   Laravel queue workers on a private network.
-- It must not be exposed on the public internet and must not be called from the browser.
+- **Gotenberg** (HTML→PDF rendering for reports) is the same kind of internal service: private
+  network only, called exclusively by the report job through the `ReportRenderer` seam. The report
+  HTML is generated server-side from a Blade template (escaped extracted text only) and is never
+  rendered in a browser or returned to the client; only the finished PDF bytes are stored.
+- Neither service may be exposed on the public internet or called from the browser.
 - No public, frontend-facing FastAPI endpoints may be added unless `docs/API_SPEC.md` is
   deliberately changed.
 - Inference endpoints accept only the documented internal shapes (`/health`, `/v1/extract`,
   `/v1/embeddings`) and reject other input.
-- GROBID/SBERT availability failures degrade to `503 INFERENCE_UNAVAILABLE`; they must not crash
-  the API or leak internal errors.
+- GROBID/SBERT availability failures degrade to `503 INFERENCE_UNAVAILABLE`; report rendering
+  failures mark the report `failed` with a safe `error` (no raw exception). Neither may crash the
+  API or leak internal errors.
 
 ---
 
 ## 8. Data protection and lifecycle
 
 - **In transit:** HTTPS for all public traffic; private network for inference.
-- **At rest:** uploaded documents and reports live on a private disk; access via time-limited
-  signed URLs, not public paths.
+- **At rest:** uploaded documents and reports live on private disks (documents on
+  `filesystems.default`, report PDFs on `reports.disk`); every `files` row records the disk it lives
+  on and access is via time-limited signed/temporary URLs, never a public path.
 - **Deletion:** hard delete with cascade (documents → references, citations, locations, findings,
   candidates, files, reports). Users may delete one document or purge their whole history.
 - **Data minimisation:** store only what the schema requires; do not persist raw page text beyond

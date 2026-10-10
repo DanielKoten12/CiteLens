@@ -40,6 +40,39 @@ enum CitationStatus: string
     }
 
     /**
+     * Indonesian label for human-facing surfaces (report template).
+     *
+     * The API keeps the machine value; only the Blade view renders labels (D-06-08).
+     */
+    public function label(): string
+    {
+        return match ($this) {
+            self::Valid => 'Valid',
+            self::Unreliable => 'Tidak dapat diandalkan',
+            self::Pending => 'Menunggu',
+            self::Unresolved => 'Belum tertaut',
+            self::Hallucination => 'Tidak ada referensi',
+        };
+    }
+
+    /**
+     * The human-facing explanation for an issue status, or null when the status
+     * is not an issue.
+     *
+     * Single source for the report template and the findings feed (`D-06-05`);
+     * the strings are part of the feed contract and must stay stable.
+     */
+    public function message(): ?string
+    {
+        return match ($this) {
+            self::Unreliable => 'Sitasi merujuk pada referensi yang tidak berhasil diverifikasi (invalid/not_found).',
+            self::Unresolved => 'Sitasi belum dapat ditautkan secara pasti ke referensi.',
+            self::Hallucination => 'Sitasi tidak memiliki pasangan referensi (hallucination).',
+            self::Valid, self::Pending => null,
+        };
+    }
+
+    /**
      * The findings-feed type for this status, or null when the status is not a finding.
      */
     public function toFindingType(): ?FindingType

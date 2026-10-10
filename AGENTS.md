@@ -492,8 +492,17 @@ Be aware of what is scaffold vs. contract before promising behavior:
   **Sanctum is installed** and the `/auth/*` endpoints (register, login, logout, me) are
   implemented (`Http/Controllers/Api/AuthController`, `Services/AuthService`, `Http/Requests/Auth/*`,
   `Data/Auth/AuthenticationData` + `Data/User/UserDetailData`, `Data/Error/ErrorResponseData`,
-  `Exceptions/InvalidCredentialsException`); report generation (Phase 06) and the FastAPI inference
-  implementation do not exist yet. Adding them is expected work — follow the contracts while doing
+  `Exceptions/InvalidCredentialsException`). Phase 06 adds report generation: the `files.disk`
+  column + report `file_id` FK migrations, `config/reports.php` + `services.gotenberg`, the
+  `ReportRenderer` seam with `GotenbergReportRenderer` (production dependency
+  `gotenberg/gotenberg-php ^2.25`, which pulls in `php-http/discovery`) over an injected Guzzle
+  PSR-18 client, `Services/Files/PrivateFileUrlResolver`, the disk-aware `DocumentFileManager`
+  (`storePdf`/`detachForReport`), the report read model/template (`ReportDataBuilder`,
+  `ReportPayload`, `ReportTemplateRenderer`, `resources/views/reports/document-report.blade.php`),
+  `GenerateDocumentReportJob` with `ReportStateService`/`ReportFailureHandler`/
+  `ReportDeletionService`, and the `/reports` endpoints (`ReportController`,
+  `ReportGenerationService`, `ReportQueryService`, `Data/Report/*` DTOs). The FastAPI inference
+  implementation does not exist yet. Adding it is expected work — follow the contracts while doing
   it. See `docs/ARCHITECTURE.md` §13 for the full status.
 - **`frontend/`** is a working Vue 3 + Vite 6 + TypeScript + Tailwind 4 + Pinia + vue-router SPA
   with shadcn-vue (`reka-ui`) components. **`src/stores/auth.ts` is mocked** (setTimeout, no API

@@ -57,3 +57,14 @@ it('maps citation statuses to finding severities', function () {
         ->and(CitationStatus::Valid->toSeverity(ReferenceFindingStatus::Valid))->toBeNull()
         ->and(CitationStatus::Pending->toSeverity(null))->toBeNull();
 });
+
+it('returns the human-facing message only for issue statuses', function () {
+    expect(CitationStatus::Valid->message())->toBeNull()
+        ->and(CitationStatus::Pending->message())->toBeNull()
+        ->and(CitationStatus::Unreliable->message())
+        ->toBe('Sitasi merujuk pada referensi yang tidak berhasil diverifikasi (invalid/not_found).')
+        ->and(CitationStatus::Unresolved->message())
+        ->toBe('Sitasi belum dapat ditautkan secara pasti ke referensi.')
+        ->and(CitationStatus::Hallucination->message())
+        ->toBe('Sitasi tidak memiliki pasangan referensi (hallucination).');
+});

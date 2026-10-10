@@ -66,6 +66,7 @@ Hard rules:
 | Database | MySQL/Postgres (target); SQLite for local dev and tests |
 | Queue | Laravel queue (`QUEUE_CONNECTION=database` by default; `sync` in tests) |
 | Inference | Python 3.14, FastAPI (`fastapi[standard]`), uv-managed; GROBID + SBERT |
+| Reports | `gotenberg/gotenberg-php` 2.x (HTML→PDF) over a Guzzle PSR-18 client; Blade template rendered to HTML in Laravel |
 | External | Crossref REST API |
 
 ---
@@ -199,8 +200,30 @@ pending ──▶ processing ──▶ completed
 
 - Terminal `completed` includes documents that have findings.
 - `POST /documents/{document}/retry` is valid **only** from `failed`; otherwise `409 CONFLICT`.
-- Reports follow `pending → processing → completed | failed`, one report per document, generated
-  only for completed documents.
+- Reports follow `pending → processing → completed | failed`, are generated **on demand for
+  completed documents only** and stored as PDF; a document may have multiple reports and a failed
+  report is regenerated with another `POST` (no queue-level retry). See
+  `docs/API_SPEC.md` §8.
+
+### 8.1 Report generation pipeline
+
+Report generation is asynchronous and orchestrated by `GenerateDocumentReportJob` (payload: report
+id, `tries = 1`, `WithoutOverlapping` per report):
+
+```text
+pending ──▶ processing ──▶ completed
+                    └────▶ failed
+
+ReportDataBuilder → ReportTemplateRenderer (Blade → HTML) → ReportRenderer (Gotenberg: HTML → PDF)
+        → DocumentFileManager::storePdf (reports.disk) → ReportStateService::markCompleted
+```
+
+- `ReportStateService` is the only writer of `status`/`error`/`file_id`/`generated_at`; the job and
+  its `failed()` hook call it.
+- `ReportRenderer` is the internal seam; the production implementation is
+  `GotenbergReportRenderer` calling the internal Gotenberg service (private network only).
+- `files.disk` records the disk each stored object lives on, so report PDFs on `reports.disk` and
+  document uploads on `filesystems.default` are deleted/URL-resolved per row.
 
 Tests configure `QUEUE_CONNECTION=sync` (see `backend/phpunit.xml`); production uses the database
 queue. Code must not assume either.
@@ -232,6 +255,9 @@ Key rules:
 - **Locations** store 1-based page numbers and bounding boxes in `pdf_points_top_left`; do not
   change coordinate semantics casually.
 - **Findings** carry the verdict + audit fields; **candidates** carry the ranked alternatives.
+- **Files** are polymorphic and record the private `disk` they live on (`files.disk`); every URL and
+  deletion resolves the disk from the row (D-06-02). Reports link their stored PDF through
+  `generated_document_reports.file_id` (FK, `nullOnDelete`).
 
 ---
 
@@ -329,16 +355,26 @@ Verified against the repository:
   provenance (`resolution_state`/`resolution_method`/`resolution_confidence`/
   `extraction_reference_index`) and `citation_resolution_candidates` are persisted, `unresolved` is a
   fifth derived status (severity `medium`), and `citations:evaluate` provides a seed evaluation
-  harness. **Missing:** report generation (Phase 06) and the inference service implementation.
+  harness. Phase 06 adds report generation: the `files.disk` column + report `file_id` FK
+  migrations, `config/reports.php` + `services.gotenberg`, the `ReportRenderer` seam with
+  `GotenbergReportRenderer` (official `gotenberg/gotenberg-php` client over an injected Guzzle
+  PSR-18 transport), `PrivateFileUrlResolver`, the disk-aware `DocumentFileManager`
+  (`storePdf`/`detachForReport`), the report read model/template (`ReportDataBuilder`,
+  `ReportPayload`, `ReportTemplateRenderer`, `reports/document-report.blade.php`),
+  `GenerateDocumentReportJob` with `ReportStateService`/`ReportFailureHandler`/
+  `ReportDeletionService`, and the `/reports` endpoints (`ReportController`,
+  `ReportGenerationService`, `ReportQueryService`, report DTOs). **Missing:** the inference service
+  implementation (FastAPI).
 - **Frontend** is a working Vue 3 + Vite SPA with mocked auth and prototype types; the API is not
   wired yet.
 - **Inference** is a FastAPI hello-world stub; `/health`, `/v1/extract`, `/v1/embeddings` are
   specified but unimplemented.
 
-Everything described as "the pipeline", "scoring" or "reports" above is the **target** design;
-the document lifecycle endpoints, the upload→job dispatch seam, the extraction/persistence half
-(Phase 03), Crossref verification/scoring (Phase 04) and citation resolution + the verification
-endpoints (Phase 05) exist today, while report generation does not.
+Everything described as "the pipeline" or "scoring" above is the **target** design; the document
+lifecycle endpoints, the upload→job dispatch seam, the extraction/persistence half (Phase 03),
+Crossref verification/scoring (Phase 04), citation resolution + the verification endpoints
+(Phase 05) and report generation + the `/reports` endpoints (Phase 06) exist today, while the
+FastAPI inference service does not.
 
 ---
 
