@@ -7,6 +7,7 @@ use App\Models\ResearchedDocument;
 use App\Models\ResearchedDocumentReference;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 /**
  * Read queries for the document bibliography (`GET /documents/{document}/references`,
@@ -31,11 +32,34 @@ final class ReferenceQueryService
             ->with('finding')
             ->when($status !== null, fn (Builder $query): Builder => $this->filterStatus($query, $status))
             ->when($hasDoi !== null, fn (Builder $query): Builder => $this->filterDoi($query, $hasDoi))
-            ->orderByRaw('text_start_offset IS NULL')
-            ->orderBy('text_start_offset')
-            ->orderBy('id')
+            ->tap(fn (Builder $query): Builder => $this->ordered($query))
             ->paginate($perPage)
             ->withQueryString();
+    }
+
+    /**
+     * Every reference of the document in reading order (report builder; no pagination).
+     *
+     * @return Collection<int, ResearchedDocumentReference>
+     */
+    public function all(ResearchedDocument $document): Collection
+    {
+        return $this->ordered($document->references()->getQuery()->with('finding'))->get();
+    }
+
+    /**
+     * Document-position ordering (`text_start_offset` ASC, nulls last, then `id`)
+     * shared by the paginated list and the unpaginated report read (D-05-03).
+     *
+     * @param  Builder<ResearchedDocumentReference>  $query
+     * @return Builder<ResearchedDocumentReference>
+     */
+    private function ordered(Builder $query): Builder
+    {
+        return $query
+            ->orderByRaw('text_start_offset IS NULL')
+            ->orderBy('text_start_offset')
+            ->orderBy('id');
     }
 
     /**

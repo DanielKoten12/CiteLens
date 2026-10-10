@@ -34,12 +34,6 @@ final class FindingsFeedQuery
      */
     private const int MAX_SORT_OFFSET = 2147483647;
 
-    private const string UNRELIABLE_MESSAGE = 'Sitasi merujuk pada referensi yang tidak berhasil diverifikasi (invalid/not_found).';
-
-    private const string UNRESOLVED_MESSAGE = 'Sitasi belum dapat ditautkan secara pasti ke referensi.';
-
-    private const string HALLUCINATION_MESSAGE = 'Sitasi tidak memiliki pasangan referensi (hallucination).';
-
     public function __construct(
         private readonly CitationStatusResolver $resolver,
     ) {}
@@ -125,10 +119,10 @@ final class FindingsFeedQuery
             ." ELSE '".FindingSeverity::Info->value."' END";
 
         $messageCase = "CASE WHEN ({$derived}) = '{$hallucination}'"
-            ." THEN '".self::HALLUCINATION_MESSAGE."'"
+            ." THEN '".CitationStatus::Hallucination->message()."'"
             ." WHEN ({$derived}) = '{$unresolved}'"
-            ." THEN '".self::UNRESOLVED_MESSAGE."'"
-            ." ELSE '".self::UNRELIABLE_MESSAGE."' END";
+            ." THEN '".CitationStatus::Unresolved->message()."'"
+            ." ELSE '".CitationStatus::Unreliable->message()."' END";
 
         return DB::table('researched_document_citations as c')
             ->leftJoin('researched_document_references as r', 'r.id', '=', 'c.researched_document_reference_id')
