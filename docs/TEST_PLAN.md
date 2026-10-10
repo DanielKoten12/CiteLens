@@ -158,6 +158,19 @@ receive `404 NOT_FOUND` (never `403`).
 | T-CIT-07 | Derived status: paired + finding `invalid`/`not_found` | `unreliable` |
 | T-CIT-08 | Derived status: paired + finding `pending` | `pending` |
 | T-CIT-09 | Derived status: unpaired | `hallucination` |
+| T-CIT-10 | Ambiguous APA match (winner margin below threshold) | `unresolved`, candidates persisted, severity `medium` |
+| T-CIT-11 | No plausible candidate | `hallucination` (high), no candidates |
+| T-CIT-12 | Valid GROBID `reference_index` hint | paired with `resolution_method=extraction_hint`, hint persisted |
+| T-CIT-13 | Hint contradicts the parsed marker | parser result wins; hint retained as candidate |
+| T-CIT-14 | Hint index out of range | ignored; parser result used |
+| T-CIT-15 | Initials disambiguation (`Koten, D.` vs `Koten, A.`) | correct reference chosen |
+| T-CIT-16 | Soft year (gap within `year_window`) | paired/unresolved per score, never hard-rejected |
+| T-CIT-17 | Multi-marker `(A, 2020; B, 2021)` | primary committed, second entry a candidate |
+| T-CIT-18 | IEEE `[3-5]` | primary = ordinal 3, 4/5 candidates |
+| T-CIT-19 | Null offsets | IEEE order follows payload order (ordered UUIDs) |
+| T-CIT-20 | Evidence consolidation (`(Hartono, 2023)` + `(Hartini)`) | both paired |
+| T-CIT-21 | Manual pair/unpair provenance | `resolution_method=manual`, state `paired`/`unmatched` |
+| T-CIT-22 | All five derived statuses agree (PHP/SQL/summary) | exact agreement |
 
 ### 5.6 Findings feed (`T-FIND`)
 
@@ -167,6 +180,7 @@ receive `404 NOT_FOUND` (never `403`).
 | T-FIND-02 | Severity mapping | `not_found`/`invalid`/`hallucination` → high; `suspicious` → medium; `pending` → info |
 | T-FIND-03 | `type`/`severity` filters | 422 on invalid, filtered on valid |
 | T-FIND-04 | Locations present for highlight rendering | page + bbox fields |
+| T-FIND-05 | `citation_unresolved` items | `medium` severity, canonical message, `reference_id` null |
 
 ### 5.7 Reports (`T-REP`)
 

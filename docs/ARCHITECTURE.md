@@ -314,18 +314,31 @@ Verified against the repository:
   `VerdictDecider`), the `crossref_validation`/`embedding`/`scoring` steps
   (`ValidateReferencesStep`, `EmbedReferencesStep`, `ScoreReferencesStep`), the transient
   `ReferenceVerificationBatch`/`EmbeddingIndex` context artifacts and the single automated writer
-  (`Services/ReferenceFinding/ReferenceFindingWriter`). **Missing:** citation resolution (Phase 05),
-  the `/references` / `/citations` / `/findings` endpoints, report generation, and the inference
-  service implementation.
+  (`Services/ReferenceFinding/ReferenceFindingWriter`). Phase 05 adds citation resolution
+  (`Services/Citations/*`: `CitationMarkerParser`, `CitationResolver`, `CitationMatchConfig`,
+  `CitationReference`/`CitationResolution` value objects, the `ResolveCitationsStep`), the
+  verification read model (`ReferenceQueryService`, `CitationQueryService`, the reference/citation/
+  finding DTOs, a shared `LocationPreviewData`), the manual review writers
+  (`ReferenceFindingReviewService`, `CitationPairingService`) and the `/references` /
+  `/citations` / `/findings` endpoints (`ReferenceController`, `CitationController`,
+  `FindingsController`; the derived feed in `Services/Findings/{FindingsFeedQuery,FindingsFeedComposer}`).
+  Phase 05.1 hardens citation resolution: `CitationMarkerParser` retains every APA pair/ordinal,
+  `AuthorMatcher::names()` adds initials, `CitationCandidateScorer`/`CitationDecisionPolicy`/
+  `CitationBatchResolver` implement soft-year scoring, ambiguity detection and cross-citation
+  evidence consolidation, the GROBID `reference_index` is consumed as a validated prior, resolution
+  provenance (`resolution_state`/`resolution_method`/`resolution_confidence`/
+  `extraction_reference_index`) and `citation_resolution_candidates` are persisted, `unresolved` is a
+  fifth derived status (severity `medium`), and `citations:evaluate` provides a seed evaluation
+  harness. **Missing:** report generation (Phase 06) and the inference service implementation.
 - **Frontend** is a working Vue 3 + Vite SPA with mocked auth and prototype types; the API is not
   wired yet.
 - **Inference** is a FastAPI hello-world stub; `/health`, `/v1/extract`, `/v1/embeddings` are
   specified but unimplemented.
 
 Everything described as "the pipeline", "scoring" or "reports" above is the **target** design;
-the document lifecycle endpoints, the upload→job dispatch seam and the extraction/persistence half
-of the pipeline (Phase 03) exist today, while Crossref verification, citation resolution and report
-generation do not.
+the document lifecycle endpoints, the upload→job dispatch seam, the extraction/persistence half
+(Phase 03), Crossref verification/scoring (Phase 04) and citation resolution + the verification
+endpoints (Phase 05) exist today, while report generation does not.
 
 ---
 

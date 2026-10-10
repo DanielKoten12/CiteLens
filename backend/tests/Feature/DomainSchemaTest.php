@@ -72,6 +72,7 @@ it('creates every canonical domain table', function () {
         'researched_document_reference_locations',
         'researched_document_citations',
         'researched_document_citation_locations',
+        'citation_resolution_candidates',
         'reference_findings',
         'reference_finding_candidates',
         'generated_document_reports',
@@ -141,4 +142,37 @@ it('nulls the selected candidate when its candidate row is deleted', function ()
     $candidate->delete();
 
     expect($finding->fresh()->selected_candidate_id)->toBeNull();
+});
+
+it('stores citation resolution provenance with an unmatched default', function () {
+    $tree = createDocumentTree();
+
+    $citation = DB::table('researched_document_citations')->where('id', $tree['citation'])->first();
+
+    expect($citation->resolution_state)->toBe('unmatched')
+        ->and($citation->resolution_method)->toBeNull()
+        ->and($citation->resolution_confidence)->toBeNull()
+        ->and($citation->extraction_reference_index)->toBeNull()
+        ->and(Schema::hasColumn('citation_resolution_candidates', 'match_reason'))->toBeTrue();
+});
+
+it('cascades citation resolution candidates when a citation is deleted', function () {
+    $tree = createDocumentTree();
+
+    DB::table('citation_resolution_candidates')->insert([
+        'id' => (string) Str::uuid(),
+        'citation_id' => $tree['citation'],
+        'researched_document_reference_id' => $tree['reference'],
+        'rank' => 1,
+        'confidence' => 0.5,
+        'method' => 'apa',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    expect(DB::table('citation_resolution_candidates')->count())->toBe(1);
+
+    DB::table('researched_documents')->where('id', $tree['document'])->delete();
+
+    expect(DB::table('citation_resolution_candidates')->count())->toBe(0);
 });

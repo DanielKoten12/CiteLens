@@ -153,3 +153,22 @@ it('clears the extraction from the context after persisting', function () {
     expect($context->hasExtraction())->toBeFalse()
         ->and(fn () => $context->takeExtraction())->toThrow(LogicException::class);
 });
+
+it('captures the extraction reference index hint on the context', function () {
+    $tree = DocumentTree::create();
+    $context = contextWith(extractionFixture());
+
+    $this->step->handle($tree->document, $context);
+
+    $references = $tree->document->references()->orderByRaw('text_start_offset IS NULL')->orderBy('text_start_offset')->get();
+    $citations = $tree->document->citations()->get()->keyBy('citation_text');
+    $hints = $context->extractionHints();
+
+    expect($context->hasExtractionHints())->toBeTrue()
+        ->and($hints->referenceIdForIndex(0))->toBe($references[0]->getKey())
+        ->and($hints->referenceIdForIndex(1))->toBe($references[1]->getKey())
+        ->and($hints->referenceIdForIndex(99))->toBeNull()
+        ->and($hints->hintForCitation($citations['(LeCun et al., 2015)']->getKey()))->toBe(0)
+        ->and($hints->hintForCitation($citations['(Koten, 2023)']->getKey()))->toBe(1)
+        ->and($hints->hintForCitation($citations['(Tanpa rujukan, 2022)']->getKey()))->toBeNull();
+});

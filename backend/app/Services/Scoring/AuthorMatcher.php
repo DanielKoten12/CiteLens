@@ -83,14 +83,31 @@ final class AuthorMatcher
     /**
      * Parse a raw author string into surnames.
      *
-     * Handles `LeCun, Y., Bengio, Y., & Hinton, G.` (surname-first with initials)
-     * and `Yann LeCun` (given-first). A comma inside a single author (`LeCun, Y.`)
-     * is distinguished from an author separator by pairing comma tokens
-     * (surname, given, surname, given, …).
+     * Kept for reference/candidate scoring; delegates to {@see self::names()} so
+     * there is exactly one author parser. Output is unchanged from the original
+     * implementation (regression-tested).
      *
      * @return list<string>
      */
     public function surnames(?string $authors): array
+    {
+        return array_values(array_map(
+            static fn (AuthorName $name): string => $name->surname,
+            $this->names($authors),
+        ));
+    }
+
+    /**
+     * Parse a raw author string into structured names (surname + initials).
+     *
+     * Handles `LeCun, Y., Bengio, Y., & Hinton, G.` (surname-first with initials),
+     * `Yann LeCun` (given-first) and `LeCun Y.` (surname + trailing initials).
+     * A comma inside a single author (`LeCun, Y.`) is distinguished from an
+     * author separator by pairing comma tokens (surname, given, surname, given, …).
+     *
+     * @return list<AuthorName>
+     */
+    public function names(?string $authors): array
     {
         if ($authors === null) {
             return [];
@@ -109,7 +126,7 @@ final class AuthorMatcher
             return [];
         }
 
-        $surnames = [];
+        $names = [];
         $chunks = preg_split('/\s*(?:&|;|\band\b|\bdkk\.?)\s*/iu', $authors) ?: [];
 
         foreach ($chunks as $chunk) {
@@ -123,17 +140,61 @@ final class AuthorMatcher
             }
 
             if (count($tokens) === 1) {
-                $surnames[] = $this->surnameFromSingleToken($tokens[0]);
+                $name = $this->nameFromSingleToken($tokens[0]);
+
+                if ($name !== null) {
+                    $names[] = $name;
+                }
 
                 continue;
             }
 
             for ($i = 0; $i < count($tokens); $i += 2) {
-                $surnames[] = $this->surnameFromSingleToken($tokens[$i]);
+                $surname = $this->surnameFromSingleToken($tokens[$i]);
+
+                if ($surname === '') {
+                    continue;
+                }
+
+                $given = $tokens[$i + 1] ?? null;
+                $names[] = new AuthorName($surname, $given === null ? null : $this->initialsFrom($given));
             }
         }
 
-        return array_values(array_filter($surnames, static fn (string $surname): bool => $surname !== ''));
+        return $names;
+    }
+
+    /**
+     * A chunk with no comma is either `Family`, `Given Family` or
+     * `Family Initials`; the last word is the surname unless it looks like an
+     * initial (`LeCun Y`). Initials are captured from the given-name side.
+     */
+    private function nameFromSingleToken(string $token): ?AuthorName
+    {
+        $words = array_values(array_filter(
+            preg_split('/\s+/u', $token) ?: [],
+            static fn (string $word): bool => $word !== '',
+        ));
+
+        if ($words === []) {
+            return null;
+        }
+
+        if (count($words) === 1) {
+            return new AuthorName($words[0]);
+        }
+
+        $last = end($words);
+
+        if (! is_string($last) || $last === '') {
+            return new AuthorName($token);
+        }
+
+        if ($this->looksLikeInitial($last)) {
+            return new AuthorName($words[0], $this->initialsFromWords(array_slice($words, 1)));
+        }
+
+        return new AuthorName($last, $this->initialsFromWords(array_slice($words, 0, -1)));
     }
 
     /**
@@ -159,6 +220,32 @@ final class AuthorMatcher
         }
 
         return $last;
+    }
+
+    /**
+     * First letter of every given-name token, uppercased (`D. B.` → `DB`).
+     */
+    private function initialsFrom(string $givenNames): ?string
+    {
+        $tokens = preg_split('/[\s.]+/u', $givenNames) ?: [];
+
+        return $this->initialsFromWords($tokens);
+    }
+
+    /**
+     * @param  list<string>  $words
+     */
+    private function initialsFromWords(array $words): ?string
+    {
+        $initials = '';
+
+        foreach ($words as $word) {
+            if (preg_match('/^\p{L}/u', trim($word), $match) === 1) {
+                $initials .= mb_strtoupper($match[0]);
+            }
+        }
+
+        return $initials === '' ? null : $initials;
     }
 
     private function looksLikeInitial(string $word): bool

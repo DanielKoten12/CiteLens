@@ -2,7 +2,6 @@
 
 namespace Tests\Support;
 
-use App\Enums\AnalysisStep;
 use App\Models\File;
 use App\Services\Analysis\AnalysisStepRegistry;
 use App\Services\Analysis\Contracts\PipelineStep;
@@ -10,6 +9,7 @@ use App\Services\Analysis\Steps\EmbedReferencesStep;
 use App\Services\Analysis\Steps\ExtractDocumentStep;
 use App\Services\Analysis\Steps\FinalizeAnalysisStep;
 use App\Services\Analysis\Steps\PersistExtractionStep;
+use App\Services\Analysis\Steps\ResolveCitationsStep;
 use App\Services\Analysis\Steps\ScoreReferencesStep;
 use App\Services\Analysis\Steps\ValidateReferencesStep;
 use Illuminate\Support\Facades\Storage;
@@ -18,8 +18,8 @@ use Illuminate\Support\Facades\Storage;
  * Shared setup for analysis-pipeline tests.
  *
  * Builds a document with a real stored PDF and assembles the pipeline step list
- * (real Phase 03 steps + test doubles for the steps Phases 04/05 own), so tests
- * never depend on global helper functions or a production stub.
+ * (the real production steps), so tests never depend on global helper functions
+ * or a production stub.
  */
 final class AnalysisHarness
 {
@@ -43,9 +43,8 @@ final class AnalysisHarness
     }
 
     /**
-     * The production step list plus a test double for the one not-yet-implemented
-     * canonical step (citation resolution is Phase 05), so the full sequence and
-     * progress range can be exercised.
+     * The production step list with the real citation-resolution step, so the
+     * full canonical sequence and progress range can be exercised.
      *
      * @return list<PipelineStep>
      */
@@ -57,7 +56,7 @@ final class AnalysisHarness
             app(ValidateReferencesStep::class),
             app(EmbedReferencesStep::class),
             app(ScoreReferencesStep::class),
-            StubPipelineStep::for(AnalysisStep::ResolvingCitations),
+            app(ResolveCitationsStep::class),
             app(FinalizeAnalysisStep::class),
         ];
     }

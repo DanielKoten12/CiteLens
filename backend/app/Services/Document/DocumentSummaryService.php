@@ -96,6 +96,7 @@ final class DocumentSummaryService
                 validCitations: (int) ($citations[CitationStatus::Valid->value] ?? 0),
                 unreliableCitations: (int) ($citations[CitationStatus::Unreliable->value] ?? 0),
                 pendingCitations: (int) ($citations[CitationStatus::Pending->value] ?? 0),
+                unresolvedCitations: (int) ($citations[CitationStatus::Unresolved->value] ?? 0),
                 hallucinationCitations: (int) ($citations[CitationStatus::Hallucination->value] ?? 0),
             );
         }
@@ -148,7 +149,7 @@ final class DocumentSummaryService
     private function citationCounts(array $ids): array
     {
         $derived = $this->citationStatusResolver->sqlExpression(
-            'c.researched_document_reference_id',
+            'c.resolution_state',
             'f.status',
         );
 
@@ -169,6 +170,7 @@ final class DocumentSummaryService
                 CitationStatus::Valid->value => (int) $row->{CitationStatus::Valid->value},
                 CitationStatus::Unreliable->value => (int) $row->{CitationStatus::Unreliable->value},
                 CitationStatus::Pending->value => (int) $row->{CitationStatus::Pending->value},
+                CitationStatus::Unresolved->value => (int) $row->{CitationStatus::Unresolved->value},
                 CitationStatus::Hallucination->value => (int) $row->{CitationStatus::Hallucination->value},
             ];
         }

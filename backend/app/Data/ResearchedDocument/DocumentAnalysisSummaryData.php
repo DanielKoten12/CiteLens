@@ -27,6 +27,7 @@ final class DocumentAnalysisSummaryData extends BaseData
         public int $validCitations,
         public int $unreliableCitations,
         public int $pendingCitations,
+        public int $unresolvedCitations,
         public int $hallucinationCitations,
     ) {}
 
@@ -43,6 +44,7 @@ final class DocumentAnalysisSummaryData extends BaseData
         int $validCitations,
         int $unreliableCitations,
         int $pendingCitations,
+        int $unresolvedCitations,
         int $hallucinationCitations,
     ): self {
         return new self(
@@ -55,6 +57,7 @@ final class DocumentAnalysisSummaryData extends BaseData
             validCitations: $validCitations,
             unreliableCitations: $unreliableCitations,
             pendingCitations: $pendingCitations,
+            unresolvedCitations: $unresolvedCitations,
             hallucinationCitations: $hallucinationCitations,
         );
     }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\Analysis\AnalysisContext;
+use App\Services\Analysis\CitationExtractionHints;
 use App\Services\Analysis\EmbeddingIndex;
 use App\Services\Analysis\ReferenceVerification;
 use App\Services\Analysis\ReferenceVerificationBatch;
@@ -52,4 +53,20 @@ it('consumes the verification batch and clears it', function () {
     expect($context->takeVerification())->toBe($batch)
         ->and($context->hasVerification())->toBeFalse()
         ->and(fn () => $context->verification())->toThrow(LogicException::class);
+});
+
+it('exposes extraction hints with typed accessors', function () {
+    $context = new AnalysisContext;
+    $hints = new CitationExtractionHints([0 => 'ref-1'], ['cit-1' => 0]);
+
+    $context->setExtractionHints($hints);
+
+    expect($context->hasExtractionHints())->toBeTrue()
+        ->and($context->extractionHints())->toBe($hints)
+        ->and($context->extractionHints()->referenceIdForIndex(0))->toBe('ref-1')
+        ->and($context->extractionHints()->hintForCitation('cit-1'))->toBe(0);
+});
+
+it('throws when extraction hints have not been set', function () {
+    expect(fn () => (new AnalysisContext)->extractionHints())->toThrow(LogicException::class);
 });

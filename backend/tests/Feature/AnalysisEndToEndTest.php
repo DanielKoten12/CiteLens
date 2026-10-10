@@ -32,6 +32,7 @@ it('drives a document to completed through the queued job', function () {
 
     expect(ResearchedDocumentReference::query()->count())->toBe(3)
         ->and(ResearchedDocumentCitation::query()->count())->toBe(3)
+        ->and(ResearchedDocumentCitation::query()->whereNotNull('researched_document_reference_id')->count())->toBe(2)
         ->and(ReferenceFinding::query()->count())->toBe(3);
 });
 

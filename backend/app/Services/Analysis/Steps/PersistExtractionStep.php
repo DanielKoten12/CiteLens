@@ -13,6 +13,7 @@ use App\Models\ResearchedDocumentCitationLocation;
 use App\Models\ResearchedDocumentReference;
 use App\Models\ResearchedDocumentReferenceLocation;
 use App\Services\Analysis\AnalysisContext;
+use App\Services\Analysis\CitationExtractionHints;
 use App\Services\Analysis\Contracts\PipelineStep;
 use App\Services\Crossref\DoiNormalizer;
 use App\Services\Document\DocumentAnalysisResetService;
@@ -60,8 +61,9 @@ final class PersistExtractionStep implements PipelineStep
     public function handle(ResearchedDocument $document, AnalysisContext $context): void
     {
         $extraction = $context->takeExtraction();
+        $hints = null;
 
-        DB::transaction(function () use ($document, $extraction): void {
+        DB::transaction(function () use ($document, $extraction, &$hints): void {
             $this->resetService->reset($document);
 
             $references = $this->referenceRows($document, $extraction->references);
@@ -71,20 +73,35 @@ final class PersistExtractionStep implements PipelineStep
             $citations = $this->citationRows($document, $extraction->citations);
             $this->insert(ResearchedDocumentCitation::class, $citations['rows']);
             $this->insert(ResearchedDocumentCitationLocation::class, $citations['locations']);
+
+            // GROBID's `reference_index` is a payload index; only here is the
+            // index → persisted reference id mapping still known.
+            $hints = new CitationExtractionHints(
+                referenceIdsByIndex: $references['ids'],
+                hintByCitationId: $citations['hints'],
+            );
         });
+
+        if ($hints !== null) {
+            $context->setExtractionHints($hints);
+        }
     }
 
     /**
      * @param  list<ExtractedReferenceData>  $references
-     * @return array{rows: list<array<string, mixed>>, locations: list<array<string, mixed>>}
+     * @return array{rows: list<array<string, mixed>>, locations: list<array<string, mixed>>, ids: list<string>}
      */
     private function referenceRows(ResearchedDocument $document, array $references): array
     {
         $rows = [];
         $locations = [];
+        $ids = [];
 
         foreach ($references as $reference) {
-            $referenceId = (string) Str::uuid();
+            // Ordered UUIDs keep the persisted order aligned with the payload
+            // order, which is the fallback IEEE order when offsets are missing.
+            $referenceId = (string) Str::orderedUuid();
+            $ids[] = $referenceId;
 
             [$startOffset, $endOffset] = $this->orderedOffsets($reference->textStartOffset, $reference->textEndOffset);
 
@@ -106,17 +123,18 @@ final class PersistExtractionStep implements PipelineStep
             }
         }
 
-        return ['rows' => $rows, 'locations' => $locations];
+        return ['rows' => $rows, 'locations' => $locations, 'ids' => $ids];
     }
 
     /**
      * @param  list<ExtractedCitationData>  $citations
-     * @return array{rows: list<array<string, mixed>>, locations: list<array<string, mixed>>}
+     * @return array{rows: list<array<string, mixed>>, locations: list<array<string, mixed>>, hints: array<string, int|null>}
      */
     private function citationRows(ResearchedDocument $document, array $citations): array
     {
         $rows = [];
         $locations = [];
+        $hints = [];
         $occurrenceIndexes = $this->occurrenceIndexes($citations);
 
         foreach ($citations as $index => $citation) {
@@ -124,7 +142,8 @@ final class PersistExtractionStep implements PipelineStep
                 throw ExtractionFailedException::malformedPayload();
             }
 
-            $citationId = (string) Str::uuid();
+            $citationId = (string) Str::orderedUuid();
+            $hints[$citationId] = $citation->referenceIndex;
 
             [$startOffset, $endOffset] = $this->orderedOffsets($citation->textStartOffset, $citation->textEndOffset);
 
@@ -147,7 +166,7 @@ final class PersistExtractionStep implements PipelineStep
             }
         }
 
-        return ['rows' => $rows, 'locations' => $locations];
+        return ['rows' => $rows, 'locations' => $locations, 'hints' => $hints];
     }
 
     /**
@@ -307,7 +326,7 @@ final class PersistExtractionStep implements PipelineStep
 
         $rows = array_map(static function (array $row) use ($timestamp): array {
             return [
-                'id' => $row['id'] ?? (string) Str::uuid(),
+                'id' => $row['id'] ?? (string) Str::orderedUuid(),
                 'created_at' => $timestamp,
                 'updated_at' => $timestamp,
                 ...$row,

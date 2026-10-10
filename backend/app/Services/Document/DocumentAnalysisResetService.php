@@ -2,6 +2,7 @@
 
 namespace App\Services\Document;
 
+use App\Models\CitationResolutionCandidate;
 use App\Models\ReferenceFinding;
 use App\Models\ReferenceFindingCandidate;
 use App\Models\ResearchedDocument;
@@ -33,6 +34,10 @@ final class DocumentAnalysisResetService
             ->pluck('id');
 
         if ($citationIds->isNotEmpty()) {
+            CitationResolutionCandidate::query()
+                ->whereIn('citation_id', $citationIds)
+                ->delete();
+
             ResearchedDocumentCitationLocation::query()
                 ->whereIn('citation_id', $citationIds)
                 ->delete();

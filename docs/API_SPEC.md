@@ -154,14 +154,16 @@ Every non-2xx response uses the same shape:
 > with an invalid shape is `invalid` with reason `"Format DOI tidak valid."`
 > `suspicious` covers a partial/weak match, including likely non-indexed local venues.
 
-**Citation status** (derived, not stored — recomputed from the pairing and the reference finding)
+**Citation status** (derived, not stored — recomputed from the resolution state and the reference
+finding)
 
 | Value | Condition |
 |---|---|
 | `valid` | Paired, and the reference finding status is `valid` or `suspicious` |
 | `unreliable` | Paired, but the reference finding status is `invalid` or `not_found` |
 | `pending` | Paired, but the reference finding is still `pending` |
-| `hallucination` | No reference pair (`researched_document_reference_id` is `null`) |
+| `unresolved` | Not paired, but at least one candidate reached the proposal threshold (a weak or ambiguous match) |
+| `hallucination` | Not paired and no plausible candidate exists (`resolution_state = unmatched`) |
 
 Because the status is derived, changing a reference finding (e.g. via manual review) immediately
 changes the status of every citation pointing to it.
@@ -181,6 +183,7 @@ Severity mapping:
 | reference `not_found` | high |
 | reference `invalid` | high |
 | citation `hallucination` | high |
+| citation `unresolved` | medium |
 | citation `unreliable` | severity of its paired reference finding |
 | reference `suspicious` | medium |
 | reference `pending` | info |
@@ -432,6 +435,7 @@ History list. Filters: `status`, `q` (name search), `sort` (`created_at|-created
         "valid_citations": 12,
         "unreliable_citations": 1,
         "pending_citations": 0,
+        "unresolved_citations": 0,
         "hallucination_citations": 2
       },
       "created_at": "2026-09-23T15:30:00Z",
@@ -532,6 +536,10 @@ in `reference_findings`; candidates live in `reference_finding_candidates`.
 ### GET `/documents/{document}/references`
 
 Filters: `status` (finding status), `has_doi` (bool). Paginated.
+
+> **Note:** ordering is document position (`text_start_offset` ASC, nulls last, then `id`). The
+> `status=pending` filter also matches references whose finding row does not exist yet. `has_doi`
+> accepts `true/false` and `1/0`.
 
 **Success — `200`**
 
@@ -672,6 +680,12 @@ Manual review override. Lets a user change the verdict and/or pick another candi
 Rules: `status` required, one of `valid|suspicious|invalid|not_found`; `selected_candidate_id`
 nullable, must belong to this finding; `reason` nullable string.
 
+> **Note:** a review while the document is `processing` returns `409 CONFLICT`
+> (`"Status referensi tidak dapat diubah saat analisis sedang berjalan."`), so a running pipeline is
+> never overwritten. A `selected_candidate_id` that does not belong to this finding returns `422`
+> with `details: { "selected_candidate_id": ["Kandidat yang dipilih tidak valid untuk temuan ini."] }`.
+> A reference without a finding gets a manual finding (confidence `null`).
+
 **Success — `200`**
 
 ```json
@@ -715,7 +729,11 @@ locations (`researched_document_citation_locations`).
 
 ### GET `/documents/{document}/citations`
 
-Filters: `status` (`valid|unreliable|pending|hallucination`), `reference_id`. Paginated.
+Filters: `status` (`valid|unreliable|pending|unresolved|hallucination`), `reference_id`. Paginated.
+
+> **Note:** ordering is document position (`text_start_offset` ASC, nulls last, then `id`).
+> `reference_id` must belong to the same document, otherwise `422`; a foreign or missing reference
+> id is not disclosed.
 
 **Success — `200`**
 
@@ -732,6 +750,7 @@ Filters: `status` (`valid|unreliable|pending|hallucination`), `reference_id`. Pa
       "text_end_offset": 2162,
       "occurrence_index": 4,
       "status": "valid",
+      "resolution_method": "apa",
       "reference": { "id": "r-102-uuid", "title": "Sistem Deteksi Plagiarisme" }
     },
     {
@@ -786,6 +805,8 @@ Filters: `status` (`valid|unreliable|pending|hallucination`), `reference_id`. Pa
     "occurrence_index": 9,
     "status": "hallucination",
     "reference": null,
+    "resolution": { "state": "unmatched", "method": null, "confidence": null, "hint_index": null },
+    "candidates": [],
     "locations": [
       {
         "page_number": 3,
@@ -809,6 +830,27 @@ Filters: `status` (`valid|unreliable|pending|hallucination`), `reference_id`. Pa
 { "error": { "code": "NOT_FOUND", "message": "Sitasi tidak ditemukan." } }
 ```
 
+> **Note (unresolved):** a citation with plausible candidates that did not clear the commit
+> threshold is reported as `"status": "unresolved"` with its resolution provenance and a ranked
+> candidate list, instead of `hallucination`:
+>
+> ```json
+> "resolution": { "state": "unresolved", "method": "apa", "confidence": 0.8000, "hint_index": null },
+> "candidates": [
+>   {
+>     "id": "cand-1-uuid",
+>     "rank": 1,
+>     "confidence": 0.8000,
+>     "method": "apa",
+>     "match_reason": "Kemiripan nama 0.80; kesesuaian tahun 1.00.",
+>     "reference": { "id": "r-102-uuid", "title": "Sistem Deteksi Plagiarisme" }
+>   }
+> ]
+> ```
+>
+> `resolution.state` is `paired|unresolved|unmatched`; `resolution.method` is
+> `extraction_hint|apa|ieee|manual`; `hint_index` is the raw GROBID `reference_index` when present.
+
 ### PATCH `/citations/{citation}`
 
 Manually pair a `hallucination` citation with a reference, or clear the pairing.
@@ -821,6 +863,10 @@ Manually pair a `hallucination` citation with a reference, or clear the pairing.
 
 Rules: field nullable; when present the reference must belong to the same document.
 
+> **Note:** the field must be present in the body: an explicit `null` clears the pairing and
+> responds with `"Tautan sitasi berhasil dilepaskan."` (derived status `hallucination`); a UUID
+> pairs the citation and responds with `"Sitasi berhasil ditautkan."`.
+
 **Success — `200`**
 
 ```json
@@ -828,6 +874,7 @@ Rules: field nullable; when present the reference must belong to the same docume
   "data": {
     "id": "cit-202-uuid",
     "status": "valid",
+    "resolution_method": "manual",
     "reference": { "id": "r-102-uuid", "title": "Sistem Deteksi Plagiarisme" }
   },
   "message": "Sitasi berhasil ditautkan."
@@ -857,8 +904,14 @@ citations. Used by the document viewer to render the issue list and highlights.
 
 ### GET `/documents/{document}/findings`
 
-Filters: `type` (`reference_invalid|reference_suspicious|reference_not_found|reference_pending|citation_unreliable|citation_hallucination`),
+Filters: `type` (`reference_invalid|reference_suspicious|reference_not_found|reference_pending|citation_unreliable|citation_unresolved|citation_hallucination`),
 `severity` (`high|medium|low|info`). Paginated.
+
+> **Note:** ordering is document position (`text_start_offset` ASC, nulls last, then `id`). The feed
+> is built from existing reference findings (a reference with no finding row is not synthesized) and
+> from citations whose derived status is `unreliable`/`hallucination`. A citation marker that
+> references several publications (`[3], [5]`, `[3–5]`, `(A, 2020; B, 2021)`) is paired with the
+> first/lowest item only: the schema stores at most one reference per citation row (v1 limitation).
 
 **Success — `200`**
 

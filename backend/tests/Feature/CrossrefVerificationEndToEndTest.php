@@ -1,10 +1,13 @@
 <?php
 
+use App\Enums\CitationResolutionState;
+use App\Enums\CitationStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\ReferenceFindingStatus;
 use App\Jobs\AnalyzeDocumentJob;
 use App\Models\ReferenceFinding;
 use App\Models\ReferenceFindingCandidate;
+use App\Services\Citations\CitationStatusResolver;
 use Illuminate\Support\Facades\Http;
 use Tests\Support\AnalysisHarness;
 use Tests\Support\CrossrefFake;
@@ -45,6 +48,37 @@ it('produces the expected findings for the three product cases', function () {
 
     expect($malformed->status)->toBe(ReferenceFindingStatus::Invalid)
         ->and($malformed->reason)->toBe('Format DOI tidak valid.');
+});
+
+it('resolves in-text citations to their bibliography references', function () {
+    InferenceFake::extraction();
+    InferenceFake::embeddingsFromText();
+    CrossrefFake::forExtractFixture();
+
+    $tree = AnalysisHarness::document();
+
+    AnalyzeDocumentJob::dispatchSync($tree->document->getKey());
+
+    $citations = $tree->document->citations()->get()->keyBy('citation_text');
+
+    $leCun = $citations->get('(LeCun et al., 2015)');
+    $koten = $citations->get('(Koten, 2023)');
+    $unpaired = $citations->get('(Tanpa rujukan, 2022)');
+
+    $leCunReference = $tree->document->references()->where('title', 'Deep learning')->firstOrFail();
+    $kotenReference = $tree->document->references()->where('title', 'Sistem deteksi plagiarisme')->firstOrFail();
+
+    expect($leCun->researched_document_reference_id)->toBe($leCunReference->getKey())
+        ->and($koten->researched_document_reference_id)->toBe($kotenReference->getKey())
+        ->and($unpaired->researched_document_reference_id)->toBeNull();
+
+    // Derived status comes from pairing + the reference verdict.
+    $resolver = app(CitationStatusResolver::class);
+
+    expect($resolver->resolve(CitationResolutionState::Paired, ReferenceFinding::query()
+        ->where('researched_document_reference_id', $leCunReference->getKey())
+        ->firstOrFail()->status))->toBe(CitationStatus::Valid)
+        ->and($resolver->resolve(CitationResolutionState::Unmatched, null))->toBe(CitationStatus::Hallucination);
 });
 
 it('keeps candidate ranks unique and ordered for every finding', function () {

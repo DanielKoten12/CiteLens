@@ -22,6 +22,8 @@ final class AnalysisContext
 
     private ?EmbeddingIndex $embeddings = null;
 
+    private ?CitationExtractionHints $extractionHints = null;
+
     public function setExtraction(ExtractionResultData $extraction): void
     {
         $this->extraction = $extraction;
@@ -104,5 +106,23 @@ final class AnalysisContext
     public function embeddings(): EmbeddingIndex
     {
         return $this->embeddings ?? throw new LogicException('No embedding index is available on the analysis context.');
+    }
+
+    public function setExtractionHints(CitationExtractionHints $extractionHints): void
+    {
+        $this->extractionHints = $extractionHints;
+    }
+
+    public function hasExtractionHints(): bool
+    {
+        return $this->extractionHints !== null;
+    }
+
+    /**
+     * @throws LogicException when no extraction hints have been set by an earlier step
+     */
+    public function extractionHints(): CitationExtractionHints
+    {
+        return $this->extractionHints ?? throw new LogicException('No extraction hints are available on the analysis context.');
     }
 }
