@@ -5,21 +5,23 @@ namespace App\Services\Citations;
 use App\Services\Scoring\AuthorMatcher;
 
 /**
- * Parses an in-text citation marker into a structured form.
+ * Parses an in-text citation marker into structured author/year pairs and IEEE
+ * ordinals.
  *
  * The parser is deliberately conservative (proposal scope: APA + IEEE only):
  * an unrecognized marker returns an empty {@see ParsedCitationMarker} and the
- * caller leaves the citation unpaired, because a false pairing is worse than a
- * `hallucination` verdict (`docs/plans/backend/05-citation-resolution-and-review-detail.md` §6).
+ * caller leaves the citation unpairable, because a false pairing is worse than
+ * an explicit unresolved/hallucination verdict.
  *
  * Supported shapes:
- * - IEEE: `[3]`, `[3], [5]`, `[3-5]`, `[3–5]`.
- * - APA parenthetical: `(Koten, 2023)`, `(Koten & Tani, 2023)`, `(LeCun et al., 2015)`.
- * - APA narrative: `Koten et al. (2023)`.
+ * - IEEE: `[3]`, `[3], [5]`, `[3-5]`, `[3–5]` (every ordinal is retained).
+ * - APA parenthetical: `(Koten, 2023)`, `(Koten & Tani, 2023)`,
+ *   `(LeCun et al., 2015)`, `(A, 2020; B, 2021)` (every pair is retained).
+ * - APA narrative: `Koten et al. (2023)`, `Koten (2023); Tani (2021)`.
+ * - Bare: `LeCun et al., 2015`.
  *
- * A marker that references several publications (`[3], [5]`, `(A, 2020; B, 2021)`)
- * is reduced to the first/lowest ordinal (or the first author/year pair): the
- * canonical schema stores at most one reference per citation row (D-05-04).
+ * Author names are parsed with {@see AuthorMatcher::names()} so initials are
+ * available to the resolver for same-surname disambiguation.
  */
 final class CitationMarkerParser
 {
@@ -31,19 +33,29 @@ final class CitationMarkerParser
     private const string RANGE_PATTERN = '/(\d+)\s*[-–—]\s*(\d+)/u';
 
     /**
-     * A parenthetical `(authors, year)` pair, with authors kept as-is.
+     * A parenthetical group, e.g. `(A, 2020; B, 2021)`.
      */
-    private const string APA_PARENTHETICAL_PATTERN = '/\(([^()]*?),\s*((?:19|20)\d{2}[a-z]?)\s*\)/iu';
+    private const string PARENTHETICAL_PATTERN = '/\(([^()]*)\)/u';
 
     /**
-     * A narrative `authors (year)` pair.
+     * A narrative pair: `Authors (year)`.
      */
-    private const string APA_NARRATIVE_PATTERN = '/([^(),]+?)\s*\(((?:19|20)\d{2}[a-z]?)\)/u';
+    private const string NARRATIVE_PATTERN = '/([^();]+?)\s*\(((?:19|20)\d{2}[a-z]?)\)/u';
 
     /**
-     * A bare `authors, year` marker (no parentheses).
+     * A bare pair: `Authors, year` at the start of a `;`-segment.
      */
-    private const string APA_BARE_PATTERN = '/^(.+?),\s*((?:19|20)\d{2}[a-z]?)\s*$/u';
+    private const string BARE_PATTERN = '/^(.+?),\s*((?:19|20)\d{2}[a-z]?)\s*$/u';
+
+    /**
+     * `authors, year` inside a parenthetical segment.
+     */
+    private const string SEGMENT_PATTERN = '/^(.+?),\s*((?:19|20)\d{2}[a-z]?)\s*$/u';
+
+    /**
+     * A segment that is only a year (the parenthetical half of a narrative pair).
+     */
+    private const string YEAR_ONLY_PATTERN = '/^\d{4}[a-z]?$/u';
 
     public function __construct(
         private readonly AuthorMatcher $authors,
@@ -69,7 +81,7 @@ final class CitationMarkerParser
             return new ParsedCitationMarker(ordinals: $ordinals);
         }
 
-        return $this->apa($raw);
+        return new ParsedCitationMarker($this->apaPairs($raw));
     }
 
     /**
@@ -136,46 +148,101 @@ final class CitationMarkerParser
         }
     }
 
-    private function apa(string $raw): ParsedCitationMarker
+    /**
+     * @return list<ParsedAuthorYear>
+     */
+    private function apaPairs(string $raw): array
     {
-        $raw = $this->firstAuthorYearSegment($raw);
+        $pairs = [];
 
-        $authorsPart = null;
-        $year = null;
+        // 1. Parenthetical groups, split on `;` into one pair per segment.
+        if (preg_match_all(self::PARENTHETICAL_PATTERN, $raw, $groups) !== false) {
+            foreach ($groups[1] as $content) {
+                foreach (preg_split('/;/u', $content) ?: [] as $segment) {
+                    $pair = $this->pairFromSegment(trim($segment));
 
-        if (preg_match(self::APA_PARENTHETICAL_PATTERN, $raw, $match) === 1) {
-            $authorsPart = $match[1];
-            $year = (int) $match[2];
-        } elseif (preg_match(self::APA_NARRATIVE_PATTERN, $raw, $match) === 1) {
-            $authorsPart = $match[1];
-            $year = (int) $match[2];
-        } elseif (preg_match(self::APA_BARE_PATTERN, $raw, $match) === 1) {
-            $authorsPart = $match[1];
-            $year = (int) $match[2];
+                    if ($pair !== null) {
+                        $pairs[] = $pair;
+                    }
+                }
+            }
         }
 
-        $surnames = $authorsPart === null ? [] : $this->authors->surnames($authorsPart);
+        // 2. Narrative forms: `Authors (year)`.
+        if (preg_match_all(self::NARRATIVE_PATTERN, $raw, $matches, PREG_SET_ORDER) !== false) {
+            foreach ($matches as $match) {
+                $pair = $this->pairFromAuthors($match[1], (int) $match[2]);
 
-        return new ParsedCitationMarker($surnames, $year);
+                if ($pair !== null) {
+                    $pairs[] = $pair;
+                }
+            }
+        }
+
+        // 3. Bare `authors, year` segments when nothing else matched.
+        if ($pairs === []) {
+            foreach (preg_split('/;/u', $raw) ?: [] as $segment) {
+                if (preg_match(self::BARE_PATTERN, trim($segment), $match) !== 1) {
+                    continue;
+                }
+
+                $pair = $this->pairFromAuthors($match[1], (int) $match[2]);
+
+                if ($pair !== null) {
+                    $pairs[] = $pair;
+                }
+            }
+        }
+
+        return $this->uniquePairs($pairs);
+    }
+
+    private function pairFromSegment(string $segment): ?ParsedAuthorYear
+    {
+        if ($segment === '' || preg_match(self::YEAR_ONLY_PATTERN, $segment) === 1) {
+            return null;
+        }
+
+        if (preg_match(self::SEGMENT_PATTERN, $segment, $match) === 1) {
+            return $this->pairFromAuthors($match[1], (int) $match[2]);
+        }
+
+        return $this->pairFromAuthors($segment, null);
+    }
+
+    private function pairFromAuthors(string $authorsPart, ?int $year): ?ParsedAuthorYear
+    {
+        $names = $this->authors->names($authorsPart);
+
+        if ($names === []) {
+            return null;
+        }
+
+        return new ParsedAuthorYear($names, $year);
     }
 
     /**
-     * Reduce a multi-reference parenthetical `(A, 2020; B, 2021)` to its first
-     * segment `(A, 2020)` (D-05-04). Narrative forms are left untouched: their
-     * first parenthetical carries only the year.
+     * Keep the first occurrence of each distinct `(surnames, year)` pair.
+     *
+     * @param  list<ParsedAuthorYear>  $pairs
+     * @return list<ParsedAuthorYear>
      */
-    private function firstAuthorYearSegment(string $raw): string
+    private function uniquePairs(array $pairs): array
     {
-        if (preg_match('/\(([^()]*)\)/u', $raw, $match) !== 1) {
-            return $raw;
+        $seen = [];
+        $unique = [];
+
+        foreach ($pairs as $pair) {
+            $key = $pair->key();
+
+            if (isset($seen[$key])) {
+                continue;
+            }
+
+            $seen[$key] = true;
+            $unique[] = $pair;
         }
 
-        if (! str_contains($match[1], ';')) {
-            return $raw;
-        }
-
-        $first = explode(';', $match[1], 2)[0];
-
-        return '('.trim($first).')';
+        return $unique;
     }
 }

@@ -1,23 +1,16 @@
 <?php
 
+use App\Enums\CitationResolutionMethod;
+use App\Enums\CitationResolutionState;
 use App\Services\Citations\CitationMarkerParser;
-use App\Services\Citations\CitationMatchConfig;
 use App\Services\Citations\CitationReference;
 use App\Services\Citations\CitationResolver;
 use App\Services\Scoring\AuthorMatcher;
-use App\Services\Scoring\ScoringConfig;
 use App\Services\Scoring\StringSimilarity;
 
 beforeEach(function () {
-    $strings = new StringSimilarity;
-    $authors = new AuthorMatcher($strings);
-
-    $this->parser = new CitationMarkerParser($authors);
-    $this->resolver = new CitationResolver(
-        new CitationMatchConfig(app(ScoringConfig::class)),
-        $strings,
-        $authors,
-    );
+    $this->parser = app(CitationMarkerParser::class);
+    $this->resolver = app(CitationResolver::class);
 });
 
 /**
@@ -26,10 +19,12 @@ beforeEach(function () {
  */
 function citationReferences(array $references): array
 {
+    $matcher = new AuthorMatcher(new StringSimilarity);
+
     $models = [];
 
     foreach ($references as $index => [$id, $authors, $year]) {
-        $models[] = new CitationReference($id, $authors, $year, $index + 1);
+        $models[] = new CitationReference($id, $matcher->names($authors), $year, $index + 1);
     }
 
     return $models;
@@ -44,7 +39,9 @@ it('pairs an apa citation by surname and year', function () {
         ]),
     );
 
-    expect($resolution->referenceId)->toBe('ref-2')
+    expect($resolution->state)->toBe(CitationResolutionState::Paired)
+        ->and($resolution->referenceId)->toBe('ref-2')
+        ->and($resolution->method)->toBe(CitationResolutionMethod::Apa)
         ->and($resolution->confidence)->toBe(1.0);
 });
 
@@ -55,27 +52,28 @@ it('pairs a surname typo above the threshold', function () {
     );
 
     expect($resolution->referenceId)->toBe('ref-1')
-        ->and($resolution->confidence)->toBeGreaterThan(0.85);
+        ->and($resolution->confidence)->toBeGreaterThan(0.90);
 });
 
-it('ignores a reference whose year is outside the tolerance', function () {
+it('penalizes a year outside the window instead of hard-rejecting', function () {
     $resolution = $this->resolver->resolve(
-        $this->parser->parse('(Koten, 2023)'),
-        citationReferences([['ref-1', 'Koten, D.', 1999]]),
+        $this->parser->parse('(Koten, 1999)'),
+        citationReferences([['ref-1', 'Koten, D.', 2023]]),
     );
 
-    expect($resolution->isPaired())->toBeFalse();
+    expect($resolution->state)->toBe(CitationResolutionState::Unmatched)
+        ->and($resolution->candidates)->not->toBe([]);
 });
 
-it('accepts a year within tolerance', function () {
-    config(['scoring.year_tolerance' => 1]);
-
+it('accepts a preprint/published year gap within the window', function () {
     $resolution = $this->resolver->resolve(
-        $this->parser->parse('(Koten, 2023)'),
-        citationReferences([['ref-1', 'Koten, D.', 2024]]),
+        $this->parser->parse('(Koten, 2020)'),
+        citationReferences([['ref-1', 'Koten, D.', 2023]]),
     );
 
-    expect($resolution->referenceId)->toBe('ref-1');
+    // 0.7 * 1.0 + 0.3 * (1 - 3/5) = 0.82 → below commit; but candidates exist.
+    expect($resolution->state)->toBe(CitationResolutionState::Unmatched)
+        ->and($resolution->candidates)->toHaveCount(1);
 });
 
 it('does not gate on a missing reference year', function () {
@@ -87,13 +85,14 @@ it('does not gate on a missing reference year', function () {
     expect($resolution->referenceId)->toBe('ref-1');
 });
 
-it('leaves an answer below the surname threshold unpaired', function () {
+it('leaves a low-similarity answer unmatched', function () {
     $resolution = $this->resolver->resolve(
         $this->parser->parse('(Koten, 2023)'),
         citationReferences([['ref-1', 'Hidayat, A.', 2023]]),
     );
 
-    expect($resolution->isPaired())->toBeFalse();
+    expect($resolution->state)->toBe(CitationResolutionState::Unmatched)
+        ->and($resolution->candidates)->toBe([]);
 });
 
 it('breaks a tie with the earliest bibliography position', function () {
@@ -108,10 +107,24 @@ it('breaks a tie with the earliest bibliography position', function () {
     expect($resolution->referenceId)->toBe('ref-earliest');
 });
 
+it('uses initials to disambiguate same-surname authors', function () {
+    $resolution = $this->resolver->resolve(
+        $this->parser->parse('(Koten, A., 2023)'),
+        citationReferences([
+            ['ref-daniel', 'Koten, D. B.', 2023],
+            ['ref-andi', 'Koten, A.', 2023],
+        ]),
+    );
+
+    expect($resolution->referenceId)->toBe('ref-andi');
+});
+
 it('orders references by their bibliography index regardless of input order', function () {
+    $matcher = new AuthorMatcher(new StringSimilarity);
+
     $references = [
-        new CitationReference('ref-b', 'Koten, D.', 2023, 2),
-        new CitationReference('ref-a', 'Koten, D.', 2023, 1),
+        new CitationReference('ref-b', $matcher->names('Koten, D.'), 2023, 2),
+        new CitationReference('ref-a', $matcher->names('Koten, D.'), 2023, 1),
     ];
 
     $resolution = $this->resolver->resolve($this->parser->parse('(Koten, 2023)'), $references);
@@ -129,19 +142,20 @@ it('resolves an ieee ordinal to the bibliography position', function () {
     );
 
     expect($resolution->referenceId)->toBe('ref-2')
+        ->and($resolution->method)->toBe(CitationResolutionMethod::Ieee)
         ->and($resolution->confidence)->toBe(1.0);
 });
 
-it('leaves an out-of-range ieee ordinal unpaired', function () {
+it('leaves an out-of-range ieee ordinal unmatched', function () {
     $resolution = $this->resolver->resolve(
         $this->parser->parse('[99]'),
         citationReferences([['ref-1', 'Koten, D.', 2023]]),
     );
 
-    expect($resolution->isPaired())->toBeFalse();
+    expect($resolution->state)->toBe(CitationResolutionState::Unmatched);
 });
 
-it('uses the lowest ordinal of an ieee range', function () {
+it('uses the lowest ordinal as primary and keeps the rest as candidates', function () {
     $resolution = $this->resolver->resolve(
         $this->parser->parse('[3-5]'),
         citationReferences([
@@ -152,16 +166,19 @@ it('uses the lowest ordinal of an ieee range', function () {
         ]),
     );
 
-    expect($resolution->referenceId)->toBe('ref-3');
+    expect($resolution->referenceId)->toBe('ref-3')
+        ->and($resolution->candidates)->toHaveCount(2)
+        ->and($resolution->candidates[0]->referenceId)->toBe('ref-3')
+        ->and($resolution->candidates[1]->referenceId)->toBe('ref-4');
 });
 
-it('leaves an unparseable marker unpaired', function () {
+it('leaves an unparseable marker unmatched', function () {
     $resolution = $this->resolver->resolve(
         $this->parser->parse('tanpa tahun'),
         citationReferences([['ref-1', 'Koten, D.', 2023]]),
     );
 
-    expect($resolution->isPaired())->toBeFalse();
+    expect($resolution->state)->toBe(CitationResolutionState::Unmatched);
 });
 
 it('penalizes a cited author the reference does not carry', function () {
@@ -170,7 +187,7 @@ it('penalizes a cited author the reference does not carry', function () {
         citationReferences([['ref-1', 'Koten, D.', 2023]]),
     );
 
-    expect($resolution->isPaired())->toBeFalse();
+    expect($resolution->state)->toBe(CitationResolutionState::Unmatched);
 });
 
 it('does not penalize an et al. citation with fewer surnames than the reference', function () {
@@ -180,4 +197,58 @@ it('does not penalize an et al. citation with fewer surnames than the reference'
     );
 
     expect($resolution->referenceId)->toBe('ref-1');
+});
+
+it('trusts a validated extraction hint for an unparseable marker', function () {
+    $resolution = $this->resolver->resolve(
+        $this->parser->parse('tanpa penanda'),
+        citationReferences([['ref-1', 'Koten, D.', 2023]]),
+        'ref-1',
+        0,
+    );
+
+    expect($resolution->state)->toBe(CitationResolutionState::Paired)
+        ->and($resolution->referenceId)->toBe('ref-1')
+        ->and($resolution->method)->toBe(CitationResolutionMethod::ExtractionHint)
+        ->and($resolution->confidence)->toBeNull()
+        ->and($resolution->hintIndex)->toBe(0);
+});
+
+it('trusts a hint that agrees with the parser', function () {
+    $resolution = $this->resolver->resolve(
+        $this->parser->parse('(Koten, 2023)'),
+        citationReferences([['ref-1', 'Koten, D.', 2023]]),
+        'ref-1',
+        0,
+    );
+
+    expect($resolution->referenceId)->toBe('ref-1')
+        ->and($resolution->method)->toBe(CitationResolutionMethod::ExtractionHint);
+});
+
+it('lets the parser win when it contradicts the hint', function () {
+    $resolution = $this->resolver->resolve(
+        $this->parser->parse('(Koten, 2023)'),
+        citationReferences([
+            ['ref-1', 'LeCun, Y.', 2015],
+            ['ref-2', 'Koten, D.', 2023],
+        ]),
+        'ref-1',
+        0,
+    );
+
+    expect($resolution->referenceId)->toBe('ref-2')
+        ->and($resolution->method)->toBe(CitationResolutionMethod::Apa);
+});
+
+it('ignores an invalid hint reference id', function () {
+    $resolution = $this->resolver->resolve(
+        $this->parser->parse('(Koten, 2023)'),
+        citationReferences([['ref-1', 'Koten, D.', 2023]]),
+        'ref-missing',
+        0,
+    );
+
+    expect($resolution->referenceId)->toBe('ref-1')
+        ->and($resolution->method)->toBe(CitationResolutionMethod::Apa);
 });

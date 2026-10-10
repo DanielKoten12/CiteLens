@@ -1,7 +1,9 @@
 <?php
 
+use App\Data\Inference\ExtractionResultData;
 use App\Models\ResearchedDocumentCitation;
 use App\Services\Analysis\AnalysisContext;
+use App\Services\Analysis\Steps\PersistExtractionStep;
 use App\Services\Analysis\Steps\ResolveCitationsStep;
 use Tests\Support\DocumentTree;
 
@@ -119,4 +121,59 @@ it('leaves every citation unpaired when the document has no references', functio
     runResolutionStep($tree);
 
     expect($citation->refresh()->researched_document_reference_id)->toBeNull();
+});
+
+/**
+ * Persist an extraction payload and resolve it with the same context, so the
+ * transient extraction hints are available.
+ *
+ * @param  array<string, mixed>  $payload
+ */
+function persistAndResolve(DocumentTree $tree, array $payload): AnalysisContext
+{
+    $context = new AnalysisContext;
+    $context->setExtraction(ExtractionResultData::from($payload));
+
+    app(PersistExtractionStep::class)->handle($tree->document, $context);
+    app(ResolveCitationsStep::class)->handle($tree->document, $context);
+
+    return $context;
+}
+
+it('trusts the extraction hint when the marker is unparseable', function () {
+    $tree = DocumentTree::create();
+
+    persistAndResolve($tree, [
+        'references' => [
+            ['raw_text' => 'First', 'authors' => 'First, A.', 'publication_year' => 2001],
+            ['raw_text' => 'Second', 'authors' => 'Second, B.', 'publication_year' => 2002],
+        ],
+        'citations' => [
+            ['citation_text' => 'lihat lampiran', 'citation_marker' => null, 'reference_index' => 1, 'occurrence_index' => 0],
+        ],
+    ]);
+
+    $citation = $tree->document->citations()->firstOrFail();
+    $second = $tree->document->references()->where('raw_text', 'Second')->firstOrFail();
+
+    expect($citation->researched_document_reference_id)->toBe($second->getKey());
+});
+
+it('resolves ieee ordinals by payload order when offsets are missing', function () {
+    $tree = DocumentTree::create();
+
+    persistAndResolve($tree, [
+        'references' => [
+            ['raw_text' => 'First', 'authors' => 'First, A.', 'publication_year' => 2001],
+            ['raw_text' => 'Second', 'authors' => 'Second, B.', 'publication_year' => 2002],
+        ],
+        'citations' => [
+            ['citation_text' => '[2]', 'citation_marker' => '[2]', 'occurrence_index' => 0],
+        ],
+    ]);
+
+    $citation = $tree->document->citations()->firstOrFail();
+    $second = $tree->document->references()->where('raw_text', 'Second')->firstOrFail();
+
+    expect($citation->researched_document_reference_id)->toBe($second->getKey());
 });

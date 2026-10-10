@@ -2,165 +2,223 @@
 
 namespace App\Services\Citations;
 
-use App\Services\Scoring\AuthorMatcher;
-use App\Services\Scoring\StringSimilarity;
+use App\Enums\CitationResolutionMethod;
 
 /**
  * Pairs one parsed citation marker with at most one reference of the same
- * document (Phase 05, `docs/plans/backend/05-citation-resolution-and-review-detail.md` §6.5).
+ * document (Phase 05.1).
  *
- * - IEEE: the first/lowest ordinal maps to bibliography position 1..N (OQ-18).
- * - APA: the cited surnames and year are compared against every reference's
- *   authors (`Jaro-Winkler`) and publication year (tolerance from config). The
- *   year is a hard gate only when both sides carry it; a missing surname signal
- *   is never treated as a penalty. A score below the configured threshold stays
- *   unpaired, because a false pairing is worse than a `hallucination` verdict.
+ * Decision layers, in order:
  *
- * The resolver is pure and only receives references of one document, so it can
- * never pair across documents.
+ * 1. **IEEE ordinals** map deterministically to bibliography positions (OQ-18);
+ *    the lowest valid ordinal is the primary pairing, the rest become candidates
+ *    (D-05.1-07).
+ * 2. **Extraction hint** (validated): when GROBID linked the citation to a
+ *    bibliography entry, that link is a strong prior. An unparseable marker
+ *    trusts it outright; a parseable marker trusts it unless the scored
+ *    candidates plausibly contradict it, in which case the parser wins and the
+ *    hint stays provenance (D-05.1-03). GROBID provides no confidence, so a
+ *    hint-only pairing records `confidence = null`.
+ * 3. **APA scoring**: the best candidate at or above `commit_threshold` is
+ *    committed; otherwise the citation is left `unmatched` with candidates.
+ *
+ * The class is pure and only receives references of one document, so it can
+ * never pair across documents. Ambiguity handling (`unresolved` + `winner_margin`)
+ * lands with the persisted resolution state in W2 so W1 never drops a pair that
+ * Phase 05 would have committed (D-05.1-06).
  */
 final class CitationResolver
 {
     public function __construct(
         private readonly CitationMatchConfig $config,
-        private readonly StringSimilarity $strings,
-        private readonly AuthorMatcher $authors,
+        private readonly CitationCandidateScorer $scorer,
     ) {}
 
     /**
      * @param  list<CitationReference>  $references  bibliography order (index 1..N)
      */
-    public function resolve(ParsedCitationMarker $marker, array $references): CitationResolution
-    {
+    public function resolve(
+        ParsedCitationMarker $marker,
+        array $references,
+        ?string $hintedReferenceId = null,
+        ?int $hintIndex = null,
+    ): CitationResolution {
         if ($marker->isIeee()) {
-            return $this->resolveIeee($marker, $references);
+            return $this->resolveIeee($marker, $references, $hintIndex);
         }
 
-        if ($marker->isApa()) {
-            return $this->resolveApa($marker, $references);
-        }
-
-        return CitationResolution::unpaired('unparsed');
+        return $this->resolveApa($marker, $references, $hintedReferenceId, $hintIndex);
     }
 
     /**
      * @param  list<CitationReference>  $references
      */
-    private function resolveIeee(ParsedCitationMarker $marker, array $references): CitationResolution
-    {
-        $ordinal = $marker->ordinals[0] ?? null;
+    private function resolveIeee(
+        ParsedCitationMarker $marker,
+        array $references,
+        ?int $hintIndex,
+    ): CitationResolution {
+        $byIndex = [];
 
         foreach ($references as $reference) {
-            if ($reference->bibliographyIndex === $ordinal) {
-                return new CitationResolution($reference->id, 1.0, 'ieee_ordinal');
+            $byIndex[$reference->bibliographyIndex] = $reference;
+        }
+
+        $matched = [];
+
+        foreach ($marker->ordinals as $ordinal) {
+            if (isset($byIndex[$ordinal])) {
+                $matched[$ordinal] = $byIndex[$ordinal];
             }
         }
 
-        return CitationResolution::unpaired('ieee_ordinal_out_of_range');
+        if ($matched === []) {
+            return CitationResolution::unmatched($hintIndex);
+        }
+
+        $candidates = [];
+        $primary = null;
+        $rank = 1;
+
+        foreach ($matched as $ordinal => $reference) {
+            $primary ??= $reference;
+            $candidates[] = new CitationCandidate(
+                referenceId: $reference->id,
+                confidence: 1.0,
+                method: CitationResolutionMethod::Ieee,
+                matchReason: sprintf('Nomor IEEE [%d].', $ordinal),
+                rank: $rank,
+            );
+            $rank++;
+        }
+
+        return CitationResolution::paired(
+            $primary->id,
+            1.0,
+            CitationResolutionMethod::Ieee,
+            $hintIndex,
+            $candidates,
+        );
     }
 
     /**
      * @param  list<CitationReference>  $references
      */
-    private function resolveApa(ParsedCitationMarker $marker, array $references): CitationResolution
-    {
-        $best = null;
-        $bestScore = null;
+    private function resolveApa(
+        ParsedCitationMarker $marker,
+        array $references,
+        ?string $hintedReferenceId,
+        ?int $hintIndex,
+    ): CitationResolution {
+        $primaryPair = $marker->primaryPair();
+        $scored = $primaryPair === null ? [] : $this->scorer->score($primaryPair, $references);
 
+        if ($this->config->trustExtractionHint() && $hintedReferenceId !== null) {
+            $hinted = $this->findReference($references, $hintedReferenceId);
+
+            if ($hinted !== null) {
+                return $this->resolveWithHint($primaryPair, $scored, $hinted, $hintIndex);
+            }
+        }
+
+        return $this->resolveFromCandidates($scored, $hintIndex);
+    }
+
+    /**
+     * @param  list<CitationCandidate>  $scored
+     */
+    private function resolveWithHint(
+        ?ParsedAuthorYear $pair,
+        array $scored,
+        CitationReference $hinted,
+        ?int $hintIndex,
+    ): CitationResolution {
+        if ($pair === null) {
+            // No contradicting signal: trust the extractor's own link.
+            return CitationResolution::paired(
+                $hinted->id,
+                null,
+                CitationResolutionMethod::ExtractionHint,
+                $hintIndex,
+                $scored,
+            );
+        }
+
+        $hintedCandidate = $this->candidateFor($scored, $hinted->id);
+        $best = $scored[0] ?? null;
+
+        $hintIsBest = $best !== null && $best->referenceId === $hinted->id;
+        $hintPlausible = $hintedCandidate !== null && $hintedCandidate->confidence >= $this->config->proposalThreshold();
+
+        if ($hintIsBest || $hintPlausible || $best === null) {
+            return CitationResolution::paired(
+                $hinted->id,
+                $hintedCandidate?->confidence,
+                CitationResolutionMethod::ExtractionHint,
+                $hintIndex,
+                $scored,
+            );
+        }
+
+        // The parser contradicts the hint; the parser result wins when it commits.
+        if ($best->confidence >= $this->config->commitThreshold()) {
+            return CitationResolution::paired(
+                $best->referenceId,
+                $best->confidence,
+                CitationResolutionMethod::Apa,
+                $hintIndex,
+                $scored,
+            );
+        }
+
+        return CitationResolution::unmatched($hintIndex, $scored);
+    }
+
+    /**
+     * @param  list<CitationCandidate>  $scored
+     */
+    private function resolveFromCandidates(array $scored, ?int $hintIndex): CitationResolution
+    {
+        $best = $scored[0] ?? null;
+
+        if ($best !== null && $best->confidence >= $this->config->commitThreshold()) {
+            return CitationResolution::paired(
+                $best->referenceId,
+                $best->confidence,
+                CitationResolutionMethod::Apa,
+                $hintIndex,
+                $scored,
+            );
+        }
+
+        return CitationResolution::unmatched($hintIndex, $scored);
+    }
+
+    /**
+     * @param  list<CitationReference>  $references
+     */
+    private function findReference(array $references, string $referenceId): ?CitationReference
+    {
         foreach ($references as $reference) {
-            if (! $this->yearMatches($marker->year, $reference->publicationYear)) {
-                continue;
-            }
-
-            $score = $this->surnameScore($marker->surnames, $reference->authors);
-
-            if ($score === null) {
-                continue;
-            }
-
-            $isBetter = $bestScore === null
-                || $score > $bestScore
-                || ($score === $bestScore && $best !== null && $reference->bibliographyIndex < $best->bibliographyIndex);
-
-            if ($isBetter) {
-                $best = $reference;
-                $bestScore = $score;
+            if ($reference->id === $referenceId) {
+                return $reference;
             }
         }
 
-        if ($best === null || $bestScore === null || $bestScore < $this->config->surnameThreshold()) {
-            return CitationResolution::unpaired('apa_below_threshold');
-        }
-
-        return new CitationResolution($best->id, round($bestScore, 4), 'apa_surname_year');
+        return null;
     }
 
     /**
-     * A missing year on either side is not a mismatch; a known year outside the
-     * tolerance is.
+     * @param  list<CitationCandidate>  $candidates
      */
-    private function yearMatches(?int $citedYear, ?int $referenceYear): bool
+    private function candidateFor(array $candidates, string $referenceId): ?CitationCandidate
     {
-        if ($citedYear === null || $referenceYear === null) {
-            return true;
-        }
-
-        return abs($citedYear - $referenceYear) <= $this->config->yearTolerance();
-    }
-
-    /**
-     * Best-pair average surname similarity.
-     *
-     * The denominator is the number of **cited** surnames, so a cited author
-     * that the reference does not carry lowers the score (a truncated `et al.`
-     * citation with fewer surnames than the reference is not penalized).
-     *
-     * @param  list<string>  $citedSurnames
-     */
-    private function surnameScore(array $citedSurnames, ?string $referenceAuthors): ?float
-    {
-        if ($citedSurnames === []) {
-            return null;
-        }
-
-        $referenceSurnames = $this->authors->surnames($referenceAuthors);
-
-        if ($referenceSurnames === []) {
-            return null;
-        }
-
-        $used = [];
-        $scores = [];
-
-        foreach ($citedSurnames as $citedSurname) {
-            $best = null;
-            $bestIndex = null;
-
-            foreach ($referenceSurnames as $index => $referenceSurname) {
-                if (isset($used[$index])) {
-                    continue;
-                }
-
-                $similarity = $this->strings->jaroWinkler($citedSurname, $referenceSurname) ?? 0.0;
-
-                if ($best === null || $similarity > $best) {
-                    $best = $similarity;
-                    $bestIndex = $index;
-                }
+        foreach ($candidates as $candidate) {
+            if ($candidate->referenceId === $referenceId) {
+                return $candidate;
             }
-
-            if ($bestIndex === null) {
-                continue;
-            }
-
-            $used[$bestIndex] = true;
-            $scores[] = $best;
         }
 
-        if ($scores === []) {
-            return null;
-        }
-
-        return max(0.0, min(1.0, array_sum($scores) / count($citedSurnames)));
+        return null;
     }
 }

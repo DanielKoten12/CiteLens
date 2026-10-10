@@ -38,11 +38,27 @@ return [
 
     'year_tolerance' => (int) env('SCORING_YEAR_TOLERANCE', 1),
 
-    // Citation resolution (Phase 05). Year tolerance is shared with reference
-    // scoring so the two matchers cannot drift.
+    // Citation resolution (Phase 05.1). Year is a soft signal, not a gate.
     'citation_matching' => [
-        // Minimum Jaro-Winkler surname similarity for an APA citation to pair.
-        'surname_threshold' => (float) env('SCORING_CITATION_SURNAME_THRESHOLD', 0.85),
+        // Weighted signals (must sum to 1.0); missing signals renormalize.
+        'weights' => [
+            'surnames' => (float) env('SCORING_CITATION_WEIGHT_SURNAMES', 0.70),
+            'year' => (float) env('SCORING_CITATION_WEIGHT_YEAR', 0.30),
+        ],
+        // Commit an APA pairing at/above this combined score.
+        'commit_threshold' => (float) env('SCORING_CITATION_COMMIT_THRESHOLD', 0.90),
+        // Offer a candidate at/above this score; below = no plausible match.
+        'proposal_threshold' => (float) env('SCORING_CITATION_PROPOSAL_THRESHOLD', 0.50),
+        // How much the winner must beat the runner-up by (Phase 05.1 W2).
+        'winner_margin' => (float) env('SCORING_CITATION_WINNER_MARGIN', 0.08),
+        // Year distance at which the year signal reaches 0 (1.0 at distance 0).
+        'year_window' => (int) env('SCORING_CITATION_YEAR_WINDOW', 5),
+        // Subtracted from the surname signal when first initials differ.
+        'initial_penalty' => (float) env('SCORING_CITATION_INITIAL_PENALTY', 0.15),
+        // Maximum alternatives persisted/exposed per citation (Phase 05.1 W2).
+        'max_candidates' => (int) env('SCORING_CITATION_MAX_CANDIDATES', 3),
+        // Trust GROBID's reference_index when validated.
+        'trust_extraction_hint' => (bool) env('SCORING_CITATION_TRUST_EXTRACTION_HINT', true),
     ],
 
     // Conservative defaults for likely non-indexed/local venues; tuned in Phase 07.

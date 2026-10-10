@@ -25,6 +25,30 @@ it('returns an empty list when there is nothing to parse', function () {
         ->and($this->authors->surnames('   '))->toBe([]);
 });
 
+it('parses structured author names with initials', function () {
+    $names = $this->authors->names('LeCun, Y., Bengio, Y., & Hinton, G.');
+
+    expect(array_map(static fn ($name): string => $name->surname, $names))->toBe(['LeCun', 'Bengio', 'Hinton'])
+        ->and($names[0]->initials)->toBe('Y')
+        ->and($names[0]->firstInitial())->toBe('Y');
+
+    $koten = $this->authors->names('Koten, D. B.')[0];
+
+    expect($koten->surname)->toBe('Koten')
+        ->and($koten->initials)->toBe('DB')
+        ->and($koten->firstInitial())->toBe('D');
+
+    $givenFirst = $this->authors->names('Yann LeCun')[0];
+
+    expect($givenFirst->surname)->toBe('LeCun')
+        ->and($givenFirst->initials)->toBe('Y');
+
+    $trailing = $this->authors->names('LeCun Y.')[0];
+
+    expect($trailing->surname)->toBe('LeCun')
+        ->and($trailing->initials)->toBe('Y');
+});
+
 it('matches authors order-insensitively', function () {
     $reference = 'LeCun, Y., Bengio, Y., & Hinton, G.';
     $candidate = ['Yann LeCun', 'Yoshua Bengio', 'Geoffrey Hinton'];
