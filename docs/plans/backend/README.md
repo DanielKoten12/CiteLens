@@ -144,6 +144,17 @@ same change.
   (validated GROBID `reference_index` prior), `CitationResolutionWriter` + `citation_resolution_candidates`
   persistence, `CitationResolutionState`/`CitationResolutionMethod`, the `unresolved` derived status,
   and the `citations:evaluate` harness + seed dataset.
+- Report generation (Phase 06): the `files.disk` column + report `file_id` FK migrations;
+  `config/reports.php` + `services.gotenberg`; the `ReportRenderer` seam with
+  `GotenbergReportRenderer` (official `gotenberg/gotenberg-php ^2.25` client over an injected Guzzle
+  PSR-18 client) and `ReportServiceProvider`; `Services/Files/PrivateFileUrlResolver` (delegated to
+  by the `UrlFromFilePath` injector); the disk-aware `DocumentFileManager`
+  (`storePdf`/`detachForReport`/per-row disk delete); the report read model and template
+  (`Services/Reports/{ReportDataBuilder,ReportPayload,ReportReferenceRow,ReportCitationRow,ReportTemplateRenderer}`,
+  `resources/views/reports/document-report.blade.php`); `GenerateDocumentReportJob` with
+  `ReportStateService`, `ReportFailureHandler` and `ReportDeletionService`; the `/reports` endpoints
+  (`ReportController`, `ReportGenerationService`, `ReportQueryService`, `Data/Report/*` DTOs,
+  `ListReportsRequest`); report DTO/schema/config tests plus the sync-queue end-to-end suite.
 - Canonical error envelope renderers for `401`/`422`/`429` (now centralized in
   `ApiExceptionRenderer`) and `ErrorResponseData`; custom exceptions render their own envelope
   (`DocumentUploadFailedException`, `InvalidCredentialsException`).
@@ -160,7 +171,6 @@ same change.
 
 ### 3.2 What is missing (the work this plan covers)
 
-- `/reports` endpoints and PDF generation (Phase 06).
 - Test coverage for the remaining endpoints/pipeline (see `docs/TEST_PLAN.md` §5 and §8).
 - The FastAPI inference service implementation (separate effort, OQ-13).
 
@@ -175,9 +185,10 @@ same change.
   `"Dokumen berhasil diunggah. Analisis sedang diproses."` (Phase 02 changed it from the earlier
   `"Dokumen berhasil diunggah."`).
 - `files` is polymorphic with **no FK** on `fileable_id`; deleting a document/report does **not**
-  cascade the `files` row. File cleanup must be explicit (Phase 02/06).
-- `generated_document_reports.file_id` exists in the migration as a plain nullable UUID (no FK),
-  next to the polymorphic `files` relation — see OQ-06.
+  cascade the `files` row. File cleanup must be explicit (Phase 02/06). Every `files` row also
+  records the private `disk` it lives on (Phase 06, D-06-02).
+- `generated_document_reports.file_id` has a nullable FK to `files.id` with `nullOnDelete`
+  (Phase 06, OQ-06), next to the polymorphic `files` relation.
 
 ---
 
@@ -423,10 +434,10 @@ test harness.
 | `GET /citations/{citation}` | 6 | 05 | implemented |
 | `PATCH /citations/{citation}` | 6 | 05 | implemented |
 | `GET /documents/{document}/findings` | 7 | 05 | implemented |
-| `POST /documents/{document}/reports` | 8 | 06 | planned |
-| `GET /documents/{document}/reports` | 8 | 06 | planned |
-| `GET /reports/{report}` | 8 | 06 | planned |
-| `DELETE /reports/{report}` | 8 | 06 | planned |
+| `POST /documents/{document}/reports` | 8 | 06 | implemented |
+| `GET /documents/{document}/reports` | 8 | 06 | implemented |
+| `GET /reports/{report}` | 8 | 06 | implemented |
+| `DELETE /reports/{report}` | 8 | 06 | implemented |
 
 ### 8.2 Requirements → phase
 
@@ -503,9 +514,15 @@ Config lives in Laravel config files with `.env` overrides; `.env.example` gets 
 | `services.gotenberg.connect_timeout` | `GOTENBERG_CONNECT_TIMEOUT` | `5` | 06 | Connect timeout (s) |
 | `scoring.*` (thresholds, weights, local-venue keywords) | `SCORING_*` (optional overrides) | see Phase 04 | 04 | Tunable matching configuration |
 | `analysis.queue` | `ANALYSIS_QUEUE` | `default` | 03 | Queue for `AnalyzeDocumentJob` |
-| `reports.disk` | — | `filesystems.default` | 06 | Private disk for report PDFs |
+| `reports.disk` | `REPORTS_DISK` | `filesystems.default` | 06 | Private disk for report PDFs; persisted per row in `files.disk` (D-06-02) |
 | `reports.queue` | `REPORTS_QUEUE` | `default` | 06 | Queue for `GenerateDocumentReportJob` |
-| `reports.template` | — | `reports.document-report` | 06 | Blade view rendered to HTML before Gotenberg |
+| `reports.timeout` | `REPORTS_TIMEOUT` | `300` | 06 | Job timeout; must stay above `services.gotenberg.timeout` |
+| `reports.lock_expiry_buffer` | `REPORTS_LOCK_EXPIRY_BUFFER` | `60` | 06 | Extra seconds the overlap lock outlives the job timeout |
+| `reports.template` | `REPORTS_TEMPLATE` | `reports.document-report` | 06 | Blade view rendered to HTML before Gotenberg |
+| `reports.text_preview_length` | `REPORTS_TEXT_PREVIEW_LENGTH` | `500` | 06 | Character cap for extracted text in the report |
+| `reports.pdf.*` (paper/margins) | `REPORTS_PAPER_*`/`REPORTS_MARGIN_*` | A4/0.4in | 06 | Gotenberg Chromium form fields |
+
+New Composer dependency: `gotenberg/gotenberg-php ^2.25` (MIT; pulls in `php-http/discovery`).
 
 Note: the Crossref REST API itself is unauthenticated. The `CROSSREF_API_KEY` placeholder
 mentioned in `AGENTS.md` §17 is not required for direct Crossref access (OQ-11 resolved); use

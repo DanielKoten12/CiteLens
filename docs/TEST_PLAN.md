@@ -191,6 +191,14 @@ receive `404 NOT_FOUND` (never `403`).
 | T-REP-03 | List / detail / delete | matches spec, `204` on delete |
 | T-REP-04 | Failed generation records `error` | status `failed` + `error` |
 | T-REP-05 | Report file removed on delete | no orphan in storage |
+| T-REP-06 | Job success | `completed`, `generated_at`, valid `download_url` |
+| F-REP-01 | Document delete cascades report files | storage + rows cleaned |
+| F-REP-02 | Gotenberg unavailable/timeout | `failed` + safe `error`; `POST` can regenerate |
+| F-REP-03 | Job idempotency | terminal report not re-rendered |
+| F-REP-04 | Report deleted mid-job | orphan file cleaned up |
+| F-REP-05 | HTML escaping | extracted text escaped in the report HTML |
+| F-REP-06 | URL/build shapes | `download_url` null→string; ordering/truncation |
+| F-REP-07 | Multi-disk file lifecycle | document on `local` + report on `reports.disk` cleaned per row |
 
 ### 5.8 Scoring and matching (`T-SCORE`) — unit
 
