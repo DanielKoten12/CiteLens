@@ -1,13 +1,20 @@
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from inference.config import MAX_UPLOAD_BYTES
-from inference.grobid.client import GrobidUnavailableError, check_grobid, extract_tei
-from inference.grobid.tei import parse_tei
+from inference.config import Settings, get_settings
+from inference.grobid import (
+    GrobidClient,
+    GrobidExtractionError,
+    GrobidUnavailableError,
+    TEIParseError,
+    get_grobid_client,
+    parse_tei,
+)
+from inference.schemas import ExtractResponse, HealthData
 
 
 @asynccontextmanager
@@ -66,17 +73,21 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return error_response("VALIDATION_ERROR", "Data permintaan tidak valid.", 422, details)
 
 
-@app.get("/health")
-async def health():
-    grobid_up = await check_grobid()
+@app.get("/health", response_model=HealthData)
+async def health(grobid: GrobidClient = Depends(get_grobid_client)):
+    grobid_up = await grobid.is_alive()
     return {
         "status": "ok" if grobid_up else "degraded",
         "grobid": "up" if grobid_up else "down",
     }
 
 
-@app.post("/v1/extract")
-async def extract(file: UploadFile = File(...)):
+@app.post("/v1/extract", response_model=ExtractResponse)
+async def extract(
+    file: UploadFile = File(...),
+    settings: Settings = Depends(get_settings),
+    grobid: GrobidClient = Depends(get_grobid_client),
+):
     filename = file.filename or "document.pdf"
     content_type = (file.content_type or "").lower().split(";")[0].strip()
 
@@ -88,14 +99,14 @@ async def extract(file: UploadFile = File(...)):
             {"file": ["File harus berupa PDF."]},
         )
 
-    pdf_bytes = await file.read(MAX_UPLOAD_BYTES + 1)
+    pdf_bytes = await file.read(settings.max_upload_bytes + 1)
     await file.close()
-    if len(pdf_bytes) > MAX_UPLOAD_BYTES:
+    if len(pdf_bytes) > settings.max_upload_bytes:
         return error_response(
             "PAYLOAD_TOO_LARGE",
             "Ukuran file melebihi batas yang diizinkan.",
             413,
-            {"file": [f"Ukuran maksimum {MAX_UPLOAD_BYTES // (1024 * 1024)} MB."]},
+            {"file": [f"Ukuran maksimum {settings.max_upload_mb} MB."]},
         )
     if not pdf_bytes or not pdf_bytes.startswith(b"%PDF-"):
         return error_response(
@@ -106,7 +117,7 @@ async def extract(file: UploadFile = File(...)):
         )
 
     try:
-        tei_xml = await extract_tei(pdf_bytes, filename)
+        tei_xml = await grobid.extract_tei(pdf_bytes, filename)
         parsed = parse_tei(tei_xml)
     except GrobidUnavailableError:
         return error_response(
@@ -114,7 +125,7 @@ async def extract(file: UploadFile = File(...)):
             "GROBID could not process the document.",
             503,
         )
-    except ValueError:
+    except (GrobidExtractionError, TEIParseError):
         return error_response(
             "EXTRACTION_FAILED",
             "GROBID could not process the document.",

@@ -6,6 +6,10 @@ TEI_NS = {"tei": "http://www.tei-c.org/ns/1.0"}
 XML_NS = "http://www.w3.org/XML/1998/namespace"
 
 
+class TEIParseError(ValueError):
+    """GROBID returned TEI XML the parser cannot read."""
+
+
 def clean_text(element: ET.Element | None) -> str | None:
     if element is None:
         return None
@@ -225,7 +229,7 @@ def parse_tei(tei_xml: str) -> dict[str, Any]:
     try:
         root = ET.fromstring(tei_xml)
     except ET.ParseError as exc:
-        raise ValueError("Invalid TEI XML returned by GROBID") from exc
+        raise TEIParseError("Invalid TEI XML returned by GROBID") from exc
 
     text_element = root.find(".//tei:text", TEI_NS)
     full_text = clean_text(text_element) or ""
