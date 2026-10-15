@@ -12,6 +12,10 @@ use Spatie\LaravelData\Mappers\SnakeCaseMapper;
  *
  * Mirrors `references[]` of `docs/API_SPEC.md` §9. Every field except the
  * location list is optional: GROBID regularly cannot parse a field.
+ *
+ * The payload also carries a 0-based `reference_index`, used to resolve the
+ * `reference_index` of in-text citations; it is not modeled here because
+ * persistence derives the index from payload order (`PersistExtractionStep`).
  */
 #[MapName(SnakeCaseMapper::class)]
 final class ExtractedReferenceData extends BaseData

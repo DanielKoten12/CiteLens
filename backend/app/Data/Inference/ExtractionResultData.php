@@ -11,6 +11,10 @@ use Spatie\LaravelData\Mappers\SnakeCaseMapper;
  * Full response body of `POST /v1/extract` wrapped in its `data` object
  * (`docs/API_SPEC.md` §9).
  *
+ * The payload may also carry a document-level `header` (title, authors,
+ * abstract, publication year, doi); it is not modeled here yet because no
+ * pipeline step consumes it. Unmodeled payload fields are ignored, not rejected.
+ *
  * A document may legitimately produce zero references and zero citations.
  */
 #[MapName(SnakeCaseMapper::class)]
