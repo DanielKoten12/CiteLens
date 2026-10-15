@@ -1,8 +1,22 @@
-import requests
-import xml.etree.ElementTree as ET
+"""Historical GROBID exploration script — not part of the service.
+
+Kept for reference and manual debugging: it mirrors the TEI shapes that
+``inference.grobid`` consumes and writes the raw TEI plus a JSON dump for
+inspection. It is not imported, packaged or tested. Run it with:
+
+    uv run python scripts/grobid_exploration.py [path/to/paper.pdf]
+
+The ``GROBID_URL`` and output paths below are script-local constants; the
+service reads the same values through ``inference.config.Settings``.
+"""
+
 import json
 import re
+import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
+
+import httpx
 
 
 # ============================================================
@@ -56,12 +70,11 @@ def process_fulltext(pdf_file):
 
         # IMPORTANT:
         # Send each teiCoordinates as a separate field.
-        data = [
-            ("teiCoordinates", "ref"),
-            ("teiCoordinates", "biblStruct"),
-        ]
+        data = {
+            "teiCoordinates": ["ref", "biblStruct"],
+        }
 
-        response = requests.post(
+        response = httpx.post(
             url,
             files=files,
             data=data,
@@ -926,6 +939,8 @@ def save_json(
 
 def main():
 
+    pdf_file = sys.argv[1] if len(sys.argv) > 1 else PDF_FILE
+
     print("=" * 60)
     print("GROBID PDF REFERENCE EXTRACTION")
     print("=" * 60)
@@ -935,7 +950,7 @@ def main():
     # --------------------------------------------------------
 
     tei_xml = process_fulltext(
-        PDF_FILE
+        pdf_file
     )
 
     # --------------------------------------------------------
