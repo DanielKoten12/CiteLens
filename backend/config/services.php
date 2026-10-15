@@ -46,6 +46,9 @@ return [
         'connect_timeout' => (int) env('CROSSREF_CONNECT_TIMEOUT', 5),
         'rows' => (int) env('CROSSREF_ROWS', 5),
         'cache_ttl' => (int) env('CROSSREF_CACHE_TTL', 86400),
+        'retries' => (int) env('CROSSREF_RETRIES', 2),
+        'retry_backoff_ms' => (int) env('CROSSREF_RETRY_BACKOFF_MS', 200),
+        'user_agent' => env('CROSSREF_USER_AGENT'),
     ],
 
     /*
@@ -57,6 +60,16 @@ return [
         'timeout' => (int) env('INFERENCE_TIMEOUT', 120),
         'connect_timeout' => (int) env('INFERENCE_CONNECT_TIMEOUT', 5),
         'embedding_batch_size' => (int) env('INFERENCE_EMBEDDING_BATCH_SIZE', 32),
+    ],
+
+    /*
+    | Gotenberg HTML→PDF rendering (`docs/API_SPEC.md` §8). Internal service on the
+    | private network, exactly like inference: never exposed, never called by the browser.
+    */
+    'gotenberg' => [
+        'base_url' => env('GOTENBERG_URL', 'http://gotenberg:3000'),
+        'timeout' => (int) env('GOTENBERG_TIMEOUT', 60),
+        'connect_timeout' => (int) env('GOTENBERG_CONNECT_TIMEOUT', 5),
     ],
 
 ];

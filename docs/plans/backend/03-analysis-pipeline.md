@@ -1,6 +1,7 @@
 # Phase 03 — Analysis Pipeline & Inference Client
 
-> **Status:** broad plan · **Depends on:** Phase 02 · **Unblocks:** Phase 04
+> **Status:** broad plan — **implemented**; see [`03-analysis-pipeline-detail.md`](03-analysis-pipeline-detail.md)
+> for the executable plan (all recommendations/defaults adopted there). · **Depends on:** Phase 02 · **Unblocks:** Phase 04
 > Canonical references: `docs/API_SPEC.md` §2.6/§9/§10, `docs/ARCHITECTURE.md` §7/§8/§10,
 > `docs/TEST_PLAN.md` T-PIPE / T-INF, `AGENTS.md` §8.
 

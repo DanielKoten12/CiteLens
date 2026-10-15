@@ -459,15 +459,51 @@ Be aware of what is scaffold vs. contract before promising behavior:
   (`Http/Controllers/Api/UploadController`, `Http/Requests/UploadDocumentRequest`,
   `Data/ResearchedDocument/*`, `Services/DocumentUploadService`,
   `Exceptions/DocumentUploadFailedException`) which dispatches `AnalyzeDocumentJob` after commit
-  via the `RunsDocumentAnalysis` seam. API responses are shaped with
+  via the `RunsDocumentAnalysis` seam. Phase 03 binds that seam to `AnalysisPipeline`: the canonical
+  step machine (`AnalysisStepRegistry`, `AnalysisProgress`, `AnalysisFailureHandler`,
+  `AnalysisContext`), the implemented steps (`ExtractDocumentStep`, `PersistExtractionStep`,
+  `FinalizeAnalysisStep`), the internal inference client (`Services/Inference/InferenceClient` +
+  `Data/Inference/*` DTOs + `ExtractionFailedException`), `Services/Crossref/DoiNormalizer`, the
+  `WithoutOverlapping` job middleware and the inference fixtures/fakes (`tests/Support/InferenceFake`,
+  `AnalysisHarness`). Phase 04 adds the Crossref layer (`Services/Crossref/CrossrefClient` + query
+  builder/result mapper/value objects + `Exceptions/CrossrefUnavailableException`), the pure
+  scoring engine (`Services/Scoring/*`: string/author/semantic similarity, local-venue detection,
+  reason building, `ReferenceScorer`, `VerdictDecider`), the
+  `crossref_validation`/`embedding`/`scoring` steps (`ValidateReferencesStep`,
+  `EmbedReferencesStep`, `ScoreReferencesStep`), the transient
+  `ReferenceVerificationBatch`/`EmbeddingIndex` context artifacts and the single automated writer
+  (`Services/ReferenceFinding/ReferenceFindingWriter`). Phase 05 adds citation resolution
+  (`Services/Citations/*`: `CitationMarkerParser`, `CitationResolver`, `CitationMatchConfig`,
+  `CitationReference`/`CitationResolution`, `ResolveCitationsStep`), the verification read model
+  (`Services/Reference/ReferenceQueryService`, `Services/Citation/CitationQueryService`, the
+  reference/citation/finding DTOs and a shared `Data/Location/LocationPreviewData`), the manual
+  writers (`Services/ReferenceFinding/ReferenceFindingReviewService`,
+  `Services/Citation/CitationPairingService`) and the `/references` / `/citations` / `/findings`
+  endpoints (`ReferenceController`, `CitationController`, `FindingsController`; derived feed in
+  `Services/Findings/{FindingsFeedQuery,FindingsFeedComposer}`). Phase 05.1 hardens citation
+  resolution: `CitationMarkerParser` retains every APA pair/ordinal, `AuthorMatcher::names()` adds
+  initials, `CitationCandidateScorer`/`CitationDecisionPolicy`/`CitationBatchResolver` implement
+  soft-year scoring, ambiguity detection and cross-citation evidence consolidation, the GROBID
+  `reference_index` is consumed as a validated prior, resolution provenance
+  (`resolution_state`/`resolution_method`/`resolution_confidence`/`extraction_reference_index`) and
+  `citation_resolution_candidates` are persisted, `unresolved` is a fifth derived status (severity
+  `medium`), and `citations:evaluate` provides a seed evaluation harness. API responses are shaped with
   **`spatie/laravel-data`** DTOs in `app/Data/` (the former `Http/Resources` layer was replaced).
   **Sanctum is installed** and the `/auth/*` endpoints (register, login, logout, me) are
   implemented (`Http/Controllers/Api/AuthController`, `Services/AuthService`, `Http/Requests/Auth/*`,
   `Data/Auth/AuthenticationData` + `Data/User/UserDetailData`, `Data/Error/ErrorResponseData`,
-  `Exceptions/InvalidCredentialsException`); the analysis pipeline internals (extraction, Crossref
-  client, scoring, citation resolution), the `/references` / `/citations` / `/findings` endpoints,
-  and report generation do not exist yet. Adding them is expected work — follow the contracts while
-  doing it. See `docs/ARCHITECTURE.md` §13 for the full status.
+  `Exceptions/InvalidCredentialsException`). Phase 06 adds report generation: the `files.disk`
+  column + report `file_id` FK migrations, `config/reports.php` + `services.gotenberg`, the
+  `ReportRenderer` seam with `GotenbergReportRenderer` (production dependency
+  `gotenberg/gotenberg-php ^2.25`, which pulls in `php-http/discovery`) over an injected Guzzle
+  PSR-18 client, `Services/Files/PrivateFileUrlResolver`, the disk-aware `DocumentFileManager`
+  (`storePdf`/`detachForReport`), the report read model/template (`ReportDataBuilder`,
+  `ReportPayload`, `ReportTemplateRenderer`, `resources/views/reports/document-report.blade.php`),
+  `GenerateDocumentReportJob` with `ReportStateService`/`ReportFailureHandler`/
+  `ReportDeletionService`, and the `/reports` endpoints (`ReportController`,
+  `ReportGenerationService`, `ReportQueryService`, `Data/Report/*` DTOs). The FastAPI inference
+  implementation does not exist yet. Adding it is expected work — follow the contracts while doing
+  it. See `docs/ARCHITECTURE.md` §13 for the full status.
 - **`frontend/`** is a working Vue 3 + Vite 6 + TypeScript + Tailwind 4 + Pinia + vue-router SPA
   with shadcn-vue (`reka-ui`) components. **`src/stores/auth.ts` is mocked** (setTimeout, no API
   calls) and `src/types/index.ts` uses prototype types (`valid | warning | halu`, numeric ids,

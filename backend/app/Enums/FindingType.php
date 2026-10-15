@@ -15,6 +15,7 @@ enum FindingType: string
     case ReferenceNotFound = 'reference_not_found';
     case ReferencePending = 'reference_pending';
     case CitationUnreliable = 'citation_unreliable';
+    case CitationUnresolved = 'citation_unresolved';
     case CitationHallucination = 'citation_hallucination';
 
     /**

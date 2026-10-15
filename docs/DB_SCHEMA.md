@@ -33,6 +33,9 @@ Table files {
 
   path text [not null]
 
+  // Private filesystem disk the object lives on; backfilled from the app default (D-06-02).
+  disk varchar [not null]
+
   mime_type varchar
 
   size bigint
@@ -177,6 +180,17 @@ Table researched_document_citations {
   // Nullable because a citation may be unresolved.
   researched_document_reference_id uuid
 
+  // Resolution provenance (Phase 05.1): paired | unresolved | unmatched.
+  resolution_state varchar [not null, default: 'unmatched']
+
+  // Which signal resolved it: extraction_hint | apa | ieee | manual.
+  resolution_method varchar
+
+  resolution_confidence decimal
+
+  // Raw GROBID reference_index hint (audit only).
+  extraction_reference_index integer
+
   // Citation as it appears in the PDF.
   // Examples: "[3]", "(Smith, 2020)", "Smith et al. (2020)"
   citation_text text [not null]
@@ -260,6 +274,42 @@ Table researched_document_citation_locations {
     (citation_id, location_index) [unique]
 
     page_number
+
+  }
+
+}
+
+
+Table citation_resolution_candidates {
+
+  id uuid [pk, not null]
+
+  citation_id uuid [not null]
+
+  // Suggested reference (same document as the citation).
+  researched_document_reference_id uuid [not null]
+
+  // Ranking best first (1..N).
+  rank integer [not null]
+
+  confidence decimal [not null]
+
+  // extraction_hint | apa | ieee
+  method varchar [not null]
+
+  match_reason text
+
+  created_at timestamp [not null]
+
+  updated_at timestamp [not null]
+
+  indexes {
+
+    (citation_id, rank) [unique]
+
+    (citation_id, researched_document_reference_id) [unique]
+
+    citation_id
 
   }
 
@@ -356,6 +406,7 @@ Table generated_document_reports {
   // Nullable because reports are generated at document level.
   reference_finding_id uuid
 
+  // Nullable canonical pointer to the stored PDF; nulled when the file row is deleted (OQ-06).
   file_id uuid
 
   status varchar [not null, default: 'pending']
@@ -387,6 +438,10 @@ Ref: researched_document_citations.researched_document_reference_id > researched
 
 Ref: researched_document_citation_locations.citation_id > researched_document_citations.id
 
+Ref: citation_resolution_candidates.citation_id > researched_document_citations.id
+
+Ref: citation_resolution_candidates.researched_document_reference_id > researched_document_references.id
+
 Ref: reference_findings.researched_document_id > researched_documents.id
 
 Ref: reference_findings.researched_document_reference_id > researched_document_references.id
@@ -400,6 +455,8 @@ Ref: reference_finding_candidates.reference_finding_id > reference_findings.id
 Ref: generated_document_reports.researched_document_id > researched_documents.id
 
 Ref: generated_document_reports.reference_finding_id > reference_findings.id
+
+Ref: generated_document_reports.file_id > files.id
 
 Ref: "generated_document_reports"."id" <? "files"."fileable_id"
 

@@ -77,7 +77,7 @@ it('returns an empty array without querying for no documents', function () {
 it('matches the SQL derivation to the PHP derivation', function () {
     $tree = buildDocumentSummaryFixture();
 
-    $derived = $this->resolver->sqlExpression('c.researched_document_reference_id', 'f.status');
+    $derived = $this->resolver->sqlExpression('c.resolution_state', 'f.status');
 
     $sql = DB::table('researched_document_citations as c')
         ->leftJoin('researched_document_references as r', 'r.id', '=', 'c.researched_document_reference_id')
@@ -93,7 +93,7 @@ it('matches the SQL derivation to the PHP derivation', function () {
         ->get()
         ->mapWithKeys(function ($citation): array {
             $status = CitationStatus::derive(
-                $citation->researched_document_reference_id !== null,
+                $citation->resolution_state,
                 $citation->reference?->finding?->status,
             );
 

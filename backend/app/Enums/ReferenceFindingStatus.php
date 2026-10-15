@@ -17,6 +17,22 @@ enum ReferenceFindingStatus: string
     case NotFound = 'not_found';
 
     /**
+     * Indonesian label for human-facing surfaces (report template).
+     *
+     * The API keeps the machine value; only the Blade view renders labels (D-06-08).
+     */
+    public function label(): string
+    {
+        return match ($this) {
+            self::Pending => 'Menunggu penilaian',
+            self::Valid => 'Valid',
+            self::Suspicious => 'Perlu ditinjau',
+            self::Invalid => 'Tidak valid',
+            self::NotFound => 'Tidak ditemukan',
+        };
+    }
+
+    /**
      * Whether this status surfaces a problem in the findings feed.
      */
     public function isProblem(): bool

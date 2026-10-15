@@ -1,7 +1,11 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CitationController;
 use App\Http\Controllers\Api\DocumentController;
+use App\Http\Controllers\Api\FindingsController;
+use App\Http\Controllers\Api\ReferenceController;
+use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\UploadController;
 use Illuminate\Support\Facades\Route;
 
@@ -51,5 +55,51 @@ Route::prefix('v1')->name('v1.')->group(function (): void {
         Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])
             ->whereUuid('document')
             ->name('documents.destroy');
+
+        // Verification surface (Phase 05, `docs/API_SPEC.md` §5/§6).
+        Route::get('/documents/{document}/references', [ReferenceController::class, 'index'])
+            ->whereUuid('document')
+            ->name('documents.references.index');
+
+        Route::get('/references/{reference}', [ReferenceController::class, 'show'])
+            ->whereUuid('reference')
+            ->name('references.show');
+
+        Route::patch('/references/{reference}/finding', [ReferenceController::class, 'updateFinding'])
+            ->whereUuid('reference')
+            ->name('references.finding.update');
+
+        Route::get('/documents/{document}/citations', [CitationController::class, 'index'])
+            ->whereUuid('document')
+            ->name('documents.citations.index');
+
+        Route::get('/citations/{citation}', [CitationController::class, 'show'])
+            ->whereUuid('citation')
+            ->name('citations.show');
+
+        Route::patch('/citations/{citation}', [CitationController::class, 'update'])
+            ->whereUuid('citation')
+            ->name('citations.update');
+
+        Route::get('/documents/{document}/findings', [FindingsController::class, 'index'])
+            ->whereUuid('document')
+            ->name('documents.findings.index');
+
+        // Reports (Phase 06, `docs/API_SPEC.md` §8): on-demand PDF generation.
+        Route::post('/documents/{document}/reports', [ReportController::class, 'store'])
+            ->whereUuid('document')
+            ->name('documents.reports.store');
+
+        Route::get('/documents/{document}/reports', [ReportController::class, 'index'])
+            ->whereUuid('document')
+            ->name('documents.reports.index');
+
+        Route::get('/reports/{report}', [ReportController::class, 'show'])
+            ->whereUuid('report')
+            ->name('reports.show');
+
+        Route::delete('/reports/{report}', [ReportController::class, 'destroy'])
+            ->whereUuid('report')
+            ->name('reports.destroy');
     });
 });

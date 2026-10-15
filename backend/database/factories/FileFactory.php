@@ -24,6 +24,7 @@ class FileFactory extends Factory
             'fileable_id' => ResearchedDocument::factory(),
             'filename' => fake()->word().'.pdf',
             'path' => 'documents/'.Str::uuid().'/'.Str::uuid().'.pdf',
+            'disk' => (string) config('filesystems.default'),
             'mime_type' => 'application/pdf',
             'size' => fake()->numberBetween(1024, 5_000_000),
         ];

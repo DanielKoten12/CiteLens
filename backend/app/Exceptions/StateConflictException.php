@@ -19,6 +19,11 @@ final class StateConflictException extends ApiException
         return new self('Laporan hanya dapat dibuat untuk dokumen yang selesai dianalisis.');
     }
 
+    public static function findingReviewNotAllowed(): self
+    {
+        return new self('Status referensi tidak dapat diubah saat analisis sedang berjalan.');
+    }
+
     public function code(): string
     {
         return 'CONFLICT';

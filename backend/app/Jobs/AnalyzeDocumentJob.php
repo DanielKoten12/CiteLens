@@ -10,6 +10,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
 use Throwable;
 
@@ -58,6 +59,23 @@ final class AnalyzeDocumentJob implements ShouldQueue
         }
 
         $pipeline->run($document);
+    }
+
+    /**
+     * A single concurrent run per document is enough; a duplicate that cannot
+     * acquire the lock is dropped (`dontRelease()`), which is safe because the
+     * status guard plus idempotent steps make a second run redundant. The lock
+     * outlives the job timeout so a killed worker cannot wedge a document.
+     *
+     * @return list<object>
+     */
+    public function middleware(): array
+    {
+        return [
+            (new WithoutOverlapping("document-analysis:{$this->documentId}"))
+                ->expireAfter($this->timeout + (int) config('analysis.lock_expiry_buffer', 60))
+                ->dontRelease(),
+        ];
     }
 
     /**

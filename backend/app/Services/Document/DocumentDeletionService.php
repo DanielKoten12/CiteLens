@@ -25,15 +25,15 @@ final class DocumentDeletionService
      */
     public function delete(ResearchedDocument $document): void
     {
-        $paths = DB::transaction(function () use ($document): array {
-            $paths = $this->fileManager->detachForDocument($document);
+        $objects = DB::transaction(function () use ($document): array {
+            $objects = $this->fileManager->detachForDocument($document);
 
             $document->delete();
 
-            return $paths;
+            return $objects;
         });
 
-        $this->fileManager->deleteStoredObjects($paths);
+        $this->fileManager->deleteStoredObjects($objects);
     }
 
     /**

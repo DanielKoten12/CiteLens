@@ -65,4 +65,17 @@ class ResearchedDocumentReference extends Model
     {
         return $this->hasOne(ReferenceFinding::class);
     }
+
+    /**
+     * In-text citations resolved to this reference, in document order.
+     *
+     * @return HasMany<ResearchedDocumentCitation, $this>
+     */
+    public function citations(): HasMany
+    {
+        return $this->hasMany(ResearchedDocumentCitation::class, 'researched_document_reference_id')
+            ->orderByRaw('occurrence_index IS NULL')
+            ->orderBy('occurrence_index')
+            ->orderBy('id');
+    }
 }

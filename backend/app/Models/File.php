@@ -24,6 +24,7 @@ class File extends Model
         'fileable_id',
         'filename',
         'path',
+        'disk',
         'mime_type',
         'size',
     ];

@@ -50,8 +50,15 @@ final class DocumentTree
      */
     public function reference(array $attributes = [], int $locations = 0): ResearchedDocumentReference
     {
-        $attributes['text_start_offset'] ??= ($this->document->references()->max('text_end_offset') ?? 0);
-        $attributes['text_end_offset'] ??= $attributes['text_start_offset'] + 120;
+        if (! array_key_exists('text_start_offset', $attributes)) {
+            $attributes['text_start_offset'] = ($this->document->references()->max('text_end_offset') ?? 0);
+        }
+
+        if (! array_key_exists('text_end_offset', $attributes)) {
+            $attributes['text_end_offset'] = $attributes['text_start_offset'] === null
+                ? null
+                : $attributes['text_start_offset'] + 120;
+        }
 
         $reference = ResearchedDocumentReference::factory()->for($this->document)->create($attributes);
 
