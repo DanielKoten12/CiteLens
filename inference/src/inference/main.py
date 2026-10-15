@@ -1,47 +1,54 @@
-from contextlib import asynccontextmanager
+"""FastAPI application factory for the internal inference service.
+
+Wiring only: the exception handlers that render the standard error envelope
+(`docs/API_SPEC.md` §2.5) and the capability routers. Capability code lives in
+``inference.grobid`` and will grow ``inference.sbert`` for embeddings.
+"""
+
+from __future__ import annotations
+
+import logging
 from typing import Any
 
-from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from inference.config import Settings, get_settings
-from inference.grobid import (
-    GrobidClient,
-    GrobidExtractionError,
-    GrobidUnavailableError,
-    TEIParseError,
-    get_grobid_client,
-    parse_tei,
-)
-from inference.schemas import ExtractResponse, HealthData
+from inference.api import extract, health
 
+logger = logging.getLogger(__name__)
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    yield
+_DEFAULT_ERRORS: dict[int, tuple[str, str]] = {
+    400: ("BAD_REQUEST", "Permintaan tidak valid."),
+    404: ("NOT_FOUND", "Endpoint tidak ditemukan."),
+    413: ("PAYLOAD_TOO_LARGE", "Ukuran file melewati batas yang diizinkan."),
+    415: ("UNSUPPORTED_MEDIA_TYPE", "Hanya file PDF yang diterima."),
+    422: ("VALIDATION_ERROR", "Data permintaan tidak valid."),
+    503: ("INFERENCE_UNAVAILABLE", "Layanan ekstraksi tidak tersedia."),
+}
 
 
-app = FastAPI(
-    title="Dafpus Cek Document Extraction API",
-    description=(
-        "Internal-only service for extracting document metadata, bibliography references, "
-        "in-text citations, and PDF locations through GROBID."
-    ),
-    version="1.1.0",
-    lifespan=lifespan,
-)
-
-
-def error_response(code: str, message: str, status_code: int, details: dict[str, Any] | None = None):
+def error_response(
+    code: str,
+    message: str,
+    status_code: int,
+    details: dict[str, Any] | None = None,
+) -> JSONResponse:
     error: dict[str, Any] = {"code": code, "message": message}
     if details:
         error["details"] = details
     return JSONResponse(status_code=status_code, content={"error": error})
 
 
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException):
+async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+    """Render every HTTPException (explicit raises and framework 404s) as the envelope.
+
+    Registered on ``starlette.exceptions.HTTPException`` so Starlette's own
+    404 (raised with its parent class) is caught too; a FastAPI-subclass-keyed
+    handler would never match it.
+    """
+
     detail = exc.detail
     if isinstance(detail, dict) and "code" in detail and "message" in detail:
         return error_response(
@@ -50,21 +57,13 @@ async def http_exception_handler(request: Request, exc: HTTPException):
             exc.status_code,
             detail.get("details"),
         )
-    defaults = {
-        400: ("BAD_REQUEST", "Permintaan tidak valid."),
-        404: ("NOT_FOUND", "Endpoint tidak ditemukan."),
-        413: ("PAYLOAD_TOO_LARGE", "Ukuran file melewati batas yang diizinkan."),
-        415: ("UNSUPPORTED_MEDIA_TYPE", "Hanya file PDF yang diterima."),
-        422: ("VALIDATION_ERROR", "Data permintaan tidak valid."),
-        503: ("INFERENCE_UNAVAILABLE", "Layanan ekstraksi tidak tersedia."),
-    }
-    code, fallback_message = defaults.get(exc.status_code, ("SERVER_ERROR", "Terjadi kesalahan."))
+
+    code, fallback_message = _DEFAULT_ERRORS.get(exc.status_code, ("SERVER_ERROR", "Terjadi kesalahan."))
     message = detail if isinstance(detail, str) else fallback_message
     return error_response(code, message, exc.status_code)
 
 
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
+async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     details: dict[str, list[str]] = {}
     for item in exc.errors():
         location = item.get("loc", ())
@@ -73,63 +72,31 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return error_response("VALIDATION_ERROR", "Data permintaan tidak valid.", 422, details)
 
 
-@app.get("/health", response_model=HealthData)
-async def health(grobid: GrobidClient = Depends(get_grobid_client)):
-    grobid_up = await grobid.is_alive()
-    return {
-        "status": "ok" if grobid_up else "degraded",
-        "grobid": "up" if grobid_up else "down",
-    }
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Never leak stack traces or paths; the envelope carries a safe message only."""
+
+    logger.error("Unhandled inference service error", exc_info=exc)
+    return error_response("SERVER_ERROR", "Terjadi kesalahan.", 500)
 
 
-@app.post("/v1/extract", response_model=ExtractResponse)
-async def extract(
-    file: UploadFile = File(...),
-    settings: Settings = Depends(get_settings),
-    grobid: GrobidClient = Depends(get_grobid_client),
-):
-    filename = file.filename or "document.pdf"
-    content_type = (file.content_type or "").lower().split(";")[0].strip()
+def create_app() -> FastAPI:
+    app = FastAPI(
+        title="Dafpus Cek Document Extraction API",
+        description=(
+            "Internal-only service for extracting document metadata, bibliography references, "
+            "in-text citations, and PDF locations through GROBID."
+        ),
+        version="1.1.0",
+    )
 
-    if not filename.lower().endswith(".pdf") or content_type not in ("application/pdf", "application/octet-stream", ""):
-        return error_response(
-            "UNSUPPORTED_MEDIA_TYPE",
-            "Format file tidak didukung. Hanya PDF yang diterima.",
-            415,
-            {"file": ["File harus berupa PDF."]},
-        )
+    app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    app.add_exception_handler(Exception, unhandled_exception_handler)
 
-    pdf_bytes = await file.read(settings.max_upload_bytes + 1)
-    await file.close()
-    if len(pdf_bytes) > settings.max_upload_bytes:
-        return error_response(
-            "PAYLOAD_TOO_LARGE",
-            "Ukuran file melebihi batas yang diizinkan.",
-            413,
-            {"file": [f"Ukuran maksimum {settings.max_upload_mb} MB."]},
-        )
-    if not pdf_bytes or not pdf_bytes.startswith(b"%PDF-"):
-        return error_response(
-            "EXTRACTION_FAILED",
-            "GROBID could not process the document.",
-            422,
-            {"file": ["File kosong atau bukan PDF yang valid."]},
-        )
+    app.include_router(health.router)
+    app.include_router(extract.router)
 
-    try:
-        tei_xml = await grobid.extract_tei(pdf_bytes, filename)
-        parsed = parse_tei(tei_xml)
-    except GrobidUnavailableError:
-        return error_response(
-            "EXTRACTION_FAILED",
-            "GROBID could not process the document.",
-            503,
-        )
-    except (GrobidExtractionError, TEIParseError):
-        return error_response(
-            "EXTRACTION_FAILED",
-            "GROBID could not process the document.",
-            422,
-        )
+    return app
 
-    return {"data": parsed}
+
+app = create_app()
