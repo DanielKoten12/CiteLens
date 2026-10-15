@@ -1091,7 +1091,8 @@ Catatan field:
 - GROBID tidak selalu dapat memparse suatu field, sehingga `title`, `authors`, `publication_name`,
   `doi`, dan `publication_year` dapat bernilai `null` pada sebuah referensi.
 
-**Gagal — `422`** (PDF tidak dapat diparse) · **`503`** (GROBID mati)
+**Gagal — `413`** (melebihi batas ukuran) · **`415`** (bukan PDF) · **`422`** (PDF tidak dapat
+diparse) · **`503`** (GROBID mati)
 
 ```json
 { "error": { "code": "EXTRACTION_FAILED", "message": "GROBID could not process the document." } }

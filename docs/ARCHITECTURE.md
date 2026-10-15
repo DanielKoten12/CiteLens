@@ -84,13 +84,13 @@ Hard rules:
 │   ├── config/
 │   └── database/{migrations,factories,seeders}
 └── inference/                 # FastAPI internal inference service
-    ├── main.py
-    └── src/inference/
+    ├── src/inference/         # main.py, config.py, schemas.py, api/, grobid/
+    └── tests/                 # pytest (hermetic MockTransport; opt-in integration)
 ```
 
 Backend entry points: `backend/bootstrap/app.php` (middleware/exception bootstrap),
 `backend/routes/api.php` (API routes under `/api/v1`). The FastAPI entry point is
-`inference/main.py`.
+`inference.main:app` (`inference/src/inference/main.py`).
 
 ---
 
@@ -267,10 +267,11 @@ Base URL `http://inference:8000` (private network, no auth in v1). Defined in `A
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/health` | `{ status, grobid, sbert }` liveness |
+| GET | `/health` | `{ status, grobid[, sbert] }` liveness |
 | POST | `/v1/extract` | Multipart PDF → references + citations + coordinates (GROBID) |
 | POST | `/v1/embeddings` | Batch texts → vectors (SBERT) |
 
+The service currently reports `status`/`grobid`; `sbert` arrives with the embeddings slice.
 Batch embedding requests (e.g. 32 texts) to bound latency/memory. Crossref consolidation is not
 delegated to GROBID — Laravel controls validation so results stay reproducible. Failures surface
 to the pipeline as `INFERENCE_UNAVAILABLE`.
@@ -367,14 +368,15 @@ Verified against the repository:
   implementation (FastAPI).
 - **Frontend** is a working Vue 3 + Vite SPA with mocked auth and prototype types; the API is not
   wired yet.
-- **Inference** is a FastAPI hello-world stub; `/health`, `/v1/extract`, `/v1/embeddings` are
-  specified but unimplemented.
+- **Inference** implements the GROBID extraction slice (`GET /health`, `POST /v1/extract`) in
+  `inference/src/inference/` with a hermetic pytest suite; `/v1/embeddings` (SBERT) is not
+  implemented yet.
 
 Everything described as "the pipeline" or "scoring" above is the **target** design; the document
 lifecycle endpoints, the upload→job dispatch seam, the extraction/persistence half (Phase 03),
 Crossref verification/scoring (Phase 04), citation resolution + the verification endpoints
 (Phase 05) and report generation + the `/reports` endpoints (Phase 06) exist today, while the
-FastAPI inference service does not.
+FastAPI inference service implements only the GROBID extraction slice (SBERT embeddings pending).
 
 ---
 

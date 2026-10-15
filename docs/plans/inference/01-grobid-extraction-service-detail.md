@@ -1,6 +1,6 @@
 # Phase 01 — GROBID Extraction Service (Detailed Implementation Plan)
 
-> **Status:** detailed plan — ready to implement
+> **Status:** implemented (2026-10-15)
 > **Parent:** [`01-grobid-extraction-service.md`](01-grobid-extraction-service.md)
 > **Depends on:** — · **Unblocks:** Phase 02 (SBERT)
 > Canonical references: `docs/API_SPEC.md` §9, `docs/ARCHITECTURE.md` §3/§4/§10/§13,

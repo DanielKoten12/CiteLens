@@ -1,6 +1,6 @@
 # Phase 01 — GROBID Extraction Service (Internal Inference API)
 
-> **Status:** broad plan — executable detail in
+> **Status:** implemented (2026-10-15) — executable detail in
 > [`01-grobid-extraction-service-detail.md`](01-grobid-extraction-service-detail.md) · **Depends on:** — ·
 > **Unblocks:** Phase 02 (SBERT)
 > Canonical references: `docs/API_SPEC.md` §9 (payload + failure codes), `docs/ARCHITECTURE.md`

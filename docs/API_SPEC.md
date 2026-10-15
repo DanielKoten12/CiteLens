@@ -1137,7 +1137,8 @@ Field notes:
 - GROBID cannot always parse a field, so `title`, `authors`, `publication_name`, `doi`, and
   `publication_year` may be `null` on a reference.
 
-**Failure — `422`** (unparseable PDF) · **`503`** (GROBID down)
+**Failure — `413`** (over the size cap) · **`415`** (not a PDF) · **`422`** (unparseable PDF) ·
+**`503`** (GROBID down)
 
 ```json
 { "error": { "code": "EXTRACTION_FAILED", "message": "GROBID could not process the document." } }

@@ -1,7 +1,7 @@
 # Inference Implementation Plan — Dafpus Cek
 
-> **Status:** broad plan (v1) — written while PR #17 (`Grobid-1`) is a draft, before the GROBID
-> slice is ported into the uv-managed service.
+> **Status:** broad plan (v1) — Phase 01 implemented and tested on PR #17 (`Grobid-1`);
+> Phase 02 (SBERT) pending.
 > Detailed, task-level plans are kept per phase (see §7). Each phase document is structured so it
 > can be expanded into an executable plan without re-deriving a contract, invariant or acceptance
 > criterion.
@@ -71,7 +71,7 @@ shape updates `docs/API_SPEC.md` (and `API_SPEC_ID.md`) in the same change.
 
 ---
 
-## 3. Current status (verified in the repo, 2026-10-15)
+## 3. Baseline before Phase 01 (verified in the repo, 2026-10-15)
 
 - `inference/` is a uv-managed Python 3.14 project (`uv 0.12.23`, `uv_build` 0.12.x) whose app is
   a hello-world stub: `inference/main.py`, `src/inference/__init__.py`, empty `README.md`,
@@ -94,7 +94,7 @@ shape updates `docs/API_SPEC.md` (and `API_SPEC_ID.md`) in the same change.
 - `docs/TEST_PLAN.md` §5.10 defines T-INF-01..07; T-INF-01/02/04 are in scope now, T-INF-03 needs
   its expectation corrected (D-INF-02), T-INF-05..07 belong to the SBERT phase.
 
-### 3.1 What is missing (the work these plans cover)
+### 3.1 What was missing (the work these plans cover)
 
 - The GROBID slice ported into `src/inference/`, wired into the app, with uv-declared dependencies
   and a regenerated lock.
@@ -102,6 +102,19 @@ shape updates `docs/API_SPEC.md` (and `API_SPEC_ID.md`) in the same change.
   envelope, plus parser unit tests.
 - The `/v1/embeddings` SBERT endpoint (later phase).
 - Container/deployment tooling (not in this repo yet; intentionally out of scope).
+
+### 3.2 Phase 01 outcome (2026-10-15)
+
+- `inference/` is one package: `src/inference/{main,config,schemas}.py`,
+  `src/inference/api/{health,extract}.py`, `src/inference/grobid/{client,tei}.py`; entry point
+  `uvicorn inference.main:app`; dependencies and lock are uv-declared (`httpx`,
+  `python-multipart`; dev group `pytest`, `httpx2`).
+- `GET /health` and `POST /v1/extract` are implemented with typed schemas, the standard error
+  envelope (`413`/`415`/`422`/`503`) and a hermetic pytest suite (`uv run pytest`: 36 passed,
+  1 opt-in integration skip).
+- `docs/API_SPEC.md`/`API_SPEC_ID.md` §9 document the `413`/`415` failure codes; T-INF-03 in
+  `docs/TEST_PLAN.md` is corrected; `AGENTS.md` and `docs/ARCHITECTURE.md` reflect the new layout.
+- Remaining for Phase 02: `inference/sbert/`, `POST /v1/embeddings`, `/health.sbert` (PR TODO 4).
 
 ---
 
