@@ -1,6 +1,6 @@
 import httpx
 
-from app.config import GROBID_TIMEOUT_SECONDS, GROBID_URL
+from inference.config import GROBID_TIMEOUT_SECONDS, GROBID_URL
 
 
 class GrobidUnavailableError(RuntimeError):

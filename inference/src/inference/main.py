@@ -5,9 +5,9 @@ from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.config import MAX_UPLOAD_BYTES
-from app.services.grobid import GrobidUnavailableError, check_grobid, extract_tei
-from app.services.tei_parser import parse_tei
+from inference.config import MAX_UPLOAD_BYTES
+from inference.grobid.client import GrobidUnavailableError, check_grobid, extract_tei
+from inference.grobid.tei import parse_tei
 
 
 @asynccontextmanager

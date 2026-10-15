@@ -1,7 +1,7 @@
 [project]
 name = "inference"
 version = "0.1.0"
-description = "Add your description here"
+description = "Internal Dafpus Cek inference service (GROBID extraction, SBERT embeddings)"
 readme = "README.md"
 authors = [
     { name = "Bagus Nur Andiansyah", email = "bagusnur@protonmail.com" }
@@ -9,11 +9,21 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     "fastapi[standard]>=0.141.1",
+    "httpx>=0.28.1",
+    "python-multipart>=0.0.32",
 ]
 
-[project.scripts]
-inference = "inference:main"
+[dependency-groups]
+dev = [
+    "pytest>=8.4",
+]
 
 [build-system]
 requires = ["uv_build>=0.12.18,<0.13.0"]
 build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: requires a live GROBID instance (opt-in)",
+]
