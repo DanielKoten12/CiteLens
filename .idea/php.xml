@@ -149,6 +149,13 @@
       <path value="$PROJECT_DIR$/backend/vendor/laravel/framework" />
       <path value="$PROJECT_DIR$/backend/vendor/phpunit/phpunit" />
       <path value="$PROJECT_DIR$/backend/vendor/phpunit/php-code-coverage" />
+      <path value="$PROJECT_DIR$/backend/vendor/spatie/laravel-package-tools" />
+      <path value="$PROJECT_DIR$/backend/vendor/spatie/php-structure-discoverer" />
+      <path value="$PROJECT_DIR$/backend/vendor/spatie/laravel-data" />
+      <path value="$PROJECT_DIR$/backend/vendor/_laravel_idea" />
+      <path value="$PROJECT_DIR$/backend/vendor/laravel/sanctum" />
+      <path value="$PROJECT_DIR$/backend/vendor/php-http/discovery" />
+      <path value="$PROJECT_DIR$/backend/vendor/gotenberg/gotenberg-php" />
     </include_path>
   </component>
   <component name="PhpProjectSharedConfiguration" php_language_level="8.3">
@@ -156,6 +163,11 @@
   </component>
   <component name="PhpStanOptionsConfiguration">
     <option name="transferred" value="true" />
+  </component>
+  <component name="PhpUnit">
+    <phpunit_settings>
+      <PhpUnitSettings configuration_file_path="$PROJECT_DIR$/backend/phpunit.xml" custom_loader_path="$PROJECT_DIR$/backend/vendor/autoload.php" paratest_path="$PROJECT_DIR$/backend/vendor/bin/paratest_for_phpstorm" use_configuration_file="true" />
+    </phpunit_settings>
   </component>
   <component name="PsalmOptionsConfiguration">
     <option name="transferred" value="true" />

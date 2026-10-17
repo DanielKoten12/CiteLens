@@ -113,7 +113,13 @@ Hard rules:
 ```text
 /
 ├── AGENTS.md                  # this file
-├── README.md                  # project stub ("To be implemented")
+├── README.md                  # project overview + docker quick start
+├── compose.yaml               # development stack (amd64 default; see docker/README.md)
+├── compose.arm64.yaml         # arm64 overlay (GROBID CRF image, native arm64)
+├── compose.prod.yaml          # production-shaped overlay (built targets, SPA via nginx)
+├── compose.debug.yaml         # opt-in 127.0.0.1 publish for db/grobid/inference/gotenberg
+├── .env.example               # compose variable overrides (copy to .env, git-ignored)
+├── docker/                    # shared container config: php.ini, entrypoint, nginx vhosts
 ├── docs/
 │   ├── API_SPEC.md            # CANONICAL public API contract (English)
 │   ├── API_SPEC_ID.md         # Indonesian translation of API_SPEC.md
@@ -127,7 +133,8 @@ Hard rules:
 │   └── Proposal Capstone Project Kelompok 7.md    # Markdown rendering of the proposal
 ├── frontend/                  # Vue 3 SPA ("CiteLens")
 │   ├── package.json           # npm scripts (dev / build / preview / type-check)
-│   ├── vite.config.ts         # Vite 6 + Tailwind 4 plugin, alias @/ -> src/
+│   ├── Dockerfile             # dev (Vite HMR) + prod (baked bundle -> nginx) targets
+│   ├── vite.config.ts         # Vite 6 + Tailwind 4 plugin, alias @/ -> src/, /api dev proxy
 │   ├── components.json        # shadcn-vue config (style "new-york")
 │   ├── README.md              # frontend setup guide (Indonesian)
 │   └── src/
@@ -141,6 +148,7 @@ Hard rules:
 │                              # ResultView, HistoryView
 ├── backend/                   # Laravel application
 │   ├── artisan
+│   ├── Dockerfile             # php-fpm image for api + worker (dev/prod targets)
 │   ├── composer.json          # PHP ^8.3, laravel/framework ^13.17, Pest 5, Pint
 │   ├── phpunit.xml            # Pest/PHPUnit config (sqlite :memory:, sync queue)
 │   ├── .env.example
@@ -153,6 +161,7 @@ Hard rules:
 │   ├── database/              # migrations (incl. canonical domain schema), factories, seeders
 │   └── tests/                 # Pest tests (tests/Feature, tests/Unit)
 └── inference/                 # FastAPI internal inference service (GROBID slice implemented)
+    ├── Dockerfile             # uv-based image (dev/prod targets)
     ├── pyproject.toml         # uv-managed, requires Python >= 3.14, fastapi[standard]
     ├── uv.lock
     ├── scripts/               # dev-only GROBID exploration script (not packaged)
@@ -167,9 +176,13 @@ Hard rules:
 
 Notes:
 
-- There is **no Docker/docker-compose, no CI configuration, no `.github/`, and no ESLint/Prettier
-  config** in this repo at the time of writing. Do not cite commands from tooling that does not
-  exist; if you add such tooling, do it deliberately and document it here.
+- The stack is **containerized**: root `compose.yaml` (development, amd64 GROBID full image) plus
+  the `compose.arm64.yaml`, `compose.prod.yaml` and `compose.debug.yaml` overlays; shared config
+  lives in `docker/`, per-component images in `backend/Dockerfile`, `frontend/Dockerfile` and
+  `inference/Dockerfile`. The runbook is `docker/README.md`; keep commands there, not duplicated.
+- There is **no CI configuration, no `.github/`, and no ESLint/Prettier config** in this repo. Do
+  not cite commands from tooling that does not exist; if you add such tooling, do it deliberately
+  and document it here.
 - `backend/.env` exists locally and is git-ignored. Never read secrets out of it into code or
   docs, never commit it.
 
@@ -185,6 +198,7 @@ Notes:
 | Migrations | `backend/database/migrations/` (framework tables + `create_initial_tables` domain schema) |
 | Backend tests | `backend/tests/Feature/`, `backend/tests/Unit/` (Pest) |
 | Frontend API/auth state | `frontend/src/stores/auth.ts` (mock) |
+| Container stack / runbook | `compose.yaml` + overlays, `docker/` (runbook: `docker/README.md`) |
 | Frontend routes/guards | `frontend/src/router/index.ts` |
 | Frontend shared types | `frontend/src/types/index.ts` |
 | Inference service entry | `inference/src/inference/main.py` (`uvicorn inference.main:app`) |
@@ -603,13 +617,38 @@ uv run pytest -m integration                                  # opt-in; needs a 
   (`httpx.MockTransport`). The `integration` marker is skipped unless `GROBID_INTEGRATION_URL` and
   `GROBID_INTEGRATION_PDF` are set. No Python linter/formatter is configured.
 
+### Docker (`compose.yaml`, `docker/`)
+
+```bash
+docker compose up -d --build                                            # dev, amd64 default
+docker compose -f compose.yaml -f compose.arm64.yaml up -d --build      # arm64 hosts
+docker compose -f compose.yaml -f compose.prod.yaml up -d --build       # production-shaped
+docker compose -f compose.yaml -f compose.debug.yaml up -d              # + 127.0.0.1 debug ports
+
+docker compose logs -f worker
+docker compose exec backend php artisan test      # Pest inside the API image
+docker compose exec inference uv run pytest       # inference contract suite
+docker compose down -v                            # also removes data volumes
+```
+
+- All images build from the repository root (`context: .`); `backend/vendor`,
+  `frontend/node_modules` and `inference/.venv` are container-local named volumes and are never
+  bound from the host.
+- Containers run with `SCORING_SEMANTIC_ENABLED=false`: SBERT (`POST /v1/embeddings`) is not
+  implemented yet and a 404 from that step is fatal to the pipeline. Full runbook:
+  `docker/README.md`.
+
 ## 17. Environment and Secrets
 
 - Backend env template: `backend/.env.example` (App/DB/session/queue/cache/mail settings;
   `QUEUE_CONNECTION=database` by default). Local `backend/.env` is git-ignored.
-- Frontend currently has **no** `.env` / `VITE_*` usage; the API base URL is not wired yet. When
-  wiring it, use a `VITE_API_BASE_URL`-style variable (see `frontend/README.md`), not hardcoded
-  URLs.
+- Frontend env template: `frontend/.env.example` (`VITE_API_BASE_URL=/api/v1`). The Vite dev
+  server and the production nginx edge both reverse-proxy `/api` to Laravel, so the value stays
+  relative — never hardcode an API host into the SPA. `frontend/src/vite-env.d.ts` types
+  `import.meta.env`.
+- Compose env template: root `.env.example` (ports, PostgreSQL credentials, `APP_KEY`,
+  `CROSSREF_MAILTO`, `SCORING_SEMANTIC_ENABLED`). Copy to `.env` (git-ignored) to override the
+  development defaults baked into `compose.yaml`.
 - Inference is uv-managed (`pyproject.toml`, `uv.lock`, `.python-version` = 3.14).
 - When external-service configuration is needed (e.g. inference base URL, Crossref access), add it
   through Laravel config (`backend/config/services.php`) + `.env.example` with placeholders such

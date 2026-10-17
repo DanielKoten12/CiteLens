@@ -1,0 +1,210 @@
+# Dafpus Cek — development stack (`docs/ARCHITECTURE.md` §2/§12).
+#
+# Usage (run from the repository root):
+#   docker compose up -d --build                        # default: amd64 GROBID full image
+#   docker compose -f compose.yaml -f compose.arm64.yaml up -d --build   # Apple Silicon / arm64
+#   docker compose -f compose.yaml -f compose.prod.yaml up -d --build    # production-shaped
+#   docker compose -f compose.yaml -f compose.debug.yaml up -d           # + localhost debug ports
+#
+# Only the Laravel API (`web`, :8000) and the SPA (`frontend`, :5173) are published
+# by default. PostgreSQL, the FastAPI inference service, GROBID and Gotenberg stay
+# on the private compose network (`docs/SECURITY.md` §7); use compose.debug.yaml to
+# expose them on 127.0.0.1 for local inspection.
+
+name: ${COMPOSE_PROJECT_NAME:-dafpus}
+
+x-backend-build: &backend-build
+  context: .
+  dockerfile: backend/Dockerfile
+  target: dev
+
+# Shared Laravel environment (backend + queue worker). The analysis pipeline may
+# run for ANALYSIS_TIMEOUT seconds, so DB_QUEUE_RETRY_AFTER must stay above it or
+# the database queue would release a running job early (config/queue.php).
+x-backend-environment: &backend-environment
+  APP_NAME: ${APP_NAME:-Dafpus Cek}
+  APP_ENV: ${APP_ENV:-local}
+  APP_DEBUG: ${APP_DEBUG:-true}
+  APP_URL: ${APP_URL:-http://localhost:8000}
+  APP_KEY: ${APP_KEY:-}
+  LOG_CHANNEL: ${LOG_CHANNEL:-stderr}
+  LOG_LEVEL: ${LOG_LEVEL:-debug}
+  DB_CONNECTION: pgsql
+  DB_HOST: db
+  DB_PORT: "5432"
+  DB_DATABASE: ${POSTGRES_DB:-dafpus}
+  DB_USERNAME: ${POSTGRES_USER:-dafpus}
+  DB_PASSWORD: ${POSTGRES_PASSWORD:-dafpus}
+  SESSION_DRIVER: database
+  CACHE_STORE: database
+  QUEUE_CONNECTION: database
+  DB_QUEUE_RETRY_AFTER: "980"
+  FILESYSTEM_DISK: local
+  REPORTS_DISK: local
+  ANALYSIS_QUEUE: default
+  ANALYSIS_TIMEOUT: "900"
+  REPORTS_QUEUE: default
+  REPORTS_TIMEOUT: "300"
+  INFERENCE_BASE_URL: http://inference:8000
+  INFERENCE_TIMEOUT: "120"
+  INFERENCE_EMBEDDING_BATCH_SIZE: "32"
+  GOTENBERG_URL: http://gotenberg:3000
+  GOTENBERG_TIMEOUT: "60"
+  CROSSREF_MAILTO: ${CROSSREF_MAILTO:-}
+  SCORING_SEMANTIC_ENABLED: ${SCORING_SEMANTIC_ENABLED:-false}
+
+# Development mounts: the bind mount serves live source; the named volumes keep
+# container-local state (vendor, framework storage, compiled caches) away from the
+# host and writable by www-data.
+x-backend-volumes: &backend-volumes
+  - ./backend:/var/www/html
+  - backend-vendor:/var/www/html/vendor
+  - backend-storage:/var/www/html/storage
+  - backend-bootstrap-cache:/var/www/html/bootstrap/cache
+
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dafpus}
+      POSTGRES_USER: ${POSTGRES_USER:-dafpus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dafpus}
+    # PostgreSQL 18 keeps PGDATA in /var/lib/postgresql/18/docker and declares the
+    # volume at /var/lib/postgresql (docker-library/postgres#1259).
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: *backend-build
+    image: ${COMPOSE_PROJECT_NAME:-dafpus}-backend:dev
+    environment:
+      <<: *backend-environment
+      RUN_MIGRATIONS: "true"
+      RUN_CACHING: "false"
+    volumes: *backend-volumes
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      # php-fpm only starts listening after the entrypoint finished migrations,
+      # so a listening worker is also the "database is migrated" signal.
+      test: ["CMD-SHELL", "php -r 'exit(@fsockopen(\"127.0.0.1\", 9000) ? 0 : 1);'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  worker:
+    build: *backend-build
+    image: ${COMPOSE_PROJECT_NAME:-dafpus}-backend:dev
+    command:
+      - php
+      - artisan
+      - queue:work
+      - --queue=default
+      - --sleep=2
+      - --tries=1
+      - --timeout=960
+      - --memory=512
+      - --max-time=3600
+    environment:
+      <<: *backend-environment
+      RUN_MIGRATIONS: "false"
+      RUN_CACHING: "false"
+    volumes: *backend-volumes
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  web:
+    image: nginx:1.29-alpine
+    ports:
+      - "${WEB_PORT:-8000}:80"
+    volumes:
+      - ./docker/nginx/backend.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./backend/public:/var/www/html/public:ro
+    depends_on:
+      backend:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/up > /dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      target: dev
+    image: ${COMPOSE_PROJECT_NAME:-dafpus}-frontend:dev
+    environment:
+      # Server-side Vite dev proxy target; the browser only ever talks to :5173.
+      API_PROXY_TARGET: http://web:80
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
+    volumes:
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    depends_on:
+      web:
+        condition: service_healthy
+
+  inference:
+    build:
+      context: .
+      dockerfile: inference/Dockerfile
+      target: dev
+    image: ${COMPOSE_PROJECT_NAME:-dafpus}-inference:dev
+    environment:
+      GROBID_URL: http://grobid:8070/
+      GROBID_TIMEOUT_SECONDS: "300"
+      GROBID_HEALTH_TIMEOUT_SECONDS: "5"
+      MAX_UPLOAD_MB: "20"
+    volumes:
+      - ./inference/src:/app/src
+    depends_on:
+      grobid:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
+
+  grobid:
+    # Default stack targets amd64 hosts (docs/API_SPEC.md §9). On arm64 use
+    # compose.arm64.yaml, which swaps in the CRF image built for linux/arm64.
+    image: grobid/grobid:0.9.1-full
+    platform: linux/amd64
+    ulimits:
+      core: 0
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8070'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/health", "-o", "/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  db-data:
+  backend-vendor:
+  backend-storage:
+  backend-bootstrap-cache:
+  frontend-node-modules:

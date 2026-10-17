@@ -1,0 +1,42 @@
+# Build context for every Dockerfile in this repo is the repository root
+# (see compose.yaml). Keep this list in sync with what the images actually need.
+
+# VCS / editors
+.git
+.gitignore
+.idea
+.DS_Store
+
+# Documentation (source proposal, plans, diagrams — not needed at runtime)
+AGENTS.md
+docs
+docker/README.md
+*.pdf
+
+# Compose overrides
+.env
+
+# Laravel
+backend/vendor
+backend/node_modules
+backend/public/build
+backend/public/storage
+backend/storage
+backend/bootstrap/cache/*
+backend/.env
+backend/.env.*
+
+# Vue SPA
+frontend/node_modules
+frontend/dist
+frontend/.env
+frontend/.env.*
+
+# FastAPI inference service
+inference/.venv
+inference/dist
+inference/.pytest_cache
+inference/.env
+inference/.env.*
+**/__pycache__
+**/*.pyc

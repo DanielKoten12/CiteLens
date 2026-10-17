@@ -15,5 +15,15 @@ export default defineConfig({
   server: {
     host: "0.0.0.0",
     port: 5173,
+    strictPort: true,
+    // Keep API calls same-origin in development: the browser talks to :5173 and
+    // Vite forwards /api to the Laravel edge (web:80 in Docker, localhost:8000
+    // when the dev server runs on the host). Production nginx does the same.
+    proxy: {
+      "/api": {
+        target: process.env.API_PROXY_TARGET ?? "http://localhost:8000",
+        changeOrigin: true,
+      },
+    },
   },
 });

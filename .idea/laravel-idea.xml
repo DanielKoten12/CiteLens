@@ -11,6 +11,7 @@
         <option name="generationStringSettings">
           <map>
             <entry key="createEloquentScope:namespace" value="Models\Scopes" />
+            <entry key="createFormRequestDto:namespace" value="Data" />
             <entry key="createModel:namespace" value="Models" />
           </map>
         </option>
