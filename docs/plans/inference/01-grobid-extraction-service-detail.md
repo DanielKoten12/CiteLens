@@ -27,7 +27,7 @@ file this phase creates (§16).
 | Python / uv | Python `3.14.8` (`.python-version` = `3.14`), uv `0.12.23`, build backend `uv_build 0.12.x` |
 | Installed (resolved via `fastapi[standard]`) | `fastapi 0.141.1`, `starlette 1.7.0`, `httpx 0.28.1`, `pydantic 2.13.5`, `python-multipart 0.0.32`, `python-dotenv 1.2.3`, `uvicorn 0.53.0`, `anyio 4.15.1`; **pytest absent** |
 | `inference/` today | `main.py` hello world; `src/inference/__init__.py` prints; empty `README.md`; `[project.scripts] inference = "inference:main"`; `.gitkeep` |
-| `grobid/` today | `app/main.py` (routes + handlers + validation), `app/config.py` (`os.getenv` constants), `app/schemas.py`, `app/services/grobid.py` (`check_grobid`, `extract_tei`), `app/services/tei_parser.py` (`parse_tei`), `.env.example`, `.gitignore`, `README.md`, `requirements.txt`, `artikel.pdf` (368 B, valid PDF), `grobid 1.0 .py` (982-line prototype, `requests`) |
+| `grobid/` today | `app/main.py` (routes + handlers + validation), `app/config.py` (`os.getenv` constants), `app/schemas.py`, `app/services/grobid.py` (`check_grobid`, `extract_tei`), `app/services/tei_parser.py` (`parse_tei`), `.env.example`, `.gitignore`, `README.md`, `requirements.txt`, `artikel.pdf` (368 B, truncated placeholder PDF), `grobid 1.0 .py` (982-line prototype, `requests`) |
 | Contract docs | `docs/API_SPEC.md` §9 updated by the PR: `data.header`, reference `reference_index`, location `coordinate_system`/`location_index`; `docs/inference-extract-response.json` is a captured real response (14 refs / 31 citations, all with locations) |
 | Laravel consumer | `Services/Inference/InferenceClient` ignores unmodeled payload fields; any 4xx → `ExtractionFailedException::invalidPdf()`, 5xx/429 → `InferenceUnavailableException`; `Data/Inference/*` DTOs model only what the pipeline consumes. Tests: `tests/Feature/InferenceClientTest.php`, `InferenceDataTest.php`, fixtures `tests/Fixtures/inference/*` |
 | Test plan | `docs/TEST_PLAN.md` §3.1 documents `uv run pytest`; T-INF-01/02/04 in scope, T-INF-03 must change to `415`/`413`/`422` (D-INF-02), T-INF-05..07 = Phase 02 |
@@ -44,9 +44,10 @@ Facts that constrain the implementation:
   within each kind; this phase must not change the behavior, only pin it with tests.
 - `httpx` multipart with `data={"teiCoordinates": ["ref", "biblStruct"]}` sends the field twice,
   which is what GROBID expects; joining the values into one string silently disables coordinates.
-- The 368-byte `artikel.pdf` is a valid PDF but a poor real-GROBID sample; it is acceptable for
-  mocked flows and becomes `tests/fixtures/documents/minimal.pdf`, while the opt-in integration
-  test requires a real paper via env (PR TODO 5 finishes fixture curation in Phase 02).
+- The 368-byte `artikel.pdf` turned out to be truncated (it ends mid-stream, with no xref or
+  trailer), so it is dropped: the hermetic suite builds a structurally valid one-page PDF via
+  `tests/support.py::minimal_pdf_bytes()`, and the opt-in integration test requires a real paper
+  via env (`GROBID_INTEGRATION_PDF`).
 
 ---
 
@@ -158,7 +159,7 @@ Use `git mv` (history-preserving) exactly as below:
 | `grobid/README.md` | folded into `inference/README.md` (rewritten in T7), then deleted |
 | `grobid/grobid 1.0 .py` | moved in T6 to `inference/scripts/grobid_exploration.py` |
 | `grobid/requirements.txt` | deleted |
-| `grobid/artikel.pdf` | moved to `inference/tests/fixtures/documents/minimal.pdf` (T5; can be done here) |
+| `grobid/artikel.pdf` | dropped; replaced by the generated fixture `tests/support.py::minimal_pdf_bytes()` (T5; PR TODO 5) |
 | `inference/main.py`, `inference/.gitkeep` | deleted |
 
 Create `inference/src/inference/grobid/__init__.py` and `inference/src/inference/api/__init__.py`.
@@ -458,8 +459,9 @@ def client(grobid_stub) -> Iterator[TestClient]:
 
 ### 10.2 Fixtures
 
-- `tests/fixtures/documents/minimal.pdf` — the 368-byte `artikel.pdf` moved here; used as the
-  mocked upload body.
+- `tests/support.py::minimal_pdf_bytes()` — builds a structurally valid one-page PDF (header,
+  objects, xref, trailer) in code; used as the mocked upload body. The 368-byte `artikel.pdf`
+  placeholder was truncated and is gone.
 - `tests/fixtures/tei/fulltext.tei.xml` — handcrafted GROBID-shaped fulltext TEI. Verified to
   parse correctly; the test asserts the parsed structure, not the XML. Minimum content:
   - `teiHeader`: `titleStmt/author/persName` (e.g. "Budi Santoso"), `publicationStmt/idno`
@@ -553,7 +555,7 @@ NEW       inference/src/inference/{api/{__init__,health,extract}.py, grobid/{__i
 MOVED     inference/src/inference/{main,config,schemas}.py          ← grobid/app/*
 MOVED     inference/.env.example, inference/.gitignore              ← grobid/
 MOVED     inference/scripts/grobid_exploration.py                   ← "grobid 1.0 .py"
-MOVED     inference/tests/fixtures/documents/minimal.pdf            ← grobid/artikel.pdf
+DROPPED   grobid/artikel.pdf (replaced by tests/support.py::minimal_pdf_bytes())
 DELETED   grobid/**, grobid/requirements.txt, inference/main.py, inference/.gitkeep
 EDITED    inference/pyproject.toml, inference/uv.lock, inference/README.md
 NEW       inference/tests/{conftest.py, test_health.py, test_extract.py, test_validation.py,
@@ -600,7 +602,9 @@ Phase 02 adds, without moving anything from this phase:
 - `inference/src/inference/api/embeddings.py` (`POST /v1/embeddings`),
 - schema additions (`EmbeddingRequest`, `EmbeddingData`, `EmbeddingResponse`; `HealthData.sbert`),
 - settings (`SBERT_MODEL`, `EMBEDDING_BATCH_SIZE=32` — the spec's batching note),
-- health route composing both capability checks; T-INF-01 updated to assert `sbert`, TODO 4 closed,
+- health route composing both capability checks; T-INF-01 updated to assert `sbert`, and
+  `docs/API_SPEC.md` / `docs/API_SPEC_ID.md` §9 re-add the key (PR #17 removed it pending this
+  slice),
 - tests T-INF-05/06/07 (`422` empty texts, `503 INFERENCE_FAILED`, batching/dimension
   consistency); the embedding dependency (`sentence-transformers`/`torch`) is a Phase 02 decision.
 
@@ -613,9 +617,9 @@ dependency overrides, `httpx.MockTransport` harness, and the `integration` marke
 
 | ID | Question | Recommended default | Owner |
 |---|---|---|---|
-| Q-1 | Real PDF fixture for the opt-in integration test (PR TODO 5) | Require `GROBID_INTEGRATION_PDF`; skip otherwise. Land curated fixtures in Phase 02 alongside the spec's `artikel.pdf` cleanup. | Phase 02 |
+| Q-1 | Real PDF fixture for the opt-in integration test (PR TODO 5) | Resolved in PR #17: the truncated `artikel.pdf` placeholder is dropped; hermetic tests generate `minimal_pdf_bytes()` and the integration test requires `GROBID_INTEGRATION_PDF`. | done |
 | Q-2 | `Dockerfile` referenced by the old `grobid/README.md` but never committed | Out of scope; pick up in the deployment phase (Phase 03) with resource limits and a GROBID version pin. | Phase 03 |
-| Q-3 | Should `/health` include `"sbert": null` now for response-shape completeness? | No (D-INF-03): keep `{status, grobid}` and let Phase 02 add the real value; revisit only if a consumer needs the key early. | Phase 02 |
+| Q-3 | Should `/health` include `"sbert": null` now for response-shape completeness? | Resolved in PR #17: no. Spec §9 now documents `{status, grobid}` and Phase 02 re-adds `sbert` together with the real capability check. | done |
 | Q-4 | `requires-python >= 3.14` limits contributor machines | Keep per D-INF-07; revisit before deployment if the target host does not ship 3.14. | Phase 03 |
 | Q-5 | `TEIParseError` as `ValueError` subclass | Keep the subclass for backward-compatible `except ValueError` handling. | done |
 | Q-6 | Should the exploration script keep duplicate parser logic? | Keep as a history/dev script only; never import from it and never test it. Delete it if it starts drifting. | Phase 02+ |

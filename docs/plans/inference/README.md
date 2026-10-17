@@ -254,8 +254,8 @@ that phase 02 extends without moving anything again.
 | 1. Move `grobid/` into `inference/`, wire the app, rename the script | 01 |
 | 2. Replace `requirements.txt` with uv + lock | 01 |
 | 3. Tests for `/health`, `/v1/extract`, `413`/`415`/`422`, error envelope | 01 |
-| 4. `/health` `sbert` (add or amend spec) | 02 (D-INF-03) |
-| 5. Replace the `artikel.pdf` placeholder with proper fixtures | partially 01 (test fixture), finished in 02 |
+| 4. `/health` `sbert` (add or amend spec) | 01 (spec amended to `{status, grobid}`; D-INF-03); `sbert` itself in 02 |
+| 5. Replace the `artikel.pdf` placeholder with proper fixtures | 01 (truncated placeholder dropped; generated fixture in `tests/support.py`) |
 
 ---
 

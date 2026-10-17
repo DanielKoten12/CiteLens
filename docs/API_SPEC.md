@@ -1070,7 +1070,10 @@ Base URL: `http://inference:8000` (internal).
 
 ### GET `/health`
 
-**Success — `200`**: `{ "status": "ok", "grobid": "up", "sbert": "up" }`
+**Success — `200`**: `{ "status": "ok", "grobid": "up" }`
+
+> `sbert` is omitted until the SBERT embeddings slice lands (Phase 02); the key is added back to
+> this response once `POST /v1/embeddings` is implemented.
 
 ### POST `/v1/extract` — GROBID
 
@@ -1144,7 +1147,7 @@ Field notes:
 { "error": { "code": "EXTRACTION_FAILED", "message": "GROBID could not process the document." } }
 ```
 
-### POST `/v1/embeddings` — SBERT
+### POST `/v1/embeddings` — SBERT (Phase 02)
 
 **Request**
 

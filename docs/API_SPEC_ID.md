@@ -1024,7 +1024,10 @@ Base URL: `http://inference:8000` (internal).
 
 ### GET `/health`
 
-**Sukses — `200`**: `{ "status": "ok", "grobid": "up", "sbert": "up" }`
+**Sukses — `200`**: `{ "status": "ok", "grobid": "up" }`
+
+> `sbert` belum disertakan sampai irisan embedding SBERT mendarat (Fase 02); key ini ditambahkan
+> kembali ke respons ini begitu `POST /v1/embeddings` diimplementasikan.
 
 ### POST `/v1/extract` — GROBID
 
@@ -1098,7 +1101,7 @@ diparse) · **`503`** (GROBID mati)
 { "error": { "code": "EXTRACTION_FAILED", "message": "GROBID could not process the document." } }
 ```
 
-### POST `/v1/embeddings` — SBERT
+### POST `/v1/embeddings` — SBERT (Fase 02)
 
 **Permintaan**
 
