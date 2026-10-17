@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from support import GrobidStub, make_client
+from support import GrobidStub, make_client, minimal_pdf_bytes
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -34,4 +34,4 @@ def empty_tei() -> str:
 
 @pytest.fixture()
 def pdf_bytes() -> bytes:
-    return (FIXTURES / "documents" / "minimal.pdf").read_bytes()
+    return minimal_pdf_bytes()
