@@ -1,0 +1,70 @@
+# Production-shaped overlay (docs/ARCHITECTURE.md §12).
+#
+# Differences from the development stack:
+#   * images are built from the `prod` targets (no dev dependencies, OPcache,
+#     baked sources instead of bind mounts, non-root inference service),
+#   * the SPA is served as static files with an `/api` reverse proxy,
+#   * Laravel config/view caches are warmed by the backend entrypoint,
+#   * only `web` and `frontend` stay published.
+#
+# Usage:
+#   docker compose -f compose.yaml -f compose.prod.yaml up -d --build
+#   docker compose -f compose.yaml -f compose.prod.yaml -f compose.arm64.yaml up -d --build
+#
+# Pin APP_KEY and the database password (and CROSSREF_MAILTO) in .env before
+# running this outside a trusted machine.
+
+services:
+  backend:
+    build:
+      target: prod
+    image: ${COMPOSE_PROJECT_NAME:-dafpus}-backend:prod
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      RUN_CACHING: "true"
+    volumes: !override
+      - backend-storage:/var/www/html/storage
+      - backend-prod-bootstrap-cache:/var/www/html/bootstrap/cache
+
+  worker:
+    build:
+      target: prod
+    image: ${COMPOSE_PROJECT_NAME:-dafpus}-backend:prod
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      RUN_CACHING: "false"
+    volumes: !override
+      - backend-storage:/var/www/html/storage
+      - backend-prod-bootstrap-cache:/var/www/html/bootstrap/cache
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    image: ${COMPOSE_PROJECT_NAME:-dafpus}-web:prod
+    volumes: !override []
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      target: prod
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
+    image: ${COMPOSE_PROJECT_NAME:-dafpus}-frontend:prod
+    volumes: !override []
+    ports: !override
+      - "${FRONTEND_PROD_PORT:-8080}:80"
+
+  inference:
+    build:
+      target: prod
+    image: ${COMPOSE_PROJECT_NAME:-dafpus}-inference:prod
+    volumes: !override []
+
+volumes:
+  # Separate from the development volume: the prod image has no dev dependencies
+  # and warms config/view caches, neither of which may leak across stacks.
+  backend-prod-bootstrap-cache:

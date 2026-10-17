@@ -305,6 +305,24 @@ Never commit secrets, tokens or credentials.
 Report and document files are stored on a private disk; access is via signed/temporary URLs
 (`FilePreviewData->url`).
 
+### 12.1 Docker Compose stack
+
+The repository implements this topology with Compose files at the repo root (runbook:
+`docker/README.md`):
+
+- `compose.yaml` — development stack (amd64 default: GROBID `0.9.1-full`, bind-mounted sources,
+  Vite dev server, php-fpm + nginx);
+- `compose.arm64.yaml` — arm64 overlay that swaps in the native GROBID `0.9.1-crf` image;
+- `compose.prod.yaml` — production-shaped overlay (built `prod` targets, no bind mounts, SPA baked
+  into nginx, non-root inference service, config/view caches warmed at start);
+- `compose.debug.yaml` — opt-in overlay publishing PostgreSQL/GROBID/inference/Gotenberg on
+  `127.0.0.1` only.
+
+Only the Laravel edge (`web`) and the SPA are published by default; GROBID, the inference service,
+Gotenberg and the database never receive public ports (`docs/SECURITY.md` §7). Semantic scoring is
+disabled in the container environment (`SCORING_SEMANTIC_ENABLED=false`) until the SBERT slice
+(`POST /v1/embeddings`) is implemented, because a 404 from that step is fatal to the pipeline.
+
 ---
 
 ## 13. Current implementation status

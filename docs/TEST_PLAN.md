@@ -58,7 +58,11 @@ uv run pytest
 ```
 
 `backend/phpunit.xml` runs tests on in-memory SQLite with a **sync** queue. Tests must not depend
-on a running worker or external network.
+on a running worker or external network. Every value in `<php>` is duplicated as a `<server>`
+entry and forced (`force="true"`): PHPUnit only overrides `putenv()`/`$_ENV`, while Laravel's Dotenv
+repository reads `$_SERVER` first, so without both an ambient container/CI variable (e.g.
+`DB_CONNECTION=pgsql` from `docker compose`) would silently redirect the suite at the dev database.
+A fixed, non-secret `APP_KEY` keeps the suite runnable in containers where no `.env` file exists.
 
 ---
 

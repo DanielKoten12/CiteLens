@@ -1,0 +1,3 @@
+# Compose environment overrides (ports, credentials, APP_KEY) — never commit.
+.env
+.DS_Store

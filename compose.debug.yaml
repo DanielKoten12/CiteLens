@@ -1,0 +1,27 @@
+# Debug overlay: publish the private services on 127.0.0.1 for local inspection.
+#
+# Compose profiles cannot toggle a published port, so this opt-in overlay takes
+# the place of the planned `debug` profile. The services themselves are always
+# running; this only exposes them to the host.
+#
+#   docker compose -f compose.yaml -f compose.debug.yaml up -d
+#   docker compose -f compose.yaml -f compose.debug.yaml -f compose.prod.yaml up -d
+#
+# Ports: PostgreSQL 5432, GROBID 8070, inference 8000 -> 8001, Gotenberg 3000.
+
+services:
+  db:
+    ports:
+      - "127.0.0.1:${POSTGRES_DEBUG_PORT:-5432}:5432"
+
+  grobid:
+    ports:
+      - "127.0.0.1:${GROBID_DEBUG_PORT:-8070}:8070"
+
+  inference:
+    ports:
+      - "127.0.0.1:${INFERENCE_DEBUG_PORT:-8001}:8000"
+
+  gotenberg:
+    ports:
+      - "127.0.0.1:${GOTENBERG_DEBUG_PORT:-3000}:3000"

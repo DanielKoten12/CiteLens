@@ -1,3 +1,4 @@
+var _a;
 import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
@@ -13,5 +14,15 @@ export default defineConfig({
     server: {
         host: "0.0.0.0",
         port: 5173,
+        strictPort: true,
+        // Keep API calls same-origin in development: the browser talks to :5173 and
+        // Vite forwards /api to the Laravel edge (web:80 in Docker, localhost:8000
+        // when the dev server runs on the host). Production nginx does the same.
+        proxy: {
+            "/api": {
+                target: (_a = process.env.API_PROXY_TARGET) !== null && _a !== void 0 ? _a : "http://localhost:8000",
+                changeOrigin: true,
+            },
+        },
     },
 });
