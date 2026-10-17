@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ApiError } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth";
 
 const router = useRouter();
@@ -24,10 +25,27 @@ async function handleSubmit() {
     error.value = "Email dan kata sandi harus diisi.";
     return;
   }
+
   loading.value = true;
-  await auth.login(form.email, form.password);
-  loading.value = false;
-  router.push({ name: "upload" });
+  try {
+    await auth.login(form.email, form.password);
+    router.push({ name: "upload" });
+  } catch (e) {
+    if (e instanceof ApiError) {
+      if (e.status === 422) {
+        // Kredensial salah dibalas 422 oleh backend.
+        error.value = "Email atau kata sandi salah.";
+      } else if (e.code === "RATE_LIMITED") {
+        error.value = "Terlalu banyak percobaan. Coba lagi dalam satu menit.";
+      } else {
+        error.value = e.message;
+      }
+    } else {
+      error.value = "Terjadi kesalahan tak terduga. Coba lagi.";
+    }
+  } finally {
+    loading.value = false;
+  }
 }
 </script>
 
