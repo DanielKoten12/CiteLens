@@ -1070,7 +1070,10 @@ Base URL: `http://inference:8000` (internal).
 
 ### GET `/health`
 
-**Success — `200`**: `{ "status": "ok", "grobid": "up", "sbert": "up" }`
+**Success — `200`**: `{ "status": "ok", "grobid": "up" }`
+
+> `sbert` is omitted until the SBERT embeddings slice lands (Phase 02); the key is added back to
+> this response once `POST /v1/embeddings` is implemented.
 
 ### POST `/v1/extract` — GROBID
 
@@ -1082,8 +1085,16 @@ citations and coordinates.
 ```json
 {
   "data": {
+    "header": {
+      "title": "Publication manual of the American Psychological Association",
+      "authors": ["American Psychological Association"],
+      "abstract": "…",
+      "publication_year": 2020,
+      "doi": "10.1037/0000165-000"
+    },
     "references": [
       {
+        "reference_index": 0,
         "raw_text": "LeCun, Y., …",
         "title": "Deep learning",
         "authors": "LeCun, Y., Bengio, Y., & Hinton, G.",
@@ -1093,7 +1104,7 @@ citations and coordinates.
         "text_start_offset": 8120,
         "text_end_offset": 8295,
         "locations": [
-          { "page_number": 12, "x": 72.0, "y": 210.4, "width": 451.2, "height": 24.0, "page_width": 595.0, "page_height": 842.0 }
+          { "page_number": 12, "x": 72.0, "y": 210.4, "width": 451.2, "height": 24.0, "page_width": 595.0, "page_height": 842.0, "coordinate_system": "pdf_points_top_left", "location_index": 0 }
         ]
       }
     ],
@@ -1108,7 +1119,7 @@ citations and coordinates.
         "occurrence_index": 0,
         "reference_index": 0,
         "locations": [
-          { "page_number": 3, "x": 120.5, "y": 640.2, "width": 48.0, "height": 11.0, "page_width": 595.0, "page_height": 842.0 }
+          { "page_number": 3, "x": 120.5, "y": 640.2, "width": 48.0, "height": 11.0, "page_width": 595.0, "page_height": 842.0, "coordinate_system": "pdf_points_top_left", "location_index": 0 }
         ]
       }
     ]
@@ -1116,13 +1127,27 @@ citations and coordinates.
 }
 ```
 
-**Failure — `422`** (unparseable PDF) · **`503`** (GROBID down)
+Field notes:
+
+- `header` — document-level metadata GROBID extracts. `authors` is a list of strings (may be empty);
+  `title`, `abstract`, `publication_year`, and `doi` are `null` when unavailable.
+- `reference_index` (references) — 0-based position of the entry within this payload. It is the value
+  an in-text citation points to through its own `reference_index`.
+- `reference_index` (citations) — the bibliography entry this occurrence resolves to, or `null` when
+  GROBID cannot link it to one.
+- `locations[]` — every box carries `coordinate_system` (`pdf_points_top_left`) and a 0-based
+  `location_index`; a reference or citation may span several boxes.
+- GROBID cannot always parse a field, so `title`, `authors`, `publication_name`, `doi`, and
+  `publication_year` may be `null` on a reference.
+
+**Failure — `413`** (over the size cap) · **`415`** (not a PDF) · **`422`** (unparseable PDF) ·
+**`503`** (GROBID down)
 
 ```json
 { "error": { "code": "EXTRACTION_FAILED", "message": "GROBID could not process the document." } }
 ```
 
-### POST `/v1/embeddings` — SBERT
+### POST `/v1/embeddings` — SBERT (Phase 02)
 
 **Request**
 

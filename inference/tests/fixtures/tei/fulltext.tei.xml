@@ -1,0 +1,51 @@
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title level="a" type="main">Sistem Deteksi Referensi Halu</title>
+        <author><persName><forename>Budi</forename><surname>Santoso</surname></persName></author>
+      </titleStmt>
+      <publicationStmt><idno type="DOI">10.1234/dafpus.2024.001</idno></publicationStmt>
+      <sourceDesc><biblStruct/></sourceDesc>
+    </fileDesc>
+    <profileDesc>
+      <abstract><p>Abstrak penelitian tentang sitasi halu.</p></abstract>
+    </profileDesc>
+  </teiHeader>
+  <facsimile>
+    <surface ulx="0" uly="0" lrx="595.276" lry="841.89"/>
+    <surface ulx="0" uly="0" lrx="595.276" lry="841.89"/>
+  </facsimile>
+  <text>
+    <body>
+      <div>
+        <p>Sitasi valid <ref type="bibr" target="#b0" coords="1,100.5,200.25,40.0,10.5">(Santoso, 2020)</ref> dan sitasi kedua <ref type="bibr" target="#b1" coords="2,80.0,90.0,60.0,12.0">(Lee &amp; Tan, 2019)</ref>.</p>
+        <p>Berulang lagi <ref type="bibr" target="#b0" coords="2,100.0,300.0,40.0,10.0">(Santoso, 2020)</ref>.</p>
+      </div>
+    </body>
+    <back>
+      <div>
+        <listBibl>
+          <biblStruct xml:id="b0" coords="2,72.0,500.0,451.2,24.0">
+            <analytic>
+              <title level="a" type="main">Metode Deteksi Sitasi</title>
+              <author><persName><forename>Budi</forename><surname>Santoso</surname></persName></author>
+              <idno type="DOI">10.1000/xyz123</idno>
+            </analytic>
+            <monogr>
+              <title level="j">Jurnal Ilmu Komputer</title>
+              <imprint><date type="published" when="2020">2020</date></imprint>
+            </monogr>
+          </biblStruct>
+          <biblStruct xml:id="b1" coords="2,72.0,530.0,451.2,24.0">
+            <analytic><title level="a" type="main">Graph Matching</title></analytic>
+            <monogr>
+              <title level="j">Nature</title>
+              <imprint><date type="published" when="2019">2019</date></imprint>
+            </monogr>
+          </biblStruct>
+        </listBibl>
+      </div>
+    </back>
+  </text>
+</TEI>

@@ -52,7 +52,7 @@ cd frontend
 npm run type-check
 npm run build
 
-# Inference (once real endpoints exist)
+# Inference
 cd inference
 uv run pytest
 ```
@@ -226,13 +226,16 @@ receive `404 NOT_FOUND` (never `403`).
 
 | ID | Case | Expected |
 |---|---|---|
-| T-INF-01 | `GET /health` | `{status, grobid, sbert}` |
-| T-INF-02 | `POST /v1/extract` valid PDF | references + citations + locations |
-| T-INF-03 | `POST /v1/extract` non-PDF | `422` |
-| T-INF-04 | `POST /v1/extract` GROBID down | `503 EXTRACTION_FAILED` |
+| T-INF-01 | `GET /health` | `{status, grobid}` (`sbert` arrives with the SBERT slice) |
+| T-INF-02 | `POST /v1/extract` valid PDF | header + references + citations + locations; the captured real response validates against the models |
+| T-INF-03 | `POST /v1/extract` non-PDF extension/content type | `415 UNSUPPORTED_MEDIA_TYPE` |
+| T-INF-04 | `POST /v1/extract` GROBID down (connection/5xx) | `503 EXTRACTION_FAILED` |
 | T-INF-05 | `POST /v1/embeddings` batch | dimensions + count match, batching respected |
 | T-INF-06 | `POST /v1/embeddings` empty | `422` |
 | T-INF-07 | `POST /v1/embeddings` model down | `503 INFERENCE_FAILED` |
+| T-INF-08 | `POST /v1/extract` over the size cap | `413 PAYLOAD_TOO_LARGE` |
+| T-INF-09 | `POST /v1/extract` `.pdf` without `%PDF-` bytes or unusable TEI | `422 EXTRACTION_FAILED` |
+| T-INF-10 | Error envelope on framework/runtime errors | `404 NOT_FOUND`, `500 SERVER_ERROR`; no internals leaked |
 
 ### 5.11 Schema (`T-SCHEMA`)
 

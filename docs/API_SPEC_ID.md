@@ -1024,7 +1024,10 @@ Base URL: `http://inference:8000` (internal).
 
 ### GET `/health`
 
-**Sukses — `200`**: `{ "status": "ok", "grobid": "up", "sbert": "up" }`
+**Sukses — `200`**: `{ "status": "ok", "grobid": "up" }`
+
+> `sbert` belum disertakan sampai irisan embedding SBERT mendarat (Fase 02); key ini ditambahkan
+> kembali ke respons ini begitu `POST /v1/embeddings` diimplementasikan.
 
 ### POST `/v1/extract` — GROBID
 
@@ -1036,8 +1039,16 @@ sitasi dalam teks, dan koordinat.
 ```json
 {
   "data": {
+    "header": {
+      "title": "Publication manual of the American Psychological Association",
+      "authors": ["American Psychological Association"],
+      "abstract": "…",
+      "publication_year": 2020,
+      "doi": "10.1037/0000165-000"
+    },
     "references": [
       {
+        "reference_index": 0,
         "raw_text": "LeCun, Y., …",
         "title": "Deep learning",
         "authors": "LeCun, Y., Bengio, Y., & Hinton, G.",
@@ -1047,7 +1058,7 @@ sitasi dalam teks, dan koordinat.
         "text_start_offset": 8120,
         "text_end_offset": 8295,
         "locations": [
-          { "page_number": 12, "x": 72.0, "y": 210.4, "width": 451.2, "height": 24.0, "page_width": 595.0, "page_height": 842.0 }
+          { "page_number": 12, "x": 72.0, "y": 210.4, "width": 451.2, "height": 24.0, "page_width": 595.0, "page_height": 842.0, "coordinate_system": "pdf_points_top_left", "location_index": 0 }
         ]
       }
     ],
@@ -1062,7 +1073,7 @@ sitasi dalam teks, dan koordinat.
         "occurrence_index": 0,
         "reference_index": 0,
         "locations": [
-          { "page_number": 3, "x": 120.5, "y": 640.2, "width": 48.0, "height": 11.0, "page_width": 595.0, "page_height": 842.0 }
+          { "page_number": 3, "x": 120.5, "y": 640.2, "width": 48.0, "height": 11.0, "page_width": 595.0, "page_height": 842.0, "coordinate_system": "pdf_points_top_left", "location_index": 0 }
         ]
       }
     ]
@@ -1070,13 +1081,27 @@ sitasi dalam teks, dan koordinat.
 }
 ```
 
-**Gagal — `422`** (PDF tidak dapat diparse) · **`503`** (GROBID mati)
+Catatan field:
+
+- `header` — metadata tingkat dokumen yang diekstraksi GROBID. `authors` berupa daftar string (bisa
+  kosong); `title`, `abstract`, `publication_year`, dan `doi` bernilai `null` jika tidak tersedia.
+- `reference_index` (references) — posisi entri berbasis 0 di dalam payload ini. Nilai inilah yang
+  dirujuk sitasi dalam teks melalui `reference_index` miliknya sendiri.
+- `reference_index` (citations) — entri bibliografi yang diresolusi oleh kemunculan ini, atau `null`
+  jika GROBID tidak dapat menghubungkannya.
+- `locations[]` — setiap kotak membawa `coordinate_system` (`pdf_points_top_left`) dan
+  `location_index` berbasis 0; satu referensi atau sitasi dapat mencakup beberapa kotak.
+- GROBID tidak selalu dapat memparse suatu field, sehingga `title`, `authors`, `publication_name`,
+  `doi`, dan `publication_year` dapat bernilai `null` pada sebuah referensi.
+
+**Gagal — `413`** (melebihi batas ukuran) · **`415`** (bukan PDF) · **`422`** (PDF tidak dapat
+diparse) · **`503`** (GROBID mati)
 
 ```json
 { "error": { "code": "EXTRACTION_FAILED", "message": "GROBID could not process the document." } }
 ```
 
-### POST `/v1/embeddings` — SBERT
+### POST `/v1/embeddings` — SBERT (Fase 02)
 
 **Permintaan**
 

@@ -10,8 +10,10 @@ use Spatie\LaravelData\Mappers\SnakeCaseMapper;
  * A bounding box of one extracted reference/citation region on a PDF page.
  *
  * Mirrors the `locations[]` object of the internal extraction contract
- * (`docs/API_SPEC.md` §9). `location_index` and `coordinate_system` are not sent
- * by the inference service; persistence assigns both.
+ * (`docs/API_SPEC.md` §9). The service also sends `coordinate_system` and a
+ * 0-based `location_index`; they are intentionally not modeled here because
+ * persistence assigns both canonically (`PersistExtractionStep`). Unmodeled
+ * payload fields are ignored, not rejected.
  */
 #[MapName(SnakeCaseMapper::class)]
 final class ExtractedLocationData extends BaseData

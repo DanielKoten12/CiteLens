@@ -152,11 +152,17 @@ Hard rules:
 │   ├── config/                # app, auth, database, queue, services, ...
 │   ├── database/              # migrations (incl. canonical domain schema), factories, seeders
 │   └── tests/                 # Pest tests (tests/Feature, tests/Unit)
-└── inference/                 # FastAPI internal inference service (mostly a stub today)
-    ├── main.py                # FastAPI app (currently a hello-world stub)
+└── inference/                 # FastAPI internal inference service (GROBID slice implemented)
     ├── pyproject.toml         # uv-managed, requires Python >= 3.14, fastapi[standard]
     ├── uv.lock
-    └── src/inference/__init__.py
+    ├── scripts/               # dev-only GROBID exploration script (not packaged)
+    ├── src/inference/
+    │   ├── main.py            # create_app() + error handlers; run inference.main:app
+    │   ├── config.py          # Settings (GROBID URL/timeouts, upload cap)
+    │   ├── schemas.py         # wire models (`API_SPEC.md` §9)
+    │   ├── api/               # health.py, extract.py routers
+    │   └── grobid/            # client.py (GrobidClient), tei.py (TEI parser)
+    └── tests/                 # pytest (hermetic MockTransport; opt-in integration)
 ```
 
 Notes:
@@ -181,7 +187,7 @@ Notes:
 | Frontend API/auth state | `frontend/src/stores/auth.ts` (mock) |
 | Frontend routes/guards | `frontend/src/router/index.ts` |
 | Frontend shared types | `frontend/src/types/index.ts` |
-| Inference service entry | `inference/main.py` |
+| Inference service entry | `inference/src/inference/main.py` (`uvicorn inference.main:app`) |
 | Canonical specs | `docs/API_SPEC.md`, `docs/DB_SCHEMA.md` |
 | Supporting docs | `docs/PRODUCT_REQUIREMENTS.md`, `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/TEST_PLAN.md` |
 | Source proposal | `docs/Proposal Capstone Project Kelompok 7.pdf` (+ `.md` rendering) |
@@ -502,16 +508,19 @@ Be aware of what is scaffold vs. contract before promising behavior:
   `GenerateDocumentReportJob` with `ReportStateService`/`ReportFailureHandler`/
   `ReportDeletionService`, and the `/reports` endpoints (`ReportController`,
   `ReportGenerationService`, `ReportQueryService`, `Data/Report/*` DTOs). The FastAPI inference
-  implementation does not exist yet. Adding it is expected work — follow the contracts while doing
-  it. See `docs/ARCHITECTURE.md` §13 for the full status.
+  service implements the GROBID extraction slice (see the `inference/` bullet); SBERT embeddings
+  are still pending. See `docs/ARCHITECTURE.md` §13 for the full status.
 - **`frontend/`** is a working Vue 3 + Vite 6 + TypeScript + Tailwind 4 + Pinia + vue-router SPA
   with shadcn-vue (`reka-ui`) components. **`src/stores/auth.ts` is mocked** (setTimeout, no API
   calls) and `src/types/index.ts` uses prototype types (`valid | warning | halu`, numeric ids,
   `trustScore`, etc.) that do **not** match `API_SPEC.md`. When wiring the real API, map to the
   canonical enums/UUIDs — treat current types as disposable UI scaffolding, not as contract.
-- **`inference/`** is a FastAPI hello-world stub (`main.py`) managed by **uv** (Python 3.14,
-  `fastapi[standard]`). The internal API (`/health`, `POST /v1/extract`, `POST /v1/embeddings`)
-  from `API_SPEC.md` §9 is specified but not implemented yet.
+- **`inference/`** is the uv-managed FastAPI service (Python 3.14, `fastapi[standard]`) in
+  `src/inference/`: app factory + routers (`main.py`, `api/`), `Settings` (`config.py`), typed
+  wire models (`schemas.py`) and the GROBID capability (`grobid/client.py`, `grobid/tei.py`).
+  `GET /health` and `POST /v1/extract` are implemented and covered by the hermetic pytest suite
+  (`tests/`, `uv run pytest`); `POST /v1/embeddings` (SBERT) is not implemented yet. The service
+  is private-network only. See `docs/plans/inference/` for the phase plan.
 - Backend `AGENTS.md` / `CLAUDE.md` contain the Laravel Boost guidelines (PHP style, Pint, Pest,
   Artisan usage). Follow them when working inside `backend/`.
 
@@ -585,10 +594,14 @@ npm run preview
 ```bash
 cd inference
 uv sync
-uv run uvicorn main:app --reload     # internal service; app lives in inference/main.py
+uv run uvicorn inference.main:app --reload --env-file .env   # internal service
+uv run pytest                                                 # hermetic contract suite
+uv run pytest -m integration                                  # opt-in; needs a live GROBID
 ```
 
-- No tests configured yet (add pytest deliberately if you implement real endpoints).
+- pytest is configured (`[tool.pytest.ini_options]`, `tests/`); the default suite is hermetic
+  (`httpx.MockTransport`). The `integration` marker is skipped unless `GROBID_INTEGRATION_URL` and
+  `GROBID_INTEGRATION_PDF` are set. No Python linter/formatter is configured.
 
 ## 17. Environment and Secrets
 
@@ -623,8 +636,8 @@ behavior and no test covers it, add one (Pest feature test) when practical. Prio
 - manual review and report generation (report only for `completed` documents),
 - API response envelopes (`data`/`message`/`meta`, `error.code`) and rate-limit responses.
 
-For the inference service, test the internal contract (`/health`, `/v1/extract`,
-`/v1/embeddings`) when it gets implemented.
+For the inference service, test the internal contract (`/health`, `/v1/extract`; `/v1/embeddings`
+once implemented) with pytest (`docs/TEST_PLAN.md` §5.10).
 
 ## 19. Coding Conventions
 

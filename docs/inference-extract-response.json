@@ -1,0 +1,1383 @@
+{
+  "data": {
+    "header": {
+      "title": null,
+      "authors": [],
+      "abstract": "BAB 1 PENDAHULUAN 1.1 Latar Belakang Penggunaan generative AI seperti ChatGPT dalam penyusunan karya tulis ilmiah, termasuk Tugas Akhir mahasiswa, telah berkembang pesat dalam beberapa tahun terakhir. Namun, di balik kemudahan yang ditawarkan, muncul persoalan serius berupa referensi fiktif atau tidak akurat yang dikenal dengan istilah \"hallucinated citations\", \"ghost references\", atau \"phantom references\". Walters dan Wilder (2023) menemukan bahwa ketika ChatGPT-3.5 dan ChatGPT-4 diminta menghasilkan tinjauan literatur berisi 636 sitasi, sebanyak 55% sitasi dari ChatGPT-3.5 dan 18% sitasi dari ChatGPT-4 sepenuhnya fiktif, dengan pola referensi palsu yang sering menggabungkan nama penulis asli dengan judul karangan. Yang lebih mengkhawatirkan, Boretti (2026) melaporkan bahwa audit terhadap 4.841 makalah yang diterima di NeurIPS 2025, salah satu konferensi AI paling bergengsi, menemukan setidaknya 100 sitasi",
+      "publication_year": null,
+      "doi": null
+    },
+    "references": [
+      {
+        "reference_index": 0,
+        "raw_text": "Publication manual of the American Psychological Association 10.1037/0000165-000 2020 American Psychological Association 7th ed",
+        "title": "Publication manual of the American Psychological Association",
+        "authors": null,
+        "publication_name": "Publication manual of the American Psychological Association",
+        "publication_year": 2020,
+        "doi": "10.1037/0000165-000",
+        "text_start_offset": 81100,
+        "text_end_offset": 81227,
+        "locations": [
+          {
+            "page_number": 66,
+            "x": 99,
+            "y": 105.53,
+            "width": 423.73,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          },
+          {
+            "page_number": 66,
+            "x": 117,
+            "y": 119.33,
+            "width": 405.68,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 1
+          },
+          {
+            "page_number": 66,
+            "x": 117,
+            "y": 133.13,
+            "width": 177.12,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 2
+          }
+        ]
+      },
+      {
+        "reference_index": 1,
+        "raw_text": "Hallucinations in generative AI: A threat to scholarly integrity and the urgent need for publisher-led academically supervised verification A Boretti Energy Research & Social Science 136 104720 2026. 2026 Register and maintain your records Crossref Documentation",
+        "title": "Hallucinations in generative AI: A threat to scholarly integrity and the urgent need for publisher-led academically supervised verification",
+        "authors": "A Boretti",
+        "publication_name": "Energy Research & Social Science",
+        "publication_year": 2026,
+        "doi": null,
+        "text_start_offset": 81228,
+        "text_end_offset": 81490,
+        "locations": [
+          {
+            "page_number": 66,
+            "x": 99,
+            "y": 160.72,
+            "width": 423.56,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          },
+          {
+            "page_number": 66,
+            "x": 117,
+            "y": 174.52,
+            "width": 406.18,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 1
+          },
+          {
+            "page_number": 66,
+            "x": 117,
+            "y": 188.32,
+            "width": 198.62,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 2
+          },
+          {
+            "page_number": 66,
+            "x": 99,
+            "y": 215.92,
+            "width": 379.9,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 3
+          }
+        ]
+      },
+      {
+        "reference_index": 2,
+        "raw_text": "Why and how is Scrum being adapted in practice: A systematic review K Dikert Journal of Systems and Software 183 111110 2022",
+        "title": "Why and how is Scrum being adapted in practice: A systematic review",
+        "authors": "K Dikert",
+        "publication_name": "Journal of Systems and Software",
+        "publication_year": 2022,
+        "doi": null,
+        "text_start_offset": 81491,
+        "text_end_offset": 81615,
+        "locations": [
+          {
+            "page_number": 66,
+            "x": 99,
+            "y": 243.52,
+            "width": 423.97,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          },
+          {
+            "page_number": 66,
+            "x": 117,
+            "y": 257.31,
+            "width": 263.06,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 1
+          }
+        ]
+      },
+      {
+        "reference_index": 3,
+        "raw_text": "Comparing methods for large-scale agile software development: A systematic literature review H Edison X Wang K Conboy IEEE Transactions on Software Engineering 48 8 2022",
+        "title": "Comparing methods for large-scale agile software development: A systematic literature review",
+        "authors": "H Edison, X Wang, K Conboy",
+        "publication_name": "IEEE Transactions on Software Engineering",
+        "publication_year": 2022,
+        "doi": null,
+        "text_start_offset": 81616,
+        "text_end_offset": 81785,
+        "locations": [
+          {
+            "page_number": 66,
+            "x": 99,
+            "y": 284.91,
+            "width": 423.54,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          },
+          {
+            "page_number": 66,
+            "x": 117,
+            "y": 298.71,
+            "width": 406,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 1
+          },
+          {
+            "page_number": 66,
+            "x": 117,
+            "y": 312.51,
+            "width": 199.96,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 2
+          }
+        ]
+      },
+      {
+        "reference_index": 4,
+        "raw_text": "General principles Grobid 2026 GROBID Documentation",
+        "title": "General principles",
+        "authors": "Grobid",
+        "publication_name": "General principles",
+        "publication_year": 2026,
+        "doi": null,
+        "text_start_offset": 81786,
+        "text_end_offset": 81837,
+        "locations": [
+          {
+            "page_number": 66,
+            "x": 99,
+            "y": 340.11,
+            "width": 310.27,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "reference_index": 5,
+        "raw_text": "Sentence representations for semantic textual similarity: A systematic review L Guder J P Aires H U Da Silva F Meneguzzi D Griebler Computer Speech & Language 100 101970 2026",
+        "title": "Sentence representations for semantic textual similarity: A systematic review",
+        "authors": "L Guder, J P Aires, H U Da Silva, F Meneguzzi, D Griebler",
+        "publication_name": "Computer Speech & Language",
+        "publication_year": 2026,
+        "doi": null,
+        "text_start_offset": 81838,
+        "text_end_offset": 82012,
+        "locations": [
+          {
+            "page_number": 66,
+            "x": 99,
+            "y": 367.7,
+            "width": 423.74,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          },
+          {
+            "page_number": 66,
+            "x": 117,
+            "y": 381.5,
+            "width": 405.95,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 1
+          },
+          {
+            "page_number": 66,
+            "x": 117,
+            "y": 395.3,
+            "width": 166.29,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 2
+          }
+        ]
+      },
+      {
+        "reference_index": 6,
+        "raw_text": "Phantom citations: An empirical study of non-existent and unverifiable references in scholarly literature X Han Journal of the Association for Information Science and Technology 2026. 2025 International DOI Foundation handbook. International DOI Foundation Documentation",
+        "title": "Phantom citations: An empirical study of non-existent and unverifiable references in scholarly literature",
+        "authors": "X Han",
+        "publication_name": "Journal of the Association for Information Science and Technology",
+        "publication_year": 2025,
+        "doi": null,
+        "text_start_offset": 82013,
+        "text_end_offset": 82283,
+        "locations": [
+          {
+            "page_number": 66,
+            "x": 99,
+            "y": 422.9,
+            "width": 424.25,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          },
+          {
+            "page_number": 66,
+            "x": 117,
+            "y": 436.7,
+            "width": 405.77,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 1
+          },
+          {
+            "page_number": 66,
+            "x": 117,
+            "y": 450.5,
+            "width": 179.65,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 2
+          },
+          {
+            "page_number": 66,
+            "x": 99,
+            "y": 478.09,
+            "width": 424,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 3
+          },
+          {
+            "page_number": 66,
+            "x": 117,
+            "y": 491.89,
+            "width": 76.98,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 4
+          }
+        ]
+      },
+      {
+        "reference_index": 7,
+        "raw_text": "Evaluation metrics and statistical tests for machine learning P Kokol 2024",
+        "title": "Evaluation metrics and statistical tests for machine learning",
+        "authors": "P Kokol",
+        "publication_name": "Evaluation metrics and statistical tests for machine learning",
+        "publication_year": 2024,
+        "doi": null,
+        "text_start_offset": 82284,
+        "text_end_offset": 82358,
+        "locations": [
+          {
+            "page_number": 66,
+            "x": 99,
+            "y": 519.49,
+            "width": 403.9,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "reference_index": 8,
+        "raw_text": "Reliance on science by inventors: Hybrid extraction of in-text patent-to-article citations M Marx Journal of Economics & Management Strategy 2022",
+        "title": "Reliance on science by inventors: Hybrid extraction of in-text patent-to-article citations",
+        "authors": "M Marx",
+        "publication_name": "Journal of Economics & Management Strategy",
+        "publication_year": 2022,
+        "doi": null,
+        "text_start_offset": 82359,
+        "text_end_offset": 82504,
+        "locations": [
+          {
+            "page_number": 66,
+            "x": 99,
+            "y": 547.09,
+            "width": 423.8,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          },
+          {
+            "page_number": 66,
+            "x": 117,
+            "y": 560.89,
+            "width": 354.11,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 1
+          }
+        ]
+      },
+      {
+        "reference_index": 9,
+        "raw_text": "Analysis and safety engineering of fuzzy string matching algorithms M Pikies J Ali ISA Transactions 113 2021",
+        "title": "Analysis and safety engineering of fuzzy string matching algorithms",
+        "authors": "M Pikies, J Ali",
+        "publication_name": "ISA Transactions",
+        "publication_year": 2021,
+        "doi": null,
+        "text_start_offset": 82505,
+        "text_end_offset": 82613,
+        "locations": [
+          {
+            "page_number": 66,
+            "x": 99,
+            "y": 588.48,
+            "width": 423.59,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          },
+          {
+            "page_number": 66,
+            "x": 117,
+            "y": 602.29,
+            "width": 191.11,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 1
+          }
+        ]
+      },
+      {
+        "reference_index": 10,
+        "raw_text": "GPU-based similarity metrics computation and machine learning approaches for string similarity evaluation in large datasets C Pîslaru Soft Computing 2023",
+        "title": "GPU-based similarity metrics computation and machine learning approaches for string similarity evaluation in large datasets",
+        "authors": "C Pîslaru",
+        "publication_name": "Soft Computing",
+        "publication_year": 2023,
+        "doi": null,
+        "text_start_offset": 82614,
+        "text_end_offset": 82767,
+        "locations": [
+          {
+            "page_number": 66,
+            "x": 99,
+            "y": 629.88,
+            "width": 424,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          },
+          {
+            "page_number": 66,
+            "x": 117,
+            "y": 643.68,
+            "width": 405.68,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 1
+          },
+          {
+            "page_number": 66,
+            "x": 117,
+            "y": 657.48,
+            "width": 57.01,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 2
+          }
+        ]
+      },
+      {
+        "reference_index": 11,
+        "raw_text": "Definition synthesis of agility in software development: Comprehensive review of theory to practice N Ozkan M S Gok International Journal of Modern Education and Computer Science 14 3 2022",
+        "title": "Definition synthesis of agility in software development: Comprehensive review of theory to practice",
+        "authors": "N Ozkan, M S Gok",
+        "publication_name": "International Journal of Modern Education and Computer Science",
+        "publication_year": 2022,
+        "doi": null,
+        "text_start_offset": 82768,
+        "text_end_offset": 82956,
+        "locations": [
+          {
+            "page_number": 66,
+            "x": 99,
+            "y": 685.08,
+            "width": 423.96,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          },
+          {
+            "page_number": 66,
+            "x": 117,
+            "y": 698.88,
+            "width": 406.11,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 1
+          },
+          {
+            "page_number": 66,
+            "x": 117,
+            "y": 712.68,
+            "width": 272.27,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 2
+          }
+        ]
+      },
+      {
+        "reference_index": 12,
+        "raw_text": "Systematic literature review of trend and characteristic agile model L Trihardianingsih M Istighosah A Y Alin M R G Asgar Jurnal Teknik Informatika 16 1 2023",
+        "title": "Systematic literature review of trend and characteristic agile model",
+        "authors": "L Trihardianingsih, M Istighosah, A Y Alin, M R G Asgar",
+        "publication_name": "Jurnal Teknik Informatika",
+        "publication_year": 2023,
+        "doi": null,
+        "text_start_offset": 82957,
+        "text_end_offset": 83114,
+        "locations": [
+          {
+            "page_number": 67,
+            "x": 99,
+            "y": 75.26,
+            "width": 424.26,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          },
+          {
+            "page_number": 67,
+            "x": 117,
+            "y": 89.05,
+            "width": 405.57,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 1
+          },
+          {
+            "page_number": 67,
+            "x": 117,
+            "y": 102.86,
+            "width": 28.99,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 2
+          }
+        ]
+      },
+      {
+        "reference_index": 13,
+        "raw_text": "Fabrication and errors in the bibliographic citations generated by ChatGPT W H Walters E I Wilder Scientific Reports 13 14045 2023",
+        "title": "Fabrication and errors in the bibliographic citations generated by ChatGPT",
+        "authors": "W H Walters, E I Wilder",
+        "publication_name": "Scientific Reports",
+        "publication_year": 2023,
+        "doi": null,
+        "text_start_offset": 83115,
+        "text_end_offset": 83245,
+        "locations": [
+          {
+            "page_number": 67,
+            "x": 99,
+            "y": 130.45,
+            "width": 424.19,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          },
+          {
+            "page_number": 67,
+            "x": 117,
+            "y": 144.25,
+            "width": 302.05,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 1
+          }
+        ]
+      }
+    ],
+    "citations": [
+      {
+        "citation_text": "(Pikies & Ali, 2021;",
+        "citation_marker": "(Pikies & Ali, 2021;",
+        "context_before": " record linkage, pencarian data, dan pencocokan teks ketika terdapat kesalahan penulisan atau variasi representasi data ",
+        "context_after": " Pîslaru et al., 2023) . Dalam penelitian ini, fuzzy matching digunakan untuk membantu mencocokkan informasi bibliografi",
+        "text_start_offset": 15547,
+        "text_end_offset": 15567,
+        "occurrence_index": 0,
+        "reference_index": 9,
+        "locations": [
+          {
+            "page_number": 8,
+            "x": 371.06,
+            "y": 516.82,
+            "width": 101.84,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "Pîslaru et al., 2023)",
+        "citation_marker": "Pîslaru et al., 2023)",
+        "context_before": "arian data, dan pencocokan teks ketika terdapat kesalahan penulisan atau variasi representasi data (Pikies & Ali, 2021; ",
+        "context_after": " . Dalam penelitian ini, fuzzy matching digunakan untuk membantu mencocokkan informasi bibliografis yang berasal dari do",
+        "text_start_offset": 15568,
+        "text_end_offset": 15589,
+        "occurrence_index": 1,
+        "reference_index": 10,
+        "locations": [
+          {
+            "page_number": 8,
+            "x": 477.4,
+            "y": 516.82,
+            "width": 45.74,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          },
+          {
+            "page_number": 8,
+            "x": 121.5,
+            "y": 532.8,
+            "width": 43.49,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 1
+          }
+        ]
+      },
+      {
+        "citation_text": "(Pikies & Ali, 2021;",
+        "citation_marker": "(Pikies & Ali, 2021;",
+        "context_before": " sehingga dapat digunakan untuk menangani variasi penulisan pada informasi seperti nama penulis, judul, dan nama jurnal ",
+        "context_after": " Pîslaru et al., 2023) . Levenshtein Distance Levenshtein Distance merupakan algoritma yang mengukur jarak antara dua st",
+        "text_start_offset": 16107,
+        "text_end_offset": 16127,
+        "occurrence_index": 2,
+        "reference_index": 9,
+        "locations": [
+          {
+            "page_number": 8,
+            "x": 475.74,
+            "y": 644.69,
+            "width": 47.17,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          },
+          {
+            "page_number": 8,
+            "x": 121.5,
+            "y": 660.67,
+            "width": 48.67,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 1
+          }
+        ]
+      },
+      {
+        "citation_text": "Pîslaru et al., 2023)",
+        "citation_marker": "Pîslaru et al., 2023)",
+        "context_before": "akan untuk menangani variasi penulisan pada informasi seperti nama penulis, judul, dan nama jurnal (Pikies & Ali, 2021; ",
+        "context_after": " . Levenshtein Distance Levenshtein Distance merupakan algoritma yang mengukur jarak antara dua string berdasarkan jumla",
+        "text_start_offset": 16128,
+        "text_end_offset": 16149,
+        "occurrence_index": 3,
+        "reference_index": 10,
+        "locations": [
+          {
+            "page_number": 8,
+            "x": 173.17,
+            "y": 660.67,
+            "width": 91.48,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "(Pikies & Ali, 2021;",
+        "citation_marker": "(Pikies & Ali, 2021;",
+        "context_before": "in sedikit perubahan yang diperlukan untuk memperoleh string lainnya sehingga kedua string dapat dianggap semakin mirip ",
+        "context_after": " Pîslaru et al., 2023) . Sebagai contoh, apabila terdapat dua nama penulis yaitu Koten dan Koton, perbedaan kedua string",
+        "text_start_offset": 16666,
+        "text_end_offset": 16686,
+        "occurrence_index": 4,
+        "reference_index": 9,
+        "locations": [
+          {
+            "page_number": 9,
+            "x": 308.79,
+            "y": 107,
+            "width": 97.34,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "Pîslaru et al., 2023)",
+        "citation_marker": "Pîslaru et al., 2023)",
+        "context_before": "yang diperlukan untuk memperoleh string lainnya sehingga kedua string dapat dianggap semakin mirip (Pikies & Ali, 2021; ",
+        "context_after": " . Sebagai contoh, apabila terdapat dua nama penulis yaitu Koten dan Koton, perbedaan kedua string tersebut hanya terdap",
+        "text_start_offset": 16687,
+        "text_end_offset": 16708,
+        "occurrence_index": 5,
+        "reference_index": 10,
+        "locations": [
+          {
+            "page_number": 9,
+            "x": 409.13,
+            "y": 107,
+            "width": 91.48,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "(Pikies & Ali, 2021)",
+        "citation_marker": "(Pikies & Ali, 2021)",
+        "context_before": "in Distance merupakan salah satu algoritma yang dapat digunakan untuk melakukan pencocokan string dalam sistem otomatis ",
+        "context_after": " . Dalam penelitian ini, Levenshtein Distance dapat digunakan terutama untuk membandingkan nama jurnal, judul, atau info",
+        "text_start_offset": 17661,
+        "text_end_offset": 17681,
+        "occurrence_index": 6,
+        "reference_index": 9,
+        "locations": [
+          {
+            "page_number": 9,
+            "x": 130.5,
+            "y": 329.16,
+            "width": 95.83,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "(Pîslaru et al., 2023;",
+        "citation_marker": "(Pîslaru et al., 2023;",
+        "context_before": "ro-Winkler dapat memberikan nilai kemiripan yang tinggi pada string yang memiliki kesamaan terutama pada bagian awalnya ",
+        "context_after": " Microsoft, 2026) . Nilai Jaro-Winkler umumnya berada pada rentang 0 sampai 1, dengan nilai yang semakin mendekati 1 men",
+        "text_start_offset": 18654,
+        "text_end_offset": 18676,
+        "occurrence_index": 7,
+        "reference_index": 10,
+        "locations": [
+          {
+            "page_number": 9,
+            "x": 173.48,
+            "y": 577.19,
+            "width": 96.98,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "Microsoft, 2026)",
+        "citation_marker": "Microsoft, 2026)",
+        "context_before": "ikan nilai kemiripan yang tinggi pada string yang memiliki kesamaan terutama pada bagian awalnya (Pîslaru et al., 2023; ",
+        "context_after": " . Nilai Jaro-Winkler umumnya berada pada rentang 0 sampai 1, dengan nilai yang semakin mendekati 1 menunjukkan tingkat ",
+        "text_start_offset": 18677,
+        "text_end_offset": 18693,
+        "occurrence_index": 8,
+        "reference_index": null,
+        "locations": [
+          {
+            "page_number": 9,
+            "x": 273.46,
+            "y": 577.19,
+            "width": 79.16,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "(Pîslaru et al., 2023;",
+        "citation_marker": "(Pîslaru et al., 2023;",
+        "context_before": "p kesamaan pada bagian awal string sehingga sesuai untuk data yang sering memiliki pola penulisan serupa pada awal teks ",
+        "context_after": " Apache Software Foundation, 2026) . Karakteristik tersebut membuat Jaro-Winkler banyak digunakan pada permasalahan stri",
+        "text_start_offset": 19241,
+        "text_end_offset": 19263,
+        "occurrence_index": 9,
+        "reference_index": 10,
+        "locations": [
+          {
+            "page_number": 9,
+            "x": 238.45,
+            "y": 704.13,
+            "width": 96.98,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "Apache Software Foundation, 2026)",
+        "citation_marker": "Apache Software Foundation, 2026)",
+        "context_before": "awal string sehingga sesuai untuk data yang sering memiliki pola penulisan serupa pada awal teks (Pîslaru et al., 2023; ",
+        "context_after": " . Karakteristik tersebut membuat Jaro-Winkler banyak digunakan pada permasalahan string matching, khususnya ketika data",
+        "text_start_offset": 19264,
+        "text_end_offset": 19297,
+        "occurrence_index": 10,
+        "reference_index": null,
+        "locations": [
+          {
+            "page_number": 9,
+            "x": 338.44,
+            "y": 704.13,
+            "width": 172.46,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "Pîslaru et al. (2023)",
+        "citation_marker": "Pîslaru et al. (2023)",
+        "context_before": "kan pada permasalahan string matching, khususnya ketika data yang dibandingkan berupa nama atau teks pendek. Penelitian ",
+        "context_after": " , menggunakan Jaro-Winkler untuk melakukan pencocokan string dalam jumlah data yang besar dan membahas karakteristik se",
+        "text_start_offset": 19477,
+        "text_end_offset": 19498,
+        "occurrence_index": 11,
+        "reference_index": 10,
+        "locations": [
+          {
+            "page_number": 9,
+            "x": 330.19,
+            "y": 751.74,
+            "width": 111.4,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "(Pîslaru et al., 2023)",
+        "citation_marker": "(Pîslaru et al., 2023)",
+        "context_before": "i kemiripan berdasarkan persentase karakter yang cocok serta memberikan bobot tambahan terhadap karakter awal yang sama ",
+        "context_after": " . Dalam penelitian ini, Jaro-Winkler dapat digunakan untuk membandingkan nama penulis antara daftar pustaka pada dokume",
+        "text_start_offset": 19880,
+        "text_end_offset": 19902,
+        "occurrence_index": 12,
+        "reference_index": 10,
+        "locations": [
+          {
+            "page_number": 10,
+            "x": 472.86,
+            "y": 138.73,
+            "width": 49.74,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          },
+          {
+            "page_number": 10,
+            "x": 130.5,
+            "y": 154.6,
+            "width": 43.49,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 1
+          }
+        ]
+      },
+      {
+        "citation_text": "(Guder et al., 2026)",
+        "citation_marker": "(Guder et al., 2026)",
+        "context_before": "uk berbagai tugas, seperti semantic textual similarity, semantic search, clustering, klasifikasi, dan paraphrase mining ",
+        "context_after": " . Pada prosesnya, SBERT menghasilkan embedding untuk masing-masing teks yang dibandingkan. Dua teks yang memiliki makna",
+        "text_start_offset": 20917,
+        "text_end_offset": 20937,
+        "occurrence_index": 13,
+        "reference_index": 5,
+        "locations": [
+          {
+            "page_number": 10,
+            "x": 216.17,
+            "y": 403.32,
+            "width": 92.13,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "(Guder et al., 2026;",
+        "citation_marker": "(Guder et al., 2026;",
+        "context_before": "stem melakukan perbandingan berdasarkan makna teks, bukan hanya berdasarkan kesamaan karakter atau kata secara langsung ",
+        "context_after": " Sentence Transformers, 2026b) . Salah satu cara yang dapat digunakan untuk membandingkan embedding adalah Cosine Simila",
+        "text_start_offset": 21400,
+        "text_end_offset": 21420,
+        "occurrence_index": 14,
+        "reference_index": 5,
+        "locations": [
+          {
+            "page_number": 10,
+            "x": 200.8,
+            "y": 515.21,
+            "width": 93.64,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "Sentence Transformers, 2026b)",
+        "citation_marker": "Sentence Transformers, 2026b)",
+        "context_before": "dingan berdasarkan makna teks, bukan hanya berdasarkan kesamaan karakter atau kata secara langsung (Guder et al., 2026; ",
+        "context_after": " . Salah satu cara yang dapat digunakan untuk membandingkan embedding adalah Cosine Similarity. Metode ini menghitung ke",
+        "text_start_offset": 21421,
+        "text_end_offset": 21450,
+        "occurrence_index": 15,
+        "reference_index": null,
+        "locations": [
+          {
+            "page_number": 10,
+            "x": 297.44,
+            "y": 515.21,
+            "width": 148.24,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "Marx et al. (2022)",
+        "citation_marker": "Marx et al. (2022)",
+        "context_before": "t keseimbangan antara kesalahan berupa data yang salah ditandai dan data yang seharusnya terdeteksi tetapi terlewatkan. ",
+        "context_after": " , misalnya, menggunakan precision dan recall untuk mengevaluasi proses ekstraksi dan pencocokan sitasi serta menunjukka",
+        "text_start_offset": 23684,
+        "text_end_offset": 23702,
+        "occurrence_index": 16,
+        "reference_index": 8,
+        "locations": [
+          {
+            "page_number": 11,
+            "x": 184.22,
+            "y": 341,
+            "width": 85.31,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "(Marx et al., 2022)",
+        "citation_marker": "(Marx et al., 2022)",
+        "context_before": "l, dan F1-score untuk mengevaluasi kemampuan model dalam mengidentifikasi informasi yang berkaitan dengan sitasi ilmiah ",
+        "context_after": " . Pada penelitian ini, evaluasi dilakukan dengan membandingkan hasil deteksi sistem dengan ground truth yang telah dite",
+        "text_start_offset": 24151,
+        "text_end_offset": 24170,
+        "occurrence_index": 17,
+        "reference_index": 8,
+        "locations": [
+          {
+            "page_number": 11,
+            "x": 155.16,
+            "y": 436.9,
+            "width": 88.14,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "(Marx et al., 2022;",
+        "citation_marker": "(Marx et al., 2022;",
+        "context_before": "ata negatif yang salah diklasifikasikan sebagai positif dan FN menunjukkan data positif yang gagal dikenali oleh sistem ",
+        "context_after": " Kokol et al., 2024) . Confusion matrix sesuai digunakan dalam penelitian ini karena sistem yang dikembangkan memiliki t",
+        "text_start_offset": 25462,
+        "text_end_offset": 25481,
+        "occurrence_index": 18,
+        "reference_index": 8,
+        "locations": [
+          {
+            "page_number": 11,
+            "x": 258.47,
+            "y": 749.67,
+            "width": 89.64,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "Kokol et al., 2024)",
+        "citation_marker": "Kokol et al., 2024)",
+        "context_before": "ah diklasifikasikan sebagai positif dan FN menunjukkan data positif yang gagal dikenali oleh sistem (Marx et al., 2022; ",
+        "context_after": " . Confusion matrix sesuai digunakan dalam penelitian ini karena sistem yang dikembangkan memiliki tugas klasifikasi ter",
+        "text_start_offset": 25482,
+        "text_end_offset": 25501,
+        "occurrence_index": 19,
+        "reference_index": 7,
+        "locations": [
+          {
+            "page_number": 11,
+            "x": 351.11,
+            "y": 749.67,
+            "width": 88.15,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "(Marx et al., 2022;",
+        "citation_marker": "(Marx et al., 2022;",
+        "context_before": "tuk menghindari false positive, yaitu kondisi ketika sistem menandai data yang sebenarnya benar sebagai data bermasalah ",
+        "context_after": " Kokol et al., 2024) . 𝑃𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛 = 𝑇𝑃 𝑇𝑃 + 𝐹𝑃 Dalam penelitian ini, precision penting karena sistem akan memberikan tand",
+        "text_start_offset": 26620,
+        "text_end_offset": 26639,
+        "occurrence_index": 20,
+        "reference_index": 8,
+        "locations": [
+          {
+            "page_number": 12,
+            "x": 336.73,
+            "y": 323.29,
+            "width": 89.64,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "Kokol et al., 2024)",
+        "citation_marker": "Kokol et al., 2024)",
+        "context_before": "e positive, yaitu kondisi ketika sistem menandai data yang sebenarnya benar sebagai data bermasalah (Marx et al., 2022; ",
+        "context_after": " . 𝑃𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛 = 𝑇𝑃 𝑇𝑃 + 𝐹𝑃 Dalam penelitian ini, precision penting karena sistem akan memberikan tanda atau highlight ter",
+        "text_start_offset": 26640,
+        "text_end_offset": 26659,
+        "occurrence_index": 21,
+        "reference_index": 7,
+        "locations": [
+          {
+            "page_number": 12,
+            "x": 429.37,
+            "y": 323.29,
+            "width": 88.15,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "(Marx et al., 2022)",
+        "citation_marker": "(Marx et al., 2022)",
+        "context_before": "k mengetahui seberapa banyak hasil yang dinyatakan sebagai suatu kecocokan benar-benar sesuai dengan kondisi sebenarnya ",
+        "context_after": " . Recall Recall merupakan ukuran yang menunjukkan kemampuan sistem dalam menemukan seluruh data yang sebenarnya termasu",
+        "text_start_offset": 27274,
+        "text_end_offset": 27293,
+        "occurrence_index": 22,
+        "reference_index": 8,
+        "locations": [
+          {
+            "page_number": 12,
+            "x": 458.72,
+            "y": 503.72,
+            "width": 63.81,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          },
+          {
+            "page_number": 12,
+            "x": 130.5,
+            "y": 519.59,
+            "width": 25.83,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 1
+          }
+        ]
+      },
+      {
+        "citation_text": "(Marx et al., 2022;",
+        "citation_marker": "(Marx et al., 2022;",
+        "context_before": "am mengurangi false negative, yaitu kondisi ketika data yang sebenarnya bermasalah tidak berhasil dideteksi oleh sistem ",
+        "context_after": " Kokol et al., 2024) . 𝑅𝑒𝑐𝑎𝑙𝑙 = 𝑇𝑃 𝑇𝑃 + 𝐹𝑁 Recall menjadi penting dalam penelitian ini karena salah satu tujuan sistem a",
+        "text_start_offset": 27760,
+        "text_end_offset": 27779,
+        "occurrence_index": 23,
+        "reference_index": 8,
+        "locations": [
+          {
+            "page_number": 12,
+            "x": 234.15,
+            "y": 656.54,
+            "width": 89.64,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "Kokol et al., 2024)",
+        "citation_marker": "Kokol et al., 2024)",
+        "context_before": "negative, yaitu kondisi ketika data yang sebenarnya bermasalah tidak berhasil dideteksi oleh sistem (Marx et al., 2022; ",
+        "context_after": " . 𝑅𝑒𝑐𝑎𝑙𝑙 = 𝑇𝑃 𝑇𝑃 + 𝐹𝑁 Recall menjadi penting dalam penelitian ini karena salah satu tujuan sistem adalah menemukan refe",
+        "text_start_offset": 27780,
+        "text_end_offset": 27799,
+        "occurrence_index": 24,
+        "reference_index": 7,
+        "locations": [
+          {
+            "page_number": 12,
+            "x": 326.79,
+            "y": 656.54,
+            "width": 88.15,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "(Marx et al., 2022)",
+        "citation_marker": "(Marx et al., 2022)",
+        "context_before": " bersamaan untuk mengevaluasi kemampuan sistem menemukan kecocokan yang benar dan mengurangi kecocokan yang terlewatkan ",
+        "context_after": " . F1-Score F1-score merupakan metrik yang menggabungkan precision dan recall menggunakan harmonic mean. F1-score diguna",
+        "text_start_offset": 28441,
+        "text_end_offset": 28460,
+        "occurrence_index": 25,
+        "reference_index": 8,
+        "locations": [
+          {
+            "page_number": 13,
+            "x": 130.5,
+            "y": 154.6,
+            "width": 88.14,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "(Kokol et al., 2024)",
+        "citation_marker": "(Kokol et al., 2024)",
+        "context_before": "ketika suatu sistem perlu mempertahankan ketepatan prediksi sekaligus kemampuan menemukan sebanyak mungkin data positif ",
+        "context_after": " . 𝐹1 = 2 × 𝑃𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛 × 𝑅𝑒𝑐𝑎𝑙𝑙 𝑃𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛 + 𝑅𝑒𝑐𝑎𝑙𝑙 Dalam penelitian ini, F1-score digunakan untuk memberikan gambaran kes",
+        "text_start_offset": 28824,
+        "text_end_offset": 28844,
+        "occurrence_index": 26,
+        "reference_index": 7,
+        "locations": [
+          {
+            "page_number": 13,
+            "x": 458.17,
+            "y": 259.81,
+            "width": 64.82,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          },
+          {
+            "page_number": 13,
+            "x": 130.5,
+            "y": 275.68,
+            "width": 25.83,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 1
+          }
+        ]
+      },
+      {
+        "citation_text": "(Ozkan & Gok, 2022;",
+        "citation_marker": "(Ozkan & Gok, 2022;",
+        "context_before": "ak digunakan karena kemampuannya dalam menyesuaikan proses pengembangan terhadap perubahan kebutuhan dan kondisi proyek ",
+        "context_after": " Edison et al., 2022) . Dalam Agile, pengembangan perangkat lunak dilakukan melalui siklus atau iterasi yang memungkinka",
+        "text_start_offset": 30308,
+        "text_end_offset": 30327,
+        "occurrence_index": 27,
+        "reference_index": 11,
+        "locations": [
+          {
+            "page_number": 13,
+            "x": 196.16,
+            "y": 689.31,
+            "width": 104.65,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "Edison et al., 2022)",
+        "citation_marker": "Edison et al., 2022)",
+        "context_before": "kemampuannya dalam menyesuaikan proses pengembangan terhadap perubahan kebutuhan dan kondisi proyek (Ozkan & Gok, 2022; ",
+        "context_after": " . Dalam Agile, pengembangan perangkat lunak dilakukan melalui siklus atau iterasi yang memungkinkan tim menghasilkan ba",
+        "text_start_offset": 30328,
+        "text_end_offset": 30348,
+        "occurrence_index": 28,
+        "reference_index": 3,
+        "locations": [
+          {
+            "page_number": 13,
+            "x": 303.81,
+            "y": 689.31,
+            "width": 91.48,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "(Dikert et al., 2022;",
+        "citation_marker": "(Dikert et al., 2022;",
+        "context_before": "tian mengenai implementasi Scrum menunjukkan bahwa praktik Agile sering disesuaikan dengan konteks proyek yang dihadapi ",
+        "context_after": " Edison et al., 2022) . Dalam penelitian ini, Agile digunakan sebagai metode pengembangan perangkat lunak untuk membangu",
+        "text_start_offset": 30978,
+        "text_end_offset": 30999,
+        "occurrence_index": 29,
+        "reference_index": 2,
+        "locations": [
+          {
+            "page_number": 14,
+            "x": 374.44,
+            "y": 139.19,
+            "width": 98.81,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          }
+        ]
+      },
+      {
+        "citation_text": "Edison et al., 2022)",
+        "citation_marker": "Edison et al., 2022)",
+        "context_before": "tasi Scrum menunjukkan bahwa praktik Agile sering disesuaikan dengan konteks proyek yang dihadapi (Dikert et al., 2022; ",
+        "context_after": " . Dalam penelitian ini, Agile digunakan sebagai metode pengembangan perangkat lunak untuk membangun sistem deteksi daft",
+        "text_start_offset": 31000,
+        "text_end_offset": 31020,
+        "occurrence_index": 30,
+        "reference_index": 3,
+        "locations": [
+          {
+            "page_number": 14,
+            "x": 476.99,
+            "y": 139.19,
+            "width": 45.74,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 0
+          },
+          {
+            "page_number": 14,
+            "x": 121.5,
+            "y": 155.18,
+            "width": 43.49,
+            "height": 10.54,
+            "page_width": 596,
+            "page_height": 842,
+            "coordinate_system": "pdf_points_top_left",
+            "location_index": 1
+          }
+        ]
+      }
+    ]
+  }
+}
