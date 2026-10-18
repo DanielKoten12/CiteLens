@@ -52,13 +52,17 @@ cd frontend
 npm run type-check
 npm run build
 
-# Inference (once real endpoints exist)
+# Inference
 cd inference
 uv run pytest
 ```
 
 `backend/phpunit.xml` runs tests on in-memory SQLite with a **sync** queue. Tests must not depend
-on a running worker or external network.
+on a running worker or external network. Every value in `<php>` is duplicated as a `<server>`
+entry and forced (`force="true"`): PHPUnit only overrides `putenv()`/`$_ENV`, while Laravel's Dotenv
+repository reads `$_SERVER` first, so without both an ambient container/CI variable (e.g.
+`DB_CONNECTION=pgsql` from `docker compose`) would silently redirect the suite at the dev database.
+A fixed, non-secret `APP_KEY` keeps the suite runnable in containers where no `.env` file exists.
 
 ---
 
@@ -158,6 +162,19 @@ receive `404 NOT_FOUND` (never `403`).
 | T-CIT-07 | Derived status: paired + finding `invalid`/`not_found` | `unreliable` |
 | T-CIT-08 | Derived status: paired + finding `pending` | `pending` |
 | T-CIT-09 | Derived status: unpaired | `hallucination` |
+| T-CIT-10 | Ambiguous APA match (winner margin below threshold) | `unresolved`, candidates persisted, severity `medium` |
+| T-CIT-11 | No plausible candidate | `hallucination` (high), no candidates |
+| T-CIT-12 | Valid GROBID `reference_index` hint | paired with `resolution_method=extraction_hint`, hint persisted |
+| T-CIT-13 | Hint contradicts the parsed marker | parser result wins; hint retained as candidate |
+| T-CIT-14 | Hint index out of range | ignored; parser result used |
+| T-CIT-15 | Initials disambiguation (`Koten, D.` vs `Koten, A.`) | correct reference chosen |
+| T-CIT-16 | Soft year (gap within `year_window`) | paired/unresolved per score, never hard-rejected |
+| T-CIT-17 | Multi-marker `(A, 2020; B, 2021)` | primary committed, second entry a candidate |
+| T-CIT-18 | IEEE `[3-5]` | primary = ordinal 3, 4/5 candidates |
+| T-CIT-19 | Null offsets | IEEE order follows payload order (ordered UUIDs) |
+| T-CIT-20 | Evidence consolidation (`(Hartono, 2023)` + `(Hartini)`) | both paired |
+| T-CIT-21 | Manual pair/unpair provenance | `resolution_method=manual`, state `paired`/`unmatched` |
+| T-CIT-22 | All five derived statuses agree (PHP/SQL/summary) | exact agreement |
 
 ### 5.6 Findings feed (`T-FIND`)
 
@@ -167,6 +184,7 @@ receive `404 NOT_FOUND` (never `403`).
 | T-FIND-02 | Severity mapping | `not_found`/`invalid`/`hallucination` → high; `suspicious` → medium; `pending` → info |
 | T-FIND-03 | `type`/`severity` filters | 422 on invalid, filtered on valid |
 | T-FIND-04 | Locations present for highlight rendering | page + bbox fields |
+| T-FIND-05 | `citation_unresolved` items | `medium` severity, canonical message, `reference_id` null |
 
 ### 5.7 Reports (`T-REP`)
 
@@ -177,6 +195,14 @@ receive `404 NOT_FOUND` (never `403`).
 | T-REP-03 | List / detail / delete | matches spec, `204` on delete |
 | T-REP-04 | Failed generation records `error` | status `failed` + `error` |
 | T-REP-05 | Report file removed on delete | no orphan in storage |
+| T-REP-06 | Job success | `completed`, `generated_at`, valid `download_url` |
+| F-REP-01 | Document delete cascades report files | storage + rows cleaned |
+| F-REP-02 | Gotenberg unavailable/timeout | `failed` + safe `error`; `POST` can regenerate |
+| F-REP-03 | Job idempotency | terminal report not re-rendered |
+| F-REP-04 | Report deleted mid-job | orphan file cleaned up |
+| F-REP-05 | HTML escaping | extracted text escaped in the report HTML |
+| F-REP-06 | URL/build shapes | `download_url` null→string; ordering/truncation |
+| F-REP-07 | Multi-disk file lifecycle | document on `local` + report on `reports.disk` cleaned per row |
 
 ### 5.8 Scoring and matching (`T-SCORE`) — unit
 
@@ -204,13 +230,16 @@ receive `404 NOT_FOUND` (never `403`).
 
 | ID | Case | Expected |
 |---|---|---|
-| T-INF-01 | `GET /health` | `{status, grobid, sbert}` |
-| T-INF-02 | `POST /v1/extract` valid PDF | references + citations + locations |
-| T-INF-03 | `POST /v1/extract` non-PDF | `422` |
-| T-INF-04 | `POST /v1/extract` GROBID down | `503 EXTRACTION_FAILED` |
+| T-INF-01 | `GET /health` | `{status, grobid}` (`sbert` arrives with the SBERT slice) |
+| T-INF-02 | `POST /v1/extract` valid PDF | header + references + citations + locations; the captured real response validates against the models |
+| T-INF-03 | `POST /v1/extract` non-PDF extension/content type | `415 UNSUPPORTED_MEDIA_TYPE` |
+| T-INF-04 | `POST /v1/extract` GROBID down (connection/5xx) | `503 EXTRACTION_FAILED` |
 | T-INF-05 | `POST /v1/embeddings` batch | dimensions + count match, batching respected |
 | T-INF-06 | `POST /v1/embeddings` empty | `422` |
 | T-INF-07 | `POST /v1/embeddings` model down | `503 INFERENCE_FAILED` |
+| T-INF-08 | `POST /v1/extract` over the size cap | `413 PAYLOAD_TOO_LARGE` |
+| T-INF-09 | `POST /v1/extract` `.pdf` without `%PDF-` bytes or unusable TEI | `422 EXTRACTION_FAILED` |
+| T-INF-10 | Error envelope on framework/runtime errors | `404 NOT_FOUND`, `500 SERVER_ERROR`; no internals leaked |
 
 ### 5.11 Schema (`T-SCHEMA`)
 

@@ -1,6 +1,7 @@
 # Phase 05 — Citation Resolution, Review Endpoints & Findings Feed
 
-> **Status:** broad plan · **Depends on:** Phase 04 · **Unblocks:** Phase 06
+> **Status:** implemented (Phase 05) → hardened by [`05-1-citation-resolution-robustness-detail.md`](05-1-citation-resolution-robustness-detail.md)
+> · **Depends on:** Phase 04 · **Unblocks:** Phase 06
 > Canonical references: `docs/API_SPEC.md` §2.6/§5/§6/§7/§11, `docs/ARCHITECTURE.md` §9,
 > `docs/PRODUCT_REQUIREMENTS.md` §6.4/§6.5, `docs/TEST_PLAN.md` T-REF / T-CIT / T-FIND / T-OWN.
 

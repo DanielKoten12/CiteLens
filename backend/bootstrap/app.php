@@ -1,14 +1,9 @@
 <?php
 
-use App\Data\Error\ErrorResponseData;
-use Illuminate\Auth\AuthenticationException;
+use App\Exceptions\ApiExceptionRenderer;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Http\Exceptions\ThrottleRequestsException;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -23,47 +18,5 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo(null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $shouldRenderAsApiError = fn (Request $request): bool => $request->is('api/*') || $request->expectsJson();
-
-        $exceptions->shouldRenderJsonWhen($shouldRenderAsApiError);
-
-        $exceptions->render(function (AuthenticationException $exception, Request $request) use ($shouldRenderAsApiError): ?JsonResponse {
-            if (! $shouldRenderAsApiError($request)) {
-                return null;
-            }
-
-            return response()->json([
-                'error' => new ErrorResponseData(
-                    code: 'UNAUTHENTICATED',
-                    message: 'Unauthenticated.',
-                ),
-            ], 401);
-        });
-
-        $exceptions->render(function (ValidationException $exception, Request $request) use ($shouldRenderAsApiError): ?JsonResponse {
-            if (! $shouldRenderAsApiError($request)) {
-                return null;
-            }
-
-            return response()->json([
-                'error' => new ErrorResponseData(
-                    code: 'VALIDATION_ERROR',
-                    message: 'The given data was invalid.',
-                    details: $exception->errors(),
-                ),
-            ], 422);
-        });
-
-        $exceptions->render(function (ThrottleRequestsException $exception, Request $request) use ($shouldRenderAsApiError): ?JsonResponse {
-            if (! $shouldRenderAsApiError($request)) {
-                return null;
-            }
-
-            return response()->json([
-                'error' => new ErrorResponseData(
-                    code: 'RATE_LIMITED',
-                    message: 'Too many attempts. Please try again later.',
-                ),
-            ], 429, $exception->getHeaders());
-        });
+        ApiExceptionRenderer::register($exceptions);
     })->create();

@@ -1,10 +1,17 @@
 <?php
 
+use App\Enums\ReportStatus;
+use App\Models\File;
+use App\Models\ReferenceFinding;
+use App\Models\ReferenceFindingCandidate;
+use App\Models\ResearchedDocumentReference;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Tests\Support\DocumentTree;
 
 uses(RefreshDatabase::class);
 
@@ -68,6 +75,7 @@ it('creates every canonical domain table', function () {
         'researched_document_reference_locations',
         'researched_document_citations',
         'researched_document_citation_locations',
+        'citation_resolution_candidates',
         'reference_findings',
         'reference_finding_candidates',
         'generated_document_reports',
@@ -105,4 +113,119 @@ it('unpairs citations when their reference is deleted', function () {
 
     expect(DB::table('researched_document_citations')->where('id', $tree['citation'])->value('researched_document_reference_id'))
         ->toBeNull();
+});
+
+it('allows only one finding per reference', function () {
+    $reference = ResearchedDocumentReference::factory()->create();
+
+    ReferenceFinding::factory()->forReference($reference)->valid()->create();
+
+    expect(fn () => ReferenceFinding::factory()->forReference($reference)->valid()->create())
+        ->toThrow(QueryException::class);
+});
+
+it('cascades candidates when a finding is deleted', function () {
+    $reference = ResearchedDocumentReference::factory()->create();
+    $finding = ReferenceFinding::factory()->forReference($reference)->valid()->create();
+
+    ReferenceFindingCandidate::factory()->for($finding)->count(2)->create();
+
+    $finding->delete();
+
+    expect(ReferenceFindingCandidate::query()->count())->toBe(0);
+});
+
+it('nulls the selected candidate when its candidate row is deleted', function () {
+    $reference = ResearchedDocumentReference::factory()->create();
+    $finding = ReferenceFinding::factory()->forReference($reference)->valid()->create();
+    $candidate = ReferenceFindingCandidate::factory()->for($finding)->create();
+
+    $finding->update(['selected_candidate_id' => $candidate->getKey()]);
+
+    $candidate->delete();
+
+    expect($finding->fresh()->selected_candidate_id)->toBeNull();
+});
+
+it('stores citation resolution provenance with an unmatched default', function () {
+    $tree = createDocumentTree();
+
+    $citation = DB::table('researched_document_citations')->where('id', $tree['citation'])->first();
+
+    expect($citation->resolution_state)->toBe('unmatched')
+        ->and($citation->resolution_method)->toBeNull()
+        ->and($citation->resolution_confidence)->toBeNull()
+        ->and($citation->extraction_reference_index)->toBeNull()
+        ->and(Schema::hasColumn('citation_resolution_candidates', 'match_reason'))->toBeTrue();
+});
+
+it('cascades citation resolution candidates when a citation is deleted', function () {
+    $tree = createDocumentTree();
+
+    DB::table('citation_resolution_candidates')->insert([
+        'id' => (string) Str::uuid(),
+        'citation_id' => $tree['citation'],
+        'researched_document_reference_id' => $tree['reference'],
+        'rank' => 1,
+        'confidence' => 0.5,
+        'method' => 'apa',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    expect(DB::table('citation_resolution_candidates')->count())->toBe(1);
+
+    DB::table('researched_documents')->where('id', $tree['document'])->delete();
+
+    expect(DB::table('citation_resolution_candidates')->count())->toBe(0);
+});
+
+it('adds a non-null disk column to files', function () {
+    $column = collect(Schema::getColumns('files'))->firstWhere('name', 'disk');
+
+    expect($column)->not->toBeNull()
+        ->and($column['nullable'])->toBeFalse();
+});
+
+it('backfills the configured default disk on raw inserts', function () {
+    $document = DocumentTree::create()->document;
+    $id = (string) Str::uuid();
+
+    DB::table('files')->insert([
+        'id' => $id,
+        'fileable_type' => 'researched_document',
+        'fileable_id' => $document->getKey(),
+        'filename' => 'x.pdf',
+        'path' => 'documents/x/y.pdf',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    expect(File::query()->whereKey($id)->value('disk'))->toBe((string) config('filesystems.default'));
+});
+
+it('persists the disk on factory rows', function () {
+    expect(File::factory()->create()->disk)->toBe((string) config('filesystems.default'));
+});
+
+it('declares the report file foreign key', function () {
+    $foreignKeys = collect(Schema::getForeignKeys('generated_document_reports'));
+
+    expect($foreignKeys->contains(
+        fn (array $fk): bool => $fk['columns'] === ['file_id'] && $fk['foreign_table'] === 'files'
+    ))->toBeTrue();
+});
+
+it('nulls the report file pointer when the file row is deleted', function () {
+    $report = DocumentTree::create()->report();
+    $file = File::factory()->create([
+        'fileable_type' => 'generated_document_report',
+        'fileable_id' => $report->getKey(),
+    ]);
+    $report->update(['file_id' => $file->getKey()]);
+
+    $file->delete();
+
+    expect($report->fresh()->file_id)->toBeNull()
+        ->and($report->fresh()->status)->toBe(ReportStatus::Pending);
 });

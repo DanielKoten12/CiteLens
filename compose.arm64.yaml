@@ -1,0 +1,15 @@
+# arm64 overlay (Apple Silicon, linux/arm64 hosts).
+#
+# GROBID's `-full` image is amd64-only and would run under QEMU emulation here;
+# the `-crf` image ships a native linux/arm64 build. CRF models cover the
+# extraction this service needs (bibliography entries + in-text citations);
+# see docker/README.md for the accuracy trade-off.
+#
+# Usage:
+#   docker compose -f compose.yaml -f compose.arm64.yaml up -d --build
+#   docker compose -f compose.yaml -f compose.prod.yaml -f compose.arm64.yaml up -d --build
+
+services:
+  grobid:
+    image: grobid/grobid:0.9.1-crf
+    platform: linux/arm64

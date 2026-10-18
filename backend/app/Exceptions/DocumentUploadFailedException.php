@@ -2,19 +2,15 @@
 
 namespace App\Exceptions;
 
-use App\Data\Error\ErrorResponseData;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use RuntimeException;
 use Throwable;
 
 /**
  * Raised when an uploaded document cannot be persisted.
  *
- * Rendering lives beside the exception so the controller/service stay free of
+ * Rendering lives in {@see ApiException} so services and controllers stay free of
  * transport concerns and the API error envelope is produced in one place.
  */
-class DocumentUploadFailedException extends RuntimeException
+class DocumentUploadFailedException extends ApiException
 {
     /**
      * The stored file could not be written to disk.
@@ -35,16 +31,13 @@ class DocumentUploadFailedException extends RuntimeException
         );
     }
 
-    /**
-     * Render the exception using the canonical API error envelope.
-     */
-    public function render(Request $request): JsonResponse
+    public function code(): string
     {
-        return response()->json([
-            'error' => new ErrorResponseData(
-                code: 'SERVER_ERROR',
-                message: $this->getMessage(),
-            ),
-        ], 500);
+        return 'SERVER_ERROR';
+    }
+
+    public function status(): int
+    {
+        return 500;
     }
 }

@@ -66,6 +66,7 @@ Hard rules:
 | Database | MySQL/Postgres (target); SQLite for local dev and tests |
 | Queue | Laravel queue (`QUEUE_CONNECTION=database` by default; `sync` in tests) |
 | Inference | Python 3.14, FastAPI (`fastapi[standard]`), uv-managed; GROBID + SBERT |
+| Reports | `gotenberg/gotenberg-php` 2.x (HTML→PDF) over a Guzzle PSR-18 client; Blade template rendered to HTML in Laravel |
 | External | Crossref REST API |
 
 ---
@@ -83,13 +84,13 @@ Hard rules:
 │   ├── config/
 │   └── database/{migrations,factories,seeders}
 └── inference/                 # FastAPI internal inference service
-    ├── main.py
-    └── src/inference/
+    ├── src/inference/         # main.py, config.py, schemas.py, api/, grobid/
+    └── tests/                 # pytest (hermetic MockTransport; opt-in integration)
 ```
 
 Backend entry points: `backend/bootstrap/app.php` (middleware/exception bootstrap),
 `backend/routes/api.php` (API routes under `/api/v1`). The FastAPI entry point is
-`inference/main.py`.
+`inference.main:app` (`inference/src/inference/main.py`).
 
 ---
 
@@ -199,8 +200,30 @@ pending ──▶ processing ──▶ completed
 
 - Terminal `completed` includes documents that have findings.
 - `POST /documents/{document}/retry` is valid **only** from `failed`; otherwise `409 CONFLICT`.
-- Reports follow `pending → processing → completed | failed`, one report per document, generated
-  only for completed documents.
+- Reports follow `pending → processing → completed | failed`, are generated **on demand for
+  completed documents only** and stored as PDF; a document may have multiple reports and a failed
+  report is regenerated with another `POST` (no queue-level retry). See
+  `docs/API_SPEC.md` §8.
+
+### 8.1 Report generation pipeline
+
+Report generation is asynchronous and orchestrated by `GenerateDocumentReportJob` (payload: report
+id, `tries = 1`, `WithoutOverlapping` per report):
+
+```text
+pending ──▶ processing ──▶ completed
+                    └────▶ failed
+
+ReportDataBuilder → ReportTemplateRenderer (Blade → HTML) → ReportRenderer (Gotenberg: HTML → PDF)
+        → DocumentFileManager::storePdf (reports.disk) → ReportStateService::markCompleted
+```
+
+- `ReportStateService` is the only writer of `status`/`error`/`file_id`/`generated_at`; the job and
+  its `failed()` hook call it.
+- `ReportRenderer` is the internal seam; the production implementation is
+  `GotenbergReportRenderer` calling the internal Gotenberg service (private network only).
+- `files.disk` records the disk each stored object lives on, so report PDFs on `reports.disk` and
+  document uploads on `filesystems.default` are deleted/URL-resolved per row.
 
 Tests configure `QUEUE_CONNECTION=sync` (see `backend/phpunit.xml`); production uses the database
 queue. Code must not assume either.
@@ -232,6 +255,9 @@ Key rules:
 - **Locations** store 1-based page numbers and bounding boxes in `pdf_points_top_left`; do not
   change coordinate semantics casually.
 - **Findings** carry the verdict + audit fields; **candidates** carry the ranked alternatives.
+- **Files** are polymorphic and record the private `disk` they live on (`files.disk`); every URL and
+  deletion resolves the disk from the row (D-06-02). Reports link their stored PDF through
+  `generated_document_reports.file_id` (FK, `nullOnDelete`).
 
 ---
 
@@ -241,10 +267,11 @@ Base URL `http://inference:8000` (private network, no auth in v1). Defined in `A
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/health` | `{ status, grobid, sbert }` liveness |
+| GET | `/health` | `{ status, grobid[, sbert] }` liveness |
 | POST | `/v1/extract` | Multipart PDF → references + citations + coordinates (GROBID) |
 | POST | `/v1/embeddings` | Batch texts → vectors (SBERT) |
 
+The service currently reports `status`/`grobid`; `sbert` arrives with the embeddings slice.
 Batch embedding requests (e.g. 32 texts) to bound latency/memory. Crossref consolidation is not
 delegated to GROBID — Laravel controls validation so results stay reproducible. Failures surface
 to the pipeline as `INFERENCE_UNAVAILABLE`.
@@ -278,27 +305,96 @@ Never commit secrets, tokens or credentials.
 Report and document files are stored on a private disk; access is via signed/temporary URLs
 (`FilePreviewData->url`).
 
+### 12.1 Docker Compose stack
+
+The repository implements this topology with Compose files at the repo root (runbook:
+`docker/README.md`):
+
+- `compose.yaml` — development stack (amd64 default: GROBID `0.9.1-full`, bind-mounted sources,
+  Vite dev server, php-fpm + nginx);
+- `compose.arm64.yaml` — arm64 overlay that swaps in the native GROBID `0.9.1-crf` image;
+- `compose.prod.yaml` — production-shaped overlay (built `prod` targets, no bind mounts, SPA baked
+  into nginx, non-root inference service, config/view caches warmed at start);
+- `compose.debug.yaml` — opt-in overlay publishing PostgreSQL/GROBID/inference/Gotenberg on
+  `127.0.0.1` only.
+
+Only the Laravel edge (`web`) and the SPA are published by default; GROBID, the inference service,
+Gotenberg and the database never receive public ports (`docs/SECURITY.md` §7). Semantic scoring is
+disabled in the container environment (`SCORING_SEMANTIC_ENABLED=false`) until the SBERT slice
+(`POST /v1/embeddings`) is implemented, because a 404 from that step is fatal to the pipeline.
+
 ---
 
 ## 13. Current implementation status
 
 Verified against the repository:
 
-- **Backend** is a Laravel 13 app. Present: `User`, `ResearchedDocument`, `File` models; the
-  canonical domain migration (`create_initial_tables`); Sanctum auth
+- **Backend** is a Laravel 13 app. Present: the `User`, `ResearchedDocument`, `File` models plus
+  the domain models `ResearchedDocumentReference(-Location)`, `ResearchedDocumentCitation(-Location)`,
+  `ReferenceFinding(-Candidate)` and `GeneratedDocumentReport` with factories; canonical enums
+  (`app/Enums/`, `docs/API_SPEC.md` §2.6); the canonical domain migration (`create_initial_tables`)
+  plus the OQ-14 unique-index migration; the shared response/error-envelope layer
+  (`ApiResponse`, `ApiError`, `ApiException` + `ApiExceptionRenderer`, per-resource 404/409/503
+  exceptions); the `OwnedResourceFinder` ownership scoping; the `documents`/`document-status`
+  rate limiters; Crossref/inference/scoring config placeholders plus `config/analysis.php`; the
+  `DocumentTree`/`Fixtures` test harness; the enforced morph map; Sanctum auth
   (`AuthController`, `AuthService`, `RegisterRequest` / `LoginRequest`, `AuthenticationData` /
-  `UserDetailData`, `ErrorResponseData`, `InvalidCredentialsException`) with the `/auth/*` routes; and the upload slice
-  (`UploadController`, `UploadDocumentRequest`, `ResearchedDocumentDetailData` /
-  `FilePreviewData`, `DocumentUploadService`, `DocumentUploadFailedException`) in
-  `routes/api.php`. **Missing:** all other endpoints, `AnalyzeDocumentJob`, the Crossref client,
-  scoring, the inference client, and report generation.
+  `UserDetailData`, `ErrorResponseData`, `InvalidCredentialsException`) with the `/auth/*` routes;
+  the upload slice (`UploadController`, `UploadDocumentRequest`, `DocumentUploadService`,
+  `DocumentUploadFailedException`); and the **full `/documents` lifecycle** (`DocumentController` +
+  `ListDocumentsRequest`; `DocumentQueryService`, `DocumentSummaryService`,
+  `DocumentLifecycleService`, `DocumentAnalysisStateService`, `DocumentAnalysisResetService`,
+  `DocumentDeletionService`, `DocumentFileManager`, `CitationStatusResolver`; summary/status/detail
+  DTOs) including list/detail/status/retry/delete/purge. Upload dispatches `AnalyzeDocumentJob`
+  after commit through the `RunsDocumentAnalysis` seam, which Phase 03 now binds to
+  `AnalysisPipeline`: the canonical step machine (`AnalysisStepRegistry`, `AnalysisProgress`,
+  `AnalysisFailureHandler`, `AnalysisContext`), the implemented steps (`ExtractDocumentStep`,
+  `PersistExtractionStep`, `FinalizeAnalysisStep`), the internal inference client
+  (`Services/Inference/InferenceClient` + `Data/Inference/*` DTOs + `ExtractionFailedException`),
+  `DoiNormalizer`, the `WithoutOverlapping` job middleware and the inference contract fixtures/fakes
+  (`tests/Support/InferenceFake`, `AnalysisHarness`). Phase 04 adds the Crossref layer
+  (`Services/Crossref/CrossrefClient` + query builder/result mapper/value objects +
+  `CrossrefUnavailableException`), the pure scoring engine (`Services/Scoring/*`: string/author/
+  semantic similarity, local-venue detection, reason building, `ReferenceScorer`,
+  `VerdictDecider`), the `crossref_validation`/`embedding`/`scoring` steps
+  (`ValidateReferencesStep`, `EmbedReferencesStep`, `ScoreReferencesStep`), the transient
+  `ReferenceVerificationBatch`/`EmbeddingIndex` context artifacts and the single automated writer
+  (`Services/ReferenceFinding/ReferenceFindingWriter`). Phase 05 adds citation resolution
+  (`Services/Citations/*`: `CitationMarkerParser`, `CitationResolver`, `CitationMatchConfig`,
+  `CitationReference`/`CitationResolution` value objects, the `ResolveCitationsStep`), the
+  verification read model (`ReferenceQueryService`, `CitationQueryService`, the reference/citation/
+  finding DTOs, a shared `LocationPreviewData`), the manual review writers
+  (`ReferenceFindingReviewService`, `CitationPairingService`) and the `/references` /
+  `/citations` / `/findings` endpoints (`ReferenceController`, `CitationController`,
+  `FindingsController`; the derived feed in `Services/Findings/{FindingsFeedQuery,FindingsFeedComposer}`).
+  Phase 05.1 hardens citation resolution: `CitationMarkerParser` retains every APA pair/ordinal,
+  `AuthorMatcher::names()` adds initials, `CitationCandidateScorer`/`CitationDecisionPolicy`/
+  `CitationBatchResolver` implement soft-year scoring, ambiguity detection and cross-citation
+  evidence consolidation, the GROBID `reference_index` is consumed as a validated prior, resolution
+  provenance (`resolution_state`/`resolution_method`/`resolution_confidence`/
+  `extraction_reference_index`) and `citation_resolution_candidates` are persisted, `unresolved` is a
+  fifth derived status (severity `medium`), and `citations:evaluate` provides a seed evaluation
+  harness. Phase 06 adds report generation: the `files.disk` column + report `file_id` FK
+  migrations, `config/reports.php` + `services.gotenberg`, the `ReportRenderer` seam with
+  `GotenbergReportRenderer` (official `gotenberg/gotenberg-php` client over an injected Guzzle
+  PSR-18 transport), `PrivateFileUrlResolver`, the disk-aware `DocumentFileManager`
+  (`storePdf`/`detachForReport`), the report read model/template (`ReportDataBuilder`,
+  `ReportPayload`, `ReportTemplateRenderer`, `reports/document-report.blade.php`),
+  `GenerateDocumentReportJob` with `ReportStateService`/`ReportFailureHandler`/
+  `ReportDeletionService`, and the `/reports` endpoints (`ReportController`,
+  `ReportGenerationService`, `ReportQueryService`, report DTOs). **Missing:** the inference service
+  implementation (FastAPI).
 - **Frontend** is a working Vue 3 + Vite SPA with mocked auth and prototype types; the API is not
   wired yet.
-- **Inference** is a FastAPI hello-world stub; `/health`, `/v1/extract`, `/v1/embeddings` are
-  specified but unimplemented.
+- **Inference** implements the GROBID extraction slice (`GET /health`, `POST /v1/extract`) in
+  `inference/src/inference/` with a hermetic pytest suite; `/v1/embeddings` (SBERT) is not
+  implemented yet.
 
-Everything described as "the pipeline", "scoring" or "reports" above is the **target** design;
-only the upload slice exists today.
+Everything described as "the pipeline" or "scoring" above is the **target** design; the document
+lifecycle endpoints, the upload→job dispatch seam, the extraction/persistence half (Phase 03),
+Crossref verification/scoring (Phase 04), citation resolution + the verification endpoints
+(Phase 05) and report generation + the `/reports` endpoints (Phase 06) exist today, while the
+FastAPI inference service implements only the GROBID extraction slice (SBERT embeddings pending).
 
 ---
 

@@ -1,0 +1,2232 @@
+openapi: 3.1.0
+
+info:
+  title: Dafpus Cek API
+  version: 1.0.0
+  summary: Academic-reference verification API (public contract)
+  description: |
+    Public REST contract for **Dafpus Cek** (frontend brand: *CiteLens*), the
+    academic-reference verification application.
+
+    The canonical source of truth is `docs/API_SPEC.md`; this document mirrors it
+    and the Laravel implementation. The internal FastAPI/GROBID/SBERT inference
+    service is **not** part of this contract and is deliberately not described
+    here.
+
+    ## Conventions
+
+    - **Base path** `/api/v1`. Clients should send `Accept: application/json`.
+    - **Authentication** Laravel Sanctum personal access tokens:
+      `Authorization: Bearer <token>`. Only `POST /auth/register` and
+      `POST /auth/login` are public.
+    - **IDs** are UUID v4 strings.
+    - **Timestamps** are ISO 8601 UTC, e.g. `2026-09-23T15:30:00Z`.
+    - **Confidence** is a decimal between `0.0000` and `1.0000`.
+    - **Enums** are `lower_snake_case`.
+    - **Success envelope** single: `{ "data": …, "message"?: "…" }`; collection:
+      `{ "data": [ … ], "meta": { "current_page", "per_page", "total", "last_page" } }`.
+      `message` is only present on actions. `204` responses carry no body.
+    - **Error envelope** every non-2xx response:
+      `{ "error": { "code": "…", "message": "…", "details"?: { … } } }`.
+      `403 FORBIDDEN` exists in the canonical error table but document-owned
+      resources never use it: foreign resources return `404` (no existence
+      disclosure).
+    - **Ownership** a resource is accessible only to the owner of its parent
+      document. Foreign resources return `404 NOT_FOUND` exactly like missing
+      ones — existence is never disclosed.
+    - **Deletion** is a hard delete with cascade to dependent rows.
+    - **Rate limits** (defaults): auth `5/min/IP`, upload `10/min/user`,
+      status polling `120/min/user`, other authenticated endpoints `60/min/user`.
+  x-canonical-spec: docs/API_SPEC.md
+
+servers:
+  - url: https://api.dafpus.example/api/v1
+    description: Production (placeholder host from the API specification)
+  - url: http://localhost:8000/api/v1
+    description: Local development
+
+tags:
+  - name: Auth
+    description: Registration, login, logout and the current user.
+  - name: Documents
+    description: Upload, history, detail, progress polling, retry and deletion.
+  - name: References
+    description: Bibliography entries, verification findings and manual review.
+  - name: Citations
+    description: In-text citation occurrences, derived status and manual pairing.
+  - name: Findings
+    description: Derived read-only findings/highlights feed for the document viewer.
+  - name: Reports
+    description: On-demand PDF report generation, listing, detail and deletion.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      operationId: register
+      summary: Register + issue token
+      description: |
+        Creates an account and issues a Sanctum personal access token.
+        Rate limit: `5/min/IP`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Account created and token issued.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    required: [data, message]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Authentication'
+              examples:
+                success:
+                  value:
+                    data:
+                      user:
+                        id: 9f1c2b3a-4d5e-4f60-8a91-2b3c4d5e6f70
+                        name: Daniel Belawa Koten
+                        email: daniel@example.com
+                        created_at: "2026-09-23T15:30:00Z"
+                      token: "1|eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example-token"
+                      token_type: Bearer
+                    message: Registrasi berhasil.
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      operationId: login
+      summary: Login + issue token
+      description: |
+        Verifies credentials and issues a Sanctum personal access token. An
+        unknown email and a wrong password are indistinguishable.
+        Rate limit: `5/min/IP`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Authentication'
+              examples:
+                success:
+                  value:
+                    data:
+                      user:
+                        id: 9f1c2b3a-4d5e-4f60-8a91-2b3c4d5e6f70
+                        name: Daniel Belawa Koten
+                        email: daniel@example.com
+                        created_at: "2026-09-23T15:30:00Z"
+                      token: "2|eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example-token"
+                      token_type: Bearer
+        '422':
+          $ref: '#/components/responses/InvalidCredentials'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logout
+      summary: Revoke current token
+      responses:
+        '200':
+          description: Token revoked.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, message]
+                properties:
+                  data:
+                    type: 'null'
+                  message:
+                    type: string
+              examples:
+                success:
+                  value:
+                    data: null
+                    message: Logout berhasil.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      operationId: me
+      summary: Current user
+      responses:
+        '200':
+          description: The authenticated user.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+              examples:
+                success:
+                  value:
+                    data:
+                      id: 9f1c2b3a-4d5e-4f60-8a91-2b3c4d5e6f70
+                      name: Daniel Belawa Koten
+                      email: daniel@example.com
+                      created_at: "2026-09-23T15:30:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /documents:
+    get:
+      tags: [Documents]
+      operationId: listDocuments
+      summary: Document history
+      description: |
+        Paginated history of the authenticated user's documents. Ordered by
+        `created_at` descending unless `sort` is given. `summary` is `null` until
+        the analysis of that document has completed.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: status
+          in: query
+          required: false
+          description: Filter by document status.
+          schema:
+            $ref: '#/components/schemas/DocumentStatus'
+        - name: q
+          in: query
+          required: false
+          description: Case-insensitive search on the document name.
+          schema:
+            type: string
+            maxLength: 255
+        - name: sort
+          in: query
+          required: false
+          description: Sort order on `created_at`.
+          schema:
+            type: string
+            enum: [created_at, '-created_at']
+            default: '-created_at'
+      responses:
+        '200':
+          description: Paginated document list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CollectionResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DocumentSummary'
+              examples:
+                success:
+                  value:
+                    data:
+                      - id: b2d4e6f8-1234-4abc-9def-0123456789ab
+                        name: laporan-akhir.pdf
+                        status: completed
+                        progress: 100
+                        summary:
+                          total_references: 8
+                          valid: 5
+                          suspicious: 2
+                          invalid: 0
+                          not_found: 1
+                          total_citations: 15
+                          valid_citations: 12
+                          unreliable_citations: 1
+                          pending_citations: 0
+                          unresolved_citations: 0
+                          hallucination_citations: 2
+                        created_at: "2026-09-23T15:30:00Z"
+                        updated_at: "2026-09-23T15:31:12Z"
+                    meta:
+                      current_page: 1
+                      per_page: 15
+                      total: 42
+                      last_page: 3
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags: [Documents]
+      operationId: uploadDocument
+      summary: Upload + start analysis
+      description: |
+        Upload **and** analysis start are merged: the document and its file are
+        persisted, `AnalyzeDocumentJob` is dispatched to the queue, and the
+        endpoint responds immediately with `202`. Analysis runs asynchronously;
+        poll `GET /documents/{document}/status`.
+
+        **PDF only** (DOCX is not supported in v1), maximum **20 MB**.
+        Rate limit: `10/min/user`.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UploadDocumentRequest'
+      responses:
+        '202':
+          description: Document stored and analysis queued.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    required: [data, message]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DocumentDetail'
+              examples:
+                success:
+                  value:
+                    data:
+                      id: b2d4e6f8-1234-4abc-9def-0123456789ab
+                      name: laporan-akhir.pdf
+                      status: pending
+                      progress: 0
+                      current_step: queued
+                      error: null
+                      file:
+                        filename: laporan-akhir.pdf
+                        mime_type: application/pdf
+                        size: 245678
+                        url: https://api.dafpus.example/storage/documents/b2d4e6f8-1234-4abc-9def-0123456789ab/laporan-akhir.pdf
+                      created_at: "2026-09-23T15:30:00Z"
+                      updated_at: "2026-09-23T15:30:00Z"
+                      summary: null
+                    message: Dokumen berhasil diunggah. Analisis sedang diproses.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          $ref: '#/components/responses/InferenceUnavailable'
+    delete:
+      tags: [Documents]
+      operationId: purgeDocuments
+      summary: Purge history
+      description: |
+        Hard-deletes the authenticated user's entire document history (documents,
+        references, citations, locations, findings, candidates, files, reports).
+      responses:
+        '204':
+          description: History purged. No body.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /documents/{document}:
+    get:
+      tags: [Documents]
+      operationId: showDocument
+      summary: Document detail
+      description: |
+        Full document detail: the list fields plus `current_step`, `error`,
+        `file` and the derived `summary` (present once `status = completed`).
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: Document detail.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DocumentDetail'
+              examples:
+                success:
+                  value:
+                    data:
+                      id: b2d4e6f8-1234-4abc-9def-0123456789ab
+                      name: laporan-akhir.pdf
+                      status: completed
+                      progress: 100
+                      current_step: completed
+                      error: null
+                      file:
+                        filename: laporan-akhir.pdf
+                        mime_type: application/pdf
+                        size: 245678
+                        url: https://api.dafpus.example/storage/documents/b2d4e6f8-1234-4abc-9def-0123456789ab/laporan-akhir.pdf
+                      created_at: "2026-09-23T15:30:00Z"
+                      updated_at: "2026-09-23T15:31:12Z"
+                      summary:
+                        total_references: 8
+                        valid: 5
+                        suspicious: 2
+                        invalid: 0
+                        not_found: 1
+                        total_citations: 15
+                        valid_citations: 12
+                        unreliable_citations: 1
+                        pending_citations: 0
+                        unresolved_citations: 0
+                        hallucination_citations: 2
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/DocumentNotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags: [Documents]
+      operationId: deleteDocument
+      summary: Delete one document
+      description: Hard-deletes the document and cascades to all dependent rows.
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '204':
+          description: Document deleted. No body.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/DocumentNotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /documents/{document}/status:
+    get:
+      tags: [Documents]
+      operationId: documentStatus
+      summary: Poll analysis progress
+      description: |
+        Lightweight polling payload. Recommended client interval: every 2 s,
+        backing off to 5 s after 30 s; stop on `completed` or `failed`.
+        Rate limit: `120/min/user`.
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: Current analysis state.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DocumentStatusInfo'
+              examples:
+                success:
+                  value:
+                    data:
+                      id: b2d4e6f8-1234-4abc-9def-0123456789ab
+                      status: processing
+                      progress: 65
+                      current_step: crossref_validation
+                      error: null
+                      updated_at: "2026-09-23T15:31:05Z"
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/DocumentNotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /documents/{document}/retry:
+    post:
+      tags: [Documents]
+      operationId: retryDocument
+      summary: Retry failed analysis
+      description: |
+        Re-runs the pipeline. Allowed **only** when `status = failed`; any other
+        state returns `409 CONFLICT`. The previous run's derived rows are removed
+        and the document is reset to `pending` / `queued`.
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '202':
+          description: Analysis re-queued.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    required: [data, message]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DocumentStatusInfo'
+              examples:
+                success:
+                  value:
+                    data:
+                      id: b2d4e6f8-1234-4abc-9def-0123456789ab
+                      status: pending
+                      progress: 0
+                      current_step: queued
+                      error: null
+                      updated_at: "2026-09-23T15:35:00Z"
+                    message: Analisis dijadwalkan ulang.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/DocumentNotFound'
+        '409':
+          $ref: '#/components/responses/ConflictDocumentRetry'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /documents/{document}/references:
+    get:
+      tags: [References]
+      operationId: listReferences
+      summary: List references
+      description: |
+        Paginated bibliography of one document, each item with its finding
+        preview. Ordering is document position (`text_start_offset` ASC, nulls
+        last, then `id`). The `status=pending` filter also matches references
+        whose finding row does not exist yet.
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: status
+          in: query
+          required: false
+          description: Filter by reference finding status.
+          schema:
+            $ref: '#/components/schemas/ReferenceFindingStatus'
+        - name: has_doi
+          in: query
+          required: false
+          description: Filter by presence of a DOI. Accepts `true/false` and `1/0`.
+          schema:
+            oneOf:
+              - type: boolean
+              - type: string
+                enum: ['true', 'false', '1', '0']
+      responses:
+        '200':
+          description: Paginated reference list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CollectionResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ReferenceSummary'
+              examples:
+                success:
+                  value:
+                    data:
+                      - id: 1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d
+                        raw_text: LeCun, Y., Bengio, Y., & Hinton, G. (2019). Deep learning. Nature.
+                        doi: 10.1038/nature14539
+                        title: Deep learning
+                        authors: LeCun, Y., Bengio, Y., & Hinton, G.
+                        publication_name: Nature
+                        publication_year: 2019
+                        text_start_offset: 8120
+                        text_end_offset: 8295
+                        finding:
+                          id: 3c4d5e6f-7081-4c9d-ae1f-2a3b4c5d6e7f
+                          status: valid
+                          confidence: 0.95
+                          reason: Exact DOI match with Crossref.
+                          selected_candidate_id: 5e6f7081-92a3-4ebf-8a3b-4c5d6e7f8091
+                    meta:
+                      current_page: 1
+                      per_page: 15
+                      total: 8
+                      last_page: 1
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/DocumentNotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /references/{reference}:
+    get:
+      tags: [References]
+      operationId: showReference
+      summary: Reference detail
+      description: |
+        The bibliography entry plus its highlight locations, its finding with the
+        ranked Crossref candidates, and the resolved citations pointing to it.
+      parameters:
+        - $ref: '#/components/parameters/ReferenceId'
+      responses:
+        '200':
+          description: Reference detail.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ReferenceDetail'
+              examples:
+                success:
+                  value:
+                    data:
+                      id: 2b3c4d5e-6f70-4b8c-9d0e-1f2a3b4c5d6e
+                      raw_text: Koten, D. B. (2023). Sistem Deteksi Plagiarisme. Jurnal Informatika.
+                      doi: null
+                      title: Sistem Deteksi Plagiarisme
+                      authors: Koten, D. B.
+                      publication_name: Jurnal Informatika
+                      publication_year: 2023
+                      text_start_offset: 8300
+                      text_end_offset: 8390
+                      locations:
+                        - page_number: 12
+                          x: 72.0
+                          y: 210.4
+                          width: 451.2
+                          height: 24.0
+                          page_width: 595.0
+                          page_height: 842.0
+                          coordinate_system: pdf_points_top_left
+                          location_index: 0
+                      finding:
+                        id: 4d5e6f70-8192-4dae-bf2a-3b4c5d6e7f80
+                        status: suspicious
+                        confidence: 0.63
+                        reason: Judul pada metadata Crossref memiliki perbedaan.
+                        selected_candidate_id: 5e6f7081-92a3-4ebf-8a3b-4c5d6e7f8091
+                        is_manual: false
+                        reviewed_by: null
+                        reviewed_at: null
+                        candidates:
+                          - id: 5e6f7081-92a3-4ebf-8a3b-4c5d6e7f8091
+                            rank: 1
+                            confidence: 0.63
+                            doi: 10.1234/example
+                            title: Sistem Pendeteksi Plagiarisme Dokumen
+                            authors: Koten, D. B.
+                            publication_name: Jurnal Informatika
+                            publication_year: 2023
+                            url: https://doi.org/10.1234/example
+                            match_reason: "Author and year match; title similarity 0.78."
+                      citations:
+                        - id: 6f708192-a3b4-4f80-9b4c-5d6e7f8091a2
+                          citation_text: "(Koten, 2023)"
+                          occurrence_index: 4
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/ReferenceNotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /references/{reference}/finding:
+    patch:
+      tags: [References]
+      operationId: updateReferenceFinding
+      summary: Manual review override
+      description: |
+        Changes the verdict and/or selects another candidate. Sets
+        `is_manual = true` and stamps `reviewed_by` / `reviewed_at`. A review
+        while the document is `processing` returns `409 CONFLICT`, so a running
+        pipeline is never overwritten. A reference without a finding row gets a
+        manual finding with `confidence: null`.
+      parameters:
+        - $ref: '#/components/parameters/ReferenceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateReferenceFindingRequest'
+      responses:
+        '200':
+          description: Finding updated.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    required: [data, message]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ReferenceFindingReview'
+              examples:
+                success:
+                  value:
+                    data:
+                      id: 4d5e6f70-8192-4dae-bf2a-3b4c5d6e7f80
+                      status: valid
+                      confidence: 0.63
+                      reason: Diverifikasi manual oleh pengguna.
+                      selected_candidate_id: 5e6f7081-92a3-4ebf-8a3b-4c5d6e7f8091
+                      is_manual: true
+                      reviewed_by: 9f1c2b3a-4d5e-4f60-8a91-2b3c4d5e6f70
+                      reviewed_at: "2026-09-23T15:40:00Z"
+                      updated_at: "2026-09-23T15:40:00Z"
+                    message: Status referensi diperbarui.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/ReferenceNotFound'
+        '409':
+          $ref: '#/components/responses/ConflictFindingReview'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /documents/{document}/citations:
+    get:
+      tags: [Citations]
+      operationId: listCitations
+      summary: List citations
+      description: |
+        Paginated in-text citation occurrences with the **derived** status
+        (`valid | unreliable | pending | unresolved | hallucination`). Ordering is
+        document position (`text_start_offset` ASC, nulls last, then `id`).
+        `reference_id` must belong to the same document, otherwise `422` (a
+        foreign or missing reference id is never disclosed).
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: status
+          in: query
+          required: false
+          description: Filter by derived citation status.
+          schema:
+            $ref: '#/components/schemas/CitationStatus'
+        - name: reference_id
+          in: query
+          required: false
+          description: Filter by the paired reference (same document only).
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Paginated citation list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CollectionResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CitationSummary'
+              examples:
+                success:
+                  value:
+                    data:
+                      - id: 6f708192-a3b4-4f80-9b4c-5d6e7f8091a2
+                        citation_text: "(Koten, 2023)"
+                        citation_marker: Koten, 2023
+                        context_before: "…seperti yang dijelaskan oleh "
+                        context_after: " dalam penelitiannya."
+                        text_start_offset: 2150
+                        text_end_offset: 2162
+                        occurrence_index: 4
+                        status: valid
+                        resolution_method: apa
+                        reference:
+                          id: 2b3c4d5e-6f70-4b8c-9d0e-1f2a3b4c5d6e
+                          title: Sistem Deteksi Plagiarisme
+                      - id: 708192a3-b4c5-4081-ac5d-6e7f8091a2b3
+                        citation_text: "(Hidayat et al., 2021)"
+                        citation_marker: Hidayat et al., 2021
+                        context_before: null
+                        context_after: null
+                        text_start_offset: 3300
+                        text_end_offset: 3322
+                        occurrence_index: 7
+                        status: unreliable
+                        resolution_method: apa
+                        reference:
+                          id: 8192a3b4-c5d6-4182-bd6e-7f8091a2b3c4
+                          title: Analisis Sentimen Berita
+                      - id: 92a3b4c5-d6e7-4a93-8e7f-8091a2b3c4d5
+                        citation_text: "(Andi, 2022)"
+                        citation_marker: Andi, 2022
+                        context_before: null
+                        context_after: null
+                        text_start_offset: 4520
+                        text_end_offset: 4532
+                        occurrence_index: 9
+                        status: hallucination
+                        resolution_method: null
+                        reference: null
+                    meta:
+                      current_page: 1
+                      per_page: 15
+                      total: 15
+                      last_page: 1
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/DocumentNotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /citations/{citation}:
+    get:
+      tags: [Citations]
+      operationId: showCitation
+      summary: Citation detail
+      description: |
+        The citation occurrence plus its derived status, resolution provenance,
+        ranked resolution candidates (when any) and highlight locations.
+      parameters:
+        - $ref: '#/components/parameters/CitationId'
+      responses:
+        '200':
+          description: Citation detail.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CitationDetail'
+              examples:
+                unresolved:
+                  summary: A citation with plausible candidates below the commit threshold.
+                  value:
+                    data:
+                      id: 708192a3-b4c5-4081-ac5d-6e7f8091a2b3
+                      citation_text: "(Hidayat et al., 2021)"
+                      citation_marker: Hidayat et al., 2021
+                      context_before: null
+                      context_after: null
+                      text_start_offset: 3300
+                      text_end_offset: 3322
+                      occurrence_index: 7
+                      status: unresolved
+                      resolution_method: apa
+                      reference: null
+                      resolution:
+                        state: unresolved
+                        method: apa
+                        confidence: 0.8
+                        hint_index: null
+                      candidates:
+                        - id: a3b4c5d6-e7f8-4a94-9f80-91a2b3c4d5e6
+                          rank: 1
+                          confidence: 0.8
+                          method: apa
+                          match_reason: "Kemiripan nama 0.80; kesesuaian tahun 1.00."
+                          reference:
+                            id: 2b3c4d5e-6f70-4b8c-9d0e-1f2a3b4c5d6e
+                            title: Sistem Deteksi Plagiarisme
+                      locations:
+                        - page_number: 5
+                          x: 88.0
+                          y: 410.0
+                          width: 96.0
+                          height: 11.0
+                          page_width: 595.0
+                          page_height: 842.0
+                          coordinate_system: pdf_points_top_left
+                          location_index: 0
+                hallucination:
+                  summary: A citation with no plausible candidate.
+                  value:
+                    data:
+                      id: 92a3b4c5-d6e7-4a93-8e7f-8091a2b3c4d5
+                      citation_text: "(Andi, 2022)"
+                      citation_marker: Andi, 2022
+                      context_before: null
+                      context_after: null
+                      text_start_offset: 4520
+                      text_end_offset: 4532
+                      occurrence_index: 9
+                      status: hallucination
+                      resolution_method: null
+                      reference: null
+                      resolution:
+                        state: unmatched
+                        method: null
+                        confidence: null
+                        hint_index: null
+                      candidates: []
+                      locations:
+                        - page_number: 3
+                          x: 120.5
+                          y: 640.2
+                          width: 48.0
+                          height: 11.0
+                          page_width: 595.0
+                          page_height: 842.0
+                          coordinate_system: pdf_points_top_left
+                          location_index: 0
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/CitationNotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    patch:
+      tags: [Citations]
+      operationId: updateCitation
+      summary: Pair or unpair a reference
+      description: |
+        The field must be present in the body: an explicit `null` clears the
+        pairing (derived status becomes `hallucination`), a UUID pairs the
+        citation with a reference of the **same document**. Manual changes record
+        `resolution_method = manual`.
+      parameters:
+        - $ref: '#/components/parameters/CitationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCitationRequest'
+      responses:
+        '200':
+          description: Pairing updated.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    required: [data, message]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CitationPairing'
+              examples:
+                paired:
+                  value:
+                    data:
+                      id: 92a3b4c5-d6e7-4a93-8e7f-8091a2b3c4d5
+                      status: valid
+                      resolution_method: manual
+                      reference:
+                        id: 2b3c4d5e-6f70-4b8c-9d0e-1f2a3b4c5d6e
+                        title: Sistem Deteksi Plagiarisme
+                    message: Sitasi berhasil ditautkan.
+                unpaired:
+                  value:
+                    data:
+                      id: 92a3b4c5-d6e7-4a93-8e7f-8091a2b3c4d5
+                      status: hallucination
+                      resolution_method: manual
+                      reference: null
+                    message: Tautan sitasi berhasil dilepaskan.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/CitationNotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /documents/{document}/findings:
+    get:
+      tags: [Findings]
+      operationId: listFindings
+      summary: Findings / highlights feed
+      description: |
+        Derived, read-only feed combining problem reference findings,
+        `unreliable`/`unresolved` citations and `hallucination` citations, for the
+        document viewer's issue list and highlights. Recomputed per request —
+        nothing is persisted. Ordering is document position (`text_start_offset`
+        ASC, nulls last, then `id`).
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: type
+          in: query
+          required: false
+          description: Filter by finding type.
+          schema:
+            $ref: '#/components/schemas/FindingType'
+        - name: severity
+          in: query
+          required: false
+          description: Filter by derived severity.
+          schema:
+            $ref: '#/components/schemas/FindingSeverity'
+      responses:
+        '200':
+          description: Paginated findings feed.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CollectionResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/FindingHighlight'
+              examples:
+                success:
+                  value:
+                    data:
+                      - id: "ref-finding:4d5e6f70-8192-4dae-bf2a-3b4c5d6e7f80"
+                        type: reference_suspicious
+                        severity: medium
+                        message: Judul pada metadata Crossref memiliki perbedaan.
+                        reference_id: 2b3c4d5e-6f70-4b8c-9d0e-1f2a3b4c5d6e
+                        citation_id: null
+                        text: Koten, D. B. (2023). Sistem Deteksi Plagiarisme. Jurnal Informatika.
+                        start_offset: 8300
+                        end_offset: 8390
+                        locations:
+                          - page_number: 12
+                            x: 72.0
+                            y: 210.4
+                            width: 451.2
+                            height: 24.0
+                            page_width: 595.0
+                            page_height: 842.0
+                            coordinate_system: pdf_points_top_left
+                            location_index: 0
+                      - id: "citation:92a3b4c5-d6e7-4a93-8e7f-8091a2b3c4d5"
+                        type: citation_hallucination
+                        severity: high
+                        message: Sitasi tidak memiliki pasangan referensi (hallucination).
+                        reference_id: null
+                        citation_id: 92a3b4c5-d6e7-4a93-8e7f-8091a2b3c4d5
+                        text: "(Andi, 2022)"
+                        start_offset: 4520
+                        end_offset: 4532
+                        locations:
+                          - page_number: 3
+                            x: 120.5
+                            y: 640.2
+                            width: 48.0
+                            height: 11.0
+                            page_width: 595.0
+                            page_height: 842.0
+                            coordinate_system: pdf_points_top_left
+                            location_index: 0
+                    meta:
+                      current_page: 1
+                      per_page: 15
+                      total: 6
+                      last_page: 1
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/DocumentNotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /documents/{document}/reports:
+    post:
+      tags: [Reports]
+      operationId: createReport
+      summary: Generate report
+      description: |
+        Creates a report row (`status = pending`) and dispatches asynchronous PDF
+        generation. Allowed only when the document `status = completed`; anything
+        else returns `409 CONFLICT`. Reports are PDF only (no DOCX/Excel in v1);
+        a failed report is regenerated by calling this endpoint again.
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '202':
+          description: Report queued.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    required: [data, message]
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ReportSummary'
+              examples:
+                success:
+                  value:
+                    data:
+                      id: 92a3b4c5-d6e7-4a93-8e7f-8091a2b3c4d5
+                      document_id: b2d4e6f8-1234-4abc-9def-0123456789ab
+                      status: pending
+                      download_url: null
+                      generated_at: null
+                    message: Laporan sedang dibuat.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/DocumentNotFound'
+        '409':
+          $ref: '#/components/responses/ConflictReportNotAllowed'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    get:
+      tags: [Reports]
+      operationId: listReports
+      summary: List reports
+      description: |
+        Paginated report history for one document, ordered by `created_at`
+        descending. `download_url` is `null` until the report is `completed`,
+        then a temporary URL for the file on the private report disk.
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Paginated report list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CollectionResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ReportSummary'
+              examples:
+                success:
+                  value:
+                    data:
+                      - id: 92a3b4c5-d6e7-4a93-8e7f-8091a2b3c4d5
+                        document_id: b2d4e6f8-1234-4abc-9def-0123456789ab
+                        status: completed
+                        download_url: https://api.dafpus.example/storage/reports/92a3b4c5-d6e7-4a93-8e7f-8091a2b3c4d5.pdf
+                        generated_at: "2026-09-23T15:45:00Z"
+                    meta:
+                      current_page: 1
+                      per_page: 15
+                      total: 1
+                      last_page: 1
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/DocumentNotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /reports/{report}:
+    get:
+      tags: [Reports]
+      operationId: showReport
+      summary: Report detail
+      description: |
+        `download_url` is `null` until the report is `completed`; `error` carries
+        a safe message only when the report is `failed`.
+      parameters:
+        - $ref: '#/components/parameters/ReportId'
+      responses:
+        '200':
+          description: Report detail.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ReportDetail'
+              examples:
+                success:
+                  value:
+                    data:
+                      id: 92a3b4c5-d6e7-4a93-8e7f-8091a2b3c4d5
+                      document_id: b2d4e6f8-1234-4abc-9def-0123456789ab
+                      status: completed
+                      download_url: https://api.dafpus.example/storage/reports/92a3b4c5-d6e7-4a93-8e7f-8091a2b3c4d5.pdf
+                      error: null
+                      generated_at: "2026-09-23T15:45:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/ReportNotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags: [Reports]
+      operationId: deleteReport
+      summary: Delete report
+      description: Hard-deletes the report row, its `files` row and the stored file.
+      parameters:
+        - $ref: '#/components/parameters/ReportId'
+      responses:
+        '204':
+          description: Report deleted. No body.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/ReportNotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum personal access token
+      description: |
+        `Authorization: Bearer <token>` where `<token>` is a personal access token
+        issued by `POST /auth/register` or `POST /auth/login`.
+
+  parameters:
+    DocumentId:
+      name: document
+      in: path
+      required: true
+      description: Document UUID. A value that is not a UUID never matches a route and returns `404`.
+      schema:
+        type: string
+        format: uuid
+    ReferenceId:
+      name: reference
+      in: path
+      required: true
+      description: Reference UUID. A value that is not a UUID never matches a route and returns `404`.
+      schema:
+        type: string
+        format: uuid
+    CitationId:
+      name: citation
+      in: path
+      required: true
+      description: Citation UUID. A value that is not a UUID never matches a route and returns `404`.
+      schema:
+        type: string
+        format: uuid
+    ReportId:
+      name: report
+      in: path
+      required: true
+      description: Report UUID. A value that is not a UUID never matches a route and returns `404`.
+      schema:
+        type: string
+        format: uuid
+    Page:
+      name: page
+      in: query
+      required: false
+      description: Page number (1-based).
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PerPage:
+      name: per_page
+      in: query
+      required: false
+      description: Items per page. Default 15, maximum 100.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 15
+
+  schemas:
+    # --- Enums ---------------------------------------------------------------
+    DocumentStatus:
+      type: string
+      description: Lifecycle of an uploaded document.
+      enum: [pending, processing, completed, failed]
+    AnalysisStep:
+      type: string
+      description: Ordered pipeline step of the document analysis.
+      enum:
+        - queued
+        - extracting
+        - persisting
+        - crossref_validation
+        - embedding
+        - scoring
+        - resolving_citations
+        - generating_report
+        - completed
+    NullableAnalysisStep:
+      description: The current analysis step, or `null` before one is recorded.
+      oneOf:
+        - $ref: '#/components/schemas/AnalysisStep'
+        - type: 'null'
+    ReferenceFindingStatus:
+      type: string
+      description: Verification verdict stored per bibliography reference.
+      enum: [pending, valid, suspicious, invalid, not_found]
+    CitationStatus:
+      type: string
+      description: |
+        Derived citation status — never persisted. Recomputed from the resolution
+        state and the paired reference finding, so a manual review immediately
+        changes the status of every citation pointing to that reference.
+      enum: [valid, unreliable, pending, unresolved, hallucination]
+    CitationResolutionState:
+      type: string
+      description: Persisted pairing state that drives the derived citation status.
+      enum: [paired, unresolved, unmatched]
+    CitationResolutionMethod:
+      type: string
+      description: Signal that produced the pairing.
+      enum: [extraction_hint, apa, ieee, manual]
+    NullableCitationResolutionMethod:
+      description: The resolution method, or `null` when unknown / not yet resolved.
+      oneOf:
+        - $ref: '#/components/schemas/CitationResolutionMethod'
+        - type: 'null'
+    ReportStatus:
+      type: string
+      enum: [pending, processing, completed, failed]
+    FindingType:
+      type: string
+      enum:
+        - reference_invalid
+        - reference_suspicious
+        - reference_not_found
+        - reference_pending
+        - citation_unreliable
+        - citation_unresolved
+        - citation_hallucination
+    FindingSeverity:
+      type: string
+      enum: [high, medium, low, info]
+    ErrorCode:
+      type: string
+      description: Canonical machine-readable error code.
+      enum:
+        - BAD_REQUEST
+        - UNAUTHENTICATED
+        - FORBIDDEN
+        - NOT_FOUND
+        - CONFLICT
+        - PAYLOAD_TOO_LARGE
+        - UNSUPPORTED_MEDIA_TYPE
+        - VALIDATION_ERROR
+        - RATE_LIMITED
+        - SERVER_ERROR
+        - INFERENCE_UNAVAILABLE
+
+    # --- Envelopes -----------------------------------------------------------
+    SingleResponse:
+      type: object
+      description: Canonical single-resource / action envelope.
+      required: [data]
+      properties:
+        data: {}
+        message:
+          type: string
+          description: Human-readable note; only present on actions.
+    CollectionResponse:
+      type: object
+      description: Canonical paginated collection envelope.
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items: {}
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+    PaginationMeta:
+      type: object
+      required: [current_page, per_page, total, last_page]
+      properties:
+        current_page: {type: integer, minimum: 1}
+        per_page: {type: integer, minimum: 1, maximum: 100}
+        total: {type: integer, minimum: 0}
+        last_page: {type: integer, minimum: 1}
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code:
+              $ref: '#/components/schemas/ErrorCode'
+            message:
+              type: string
+              description: Safe, human-readable message. Internal exception details are never echoed.
+            details:
+              type: object
+              description: |
+                Optional machine-readable details, keyed by field name. For
+                `VALIDATION_ERROR` each value is a list of messages; domain
+                failures (invalid candidate, foreign reference id, …) use the
+                same shape.
+              additionalProperties:
+                type: array
+                items:
+                  type: string
+
+    # --- Auth ----------------------------------------------------------------
+    User:
+      type: object
+      required: [id, name, email, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string, maxLength: 255}
+        email: {type: string, format: email, maxLength: 255}
+        created_at: {type: [string, 'null'], format: date-time}
+    Authentication:
+      type: object
+      required: [user, token, token_type]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+          description: Sanctum personal access token, e.g. `1|eyJhbGciOi…`.
+        token_type:
+          type: string
+          enum: [Bearer]
+          default: Bearer
+    RegisterRequest:
+      type: object
+      required: [name, email, password, password_confirmation]
+      properties:
+        name: {type: string, maxLength: 255}
+        email: {type: string, format: email, maxLength: 255}
+        password: {type: string, minLength: 8}
+        password_confirmation: {type: string, minLength: 8}
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: {type: string, format: email}
+        password: {type: string}
+
+    # --- Documents -----------------------------------------------------------
+    UploadDocumentRequest:
+      type: object
+      required: [file]
+      properties:
+        file:
+          type: string
+          format: binary
+          contentMediaType: application/pdf
+          description: PDF only (DOCX unsupported in v1), maximum 20 MB.
+        name:
+          type: string
+          maxLength: 255
+          description: Defaults to the original filename.
+    DocumentAnalysisSummary:
+      type: object
+      description: Derived analysis counts for one document.
+      required:
+        - total_references
+        - valid
+        - suspicious
+        - invalid
+        - not_found
+        - total_citations
+        - valid_citations
+        - unreliable_citations
+        - pending_citations
+        - unresolved_citations
+        - hallucination_citations
+      properties:
+        total_references: {type: integer, minimum: 0}
+        valid: {type: integer, minimum: 0}
+        suspicious: {type: integer, minimum: 0}
+        invalid: {type: integer, minimum: 0}
+        not_found: {type: integer, minimum: 0}
+        total_citations: {type: integer, minimum: 0}
+        valid_citations: {type: integer, minimum: 0}
+        unreliable_citations: {type: integer, minimum: 0}
+        pending_citations: {type: integer, minimum: 0}
+        unresolved_citations: {type: integer, minimum: 0}
+        hallucination_citations: {type: integer, minimum: 0}
+    FilePreview:
+      type: object
+      required: [filename, mime_type, size, url]
+      properties:
+        filename: {type: string}
+        mime_type: {type: [string, 'null']}
+        size: {type: [integer, 'null'], format: int64, minimum: 0}
+        url: {type: [string, 'null'], format: uri-reference}
+    DocumentSummary:
+      type: object
+      description: A document list item.
+      required: [id, name, status, progress, summary, created_at, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        status:
+          $ref: '#/components/schemas/DocumentStatus'
+        progress: {type: integer, minimum: 0, maximum: 100}
+        summary:
+          description: Derived counts; `null` until the analysis has completed.
+          oneOf:
+            - $ref: '#/components/schemas/DocumentAnalysisSummary'
+            - type: 'null'
+        created_at: {type: [string, 'null'], format: date-time}
+        updated_at: {type: [string, 'null'], format: date-time}
+    DocumentDetail:
+      type: object
+      description: Full document representation (upload response and detail).
+      required:
+        - id
+        - name
+        - status
+        - progress
+        - current_step
+        - error
+        - file
+        - summary
+        - created_at
+        - updated_at
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        status:
+          $ref: '#/components/schemas/DocumentStatus'
+        progress: {type: integer, minimum: 0, maximum: 100}
+        current_step:
+          $ref: '#/components/schemas/NullableAnalysisStep'
+        error:
+          type: [string, 'null']
+          description: Failure message; only set when `status = failed`.
+        file:
+          oneOf:
+            - $ref: '#/components/schemas/FilePreview'
+            - type: 'null'
+        summary:
+          description: Derived counts; `null` until the analysis has completed.
+          oneOf:
+            - $ref: '#/components/schemas/DocumentAnalysisSummary'
+            - type: 'null'
+        created_at: {type: [string, 'null'], format: date-time}
+        updated_at: {type: [string, 'null'], format: date-time}
+    DocumentStatusInfo:
+      type: object
+      description: Lightweight polling payload (progress polling and retry).
+      required: [id, status, progress, current_step, error, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        status:
+          $ref: '#/components/schemas/DocumentStatus'
+        progress: {type: integer, minimum: 0, maximum: 100}
+        current_step:
+          $ref: '#/components/schemas/NullableAnalysisStep'
+        error: {type: [string, 'null']}
+        updated_at: {type: [string, 'null'], format: date-time}
+
+    # --- References ----------------------------------------------------------
+    Location:
+      type: object
+      description: |
+        A highlight location: 1-based page plus a bounding box in PDF page
+        coordinates (`coordinate_system: pdf_points_top_left`). Values feed the
+        document viewer verbatim.
+      required:
+        - page_number
+        - x
+        - y
+        - width
+        - height
+        - page_width
+        - page_height
+        - coordinate_system
+        - location_index
+      properties:
+        page_number: {type: integer, minimum: 1}
+        x: {type: number, format: float}
+        y: {type: number, format: float}
+        width: {type: number, format: float}
+        height: {type: number, format: float}
+        page_width: {type: [number, 'null'], format: float}
+        page_height: {type: [number, 'null'], format: float}
+        coordinate_system: {type: string, enum: [pdf_points_top_left]}
+        location_index: {type: integer, minimum: 0}
+    ReferenceFindingPreview:
+      type: object
+      description: Finding preview embedded in a reference list item.
+      required: [id, status, confidence, reason, selected_candidate_id]
+      properties:
+        id: {type: string, format: uuid}
+        status:
+          $ref: '#/components/schemas/ReferenceFindingStatus'
+        confidence: {type: [number, 'null'], format: float, minimum: 0, maximum: 1}
+        reason: {type: [string, 'null']}
+        selected_candidate_id: {type: [string, 'null'], format: uuid}
+    ReferenceFindingCandidate:
+      type: object
+      description: One ranked Crossref candidate of a reference finding.
+      required: [id, rank, confidence, doi, title, authors, publication_name, publication_year, url, match_reason]
+      properties:
+        id: {type: string, format: uuid}
+        rank: {type: integer, minimum: 1}
+        confidence: {type: number, format: float, minimum: 0, maximum: 1}
+        doi: {type: [string, 'null']}
+        title: {type: [string, 'null']}
+        authors: {type: [string, 'null']}
+        publication_name: {type: [string, 'null']}
+        publication_year: {type: [integer, 'null']}
+        url: {type: [string, 'null'], format: uri-reference}
+        match_reason: {type: [string, 'null']}
+    ReferenceFindingDetail:
+      type: object
+      description: Full finding of a reference detail response, with audit fields and candidates.
+      required: [id, status, confidence, reason, selected_candidate_id, is_manual, reviewed_by, reviewed_at, candidates]
+      properties:
+        id: {type: string, format: uuid}
+        status:
+          $ref: '#/components/schemas/ReferenceFindingStatus'
+        confidence: {type: [number, 'null'], format: float, minimum: 0, maximum: 1}
+        reason: {type: [string, 'null']}
+        selected_candidate_id: {type: [string, 'null'], format: uuid}
+        is_manual: {type: boolean}
+        reviewed_by: {type: [string, 'null'], format: uuid}
+        reviewed_at: {type: [string, 'null'], format: date-time}
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReferenceFindingCandidate'
+    ReferenceFindingReview:
+      type: object
+      description: Response of a manual finding review, with audit fields.
+      required: [id, status, confidence, reason, selected_candidate_id, is_manual, reviewed_by, reviewed_at, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        status:
+          $ref: '#/components/schemas/ReferenceFindingStatus'
+        confidence: {type: [number, 'null'], format: float, minimum: 0, maximum: 1}
+        reason: {type: [string, 'null']}
+        selected_candidate_id: {type: [string, 'null'], format: uuid}
+        is_manual: {type: boolean}
+        reviewed_by: {type: [string, 'null'], format: uuid}
+        reviewed_at: {type: [string, 'null'], format: date-time}
+        updated_at: {type: [string, 'null'], format: date-time}
+    UpdateReferenceFindingRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          description: Manual verdict. `pending` is not allowed.
+          enum: [valid, suspicious, invalid, not_found]
+        selected_candidate_id:
+          type: [string, 'null']
+          format: uuid
+          description: Must belong to this finding.
+        reason:
+          type: [string, 'null']
+          maxLength: 2000
+    ReferenceSummary:
+      type: object
+      description: A bibliography list item with its finding preview.
+      required: [id, raw_text, doi, title, authors, publication_name, publication_year, text_start_offset, text_end_offset, finding]
+      properties:
+        id: {type: string, format: uuid}
+        raw_text: {type: [string, 'null']}
+        doi: {type: [string, 'null']}
+        title: {type: [string, 'null']}
+        authors: {type: [string, 'null']}
+        publication_name: {type: [string, 'null']}
+        publication_year: {type: [integer, 'null']}
+        text_start_offset: {type: [integer, 'null']}
+        text_end_offset: {type: [integer, 'null']}
+        finding:
+          oneOf:
+            - $ref: '#/components/schemas/ReferenceFindingPreview'
+            - type: 'null'
+    ReferenceDetail:
+      type: object
+      description: Full reference detail with locations, finding/candidates and resolved citations.
+      required:
+        - id
+        - raw_text
+        - doi
+        - title
+        - authors
+        - publication_name
+        - publication_year
+        - text_start_offset
+        - text_end_offset
+        - locations
+        - finding
+        - citations
+      properties:
+        id: {type: string, format: uuid}
+        raw_text: {type: [string, 'null']}
+        doi: {type: [string, 'null']}
+        title: {type: [string, 'null']}
+        authors: {type: [string, 'null']}
+        publication_name: {type: [string, 'null']}
+        publication_year: {type: [integer, 'null']}
+        text_start_offset: {type: [integer, 'null']}
+        text_end_offset: {type: [integer, 'null']}
+        locations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Location'
+        finding:
+          oneOf:
+            - $ref: '#/components/schemas/ReferenceFindingDetail'
+            - type: 'null'
+        citations:
+          type: array
+          items:
+            $ref: '#/components/schemas/CitationOccurrence'
+
+    # --- Citations -----------------------------------------------------------
+    CitationReferencePreview:
+      type: object
+      description: Minimal preview of the reference a citation is paired with.
+      required: [id, title]
+      properties:
+        id: {type: string, format: uuid}
+        title: {type: [string, 'null']}
+    CitationOccurrence:
+      type: object
+      description: A citation occurrence embedded in the reference detail response.
+      required: [id, citation_text, occurrence_index]
+      properties:
+        id: {type: string, format: uuid}
+        citation_text: {type: string}
+        occurrence_index: {type: [integer, 'null']}
+    CitationResolution:
+      type: object
+      description: |
+        Resolution provenance. `state` drives the derived status;
+        `method`/`confidence`/`hint_index` explain how the pairing was produced.
+      required: [state, method, confidence, hint_index]
+      properties:
+        state:
+          $ref: '#/components/schemas/CitationResolutionState'
+        method:
+          $ref: '#/components/schemas/NullableCitationResolutionMethod'
+        confidence: {type: [number, 'null'], format: float, minimum: 0, maximum: 1}
+        hint_index:
+          type: [integer, 'null']
+          description: Raw GROBID `reference_index` when present (audit only).
+    CitationResolutionCandidate:
+      type: object
+      description: One ranked alternative reference for a citation.
+      required: [id, rank, confidence, method, match_reason, reference]
+      properties:
+        id: {type: string, format: uuid}
+        rank: {type: integer, minimum: 1}
+        confidence: {type: number, format: float, minimum: 0, maximum: 1}
+        method:
+          $ref: '#/components/schemas/CitationResolutionMethod'
+        match_reason: {type: [string, 'null']}
+        reference:
+          oneOf:
+            - $ref: '#/components/schemas/CitationReferencePreview'
+            - type: 'null'
+    CitationSummary:
+      type: object
+      description: A citation list item with its derived status.
+      required:
+        - id
+        - citation_text
+        - citation_marker
+        - context_before
+        - context_after
+        - text_start_offset
+        - text_end_offset
+        - occurrence_index
+        - status
+        - resolution_method
+        - reference
+      properties:
+        id: {type: string, format: uuid}
+        citation_text: {type: string}
+        citation_marker: {type: [string, 'null']}
+        context_before: {type: [string, 'null']}
+        context_after: {type: [string, 'null']}
+        text_start_offset: {type: [integer, 'null']}
+        text_end_offset: {type: [integer, 'null']}
+        occurrence_index: {type: [integer, 'null']}
+        status:
+          $ref: '#/components/schemas/CitationStatus'
+        resolution_method:
+          $ref: '#/components/schemas/NullableCitationResolutionMethod'
+        reference:
+          oneOf:
+            - $ref: '#/components/schemas/CitationReferencePreview'
+            - type: 'null'
+    CitationDetail:
+      type: object
+      description: Full citation detail (list fields plus resolution, locations and candidates).
+      required:
+        - id
+        - citation_text
+        - citation_marker
+        - context_before
+        - context_after
+        - text_start_offset
+        - text_end_offset
+        - occurrence_index
+        - status
+        - resolution_method
+        - reference
+        - resolution
+        - candidates
+        - locations
+      properties:
+        id: {type: string, format: uuid}
+        citation_text: {type: string}
+        citation_marker: {type: [string, 'null']}
+        context_before: {type: [string, 'null']}
+        context_after: {type: [string, 'null']}
+        text_start_offset: {type: [integer, 'null']}
+        text_end_offset: {type: [integer, 'null']}
+        occurrence_index: {type: [integer, 'null']}
+        status:
+          $ref: '#/components/schemas/CitationStatus'
+        resolution_method:
+          $ref: '#/components/schemas/NullableCitationResolutionMethod'
+        reference:
+          oneOf:
+            - $ref: '#/components/schemas/CitationReferencePreview'
+            - type: 'null'
+        resolution:
+          $ref: '#/components/schemas/CitationResolution'
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/CitationResolutionCandidate'
+        locations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Location'
+    CitationPairing:
+      type: object
+      description: Response of a manual pairing/unpairing with the freshly derived status.
+      required: [id, status, resolution_method, reference]
+      properties:
+        id: {type: string, format: uuid}
+        status:
+          $ref: '#/components/schemas/CitationStatus'
+        resolution_method:
+          $ref: '#/components/schemas/NullableCitationResolutionMethod'
+        reference:
+          oneOf:
+            - $ref: '#/components/schemas/CitationReferencePreview'
+            - type: 'null'
+    UpdateCitationRequest:
+      type: object
+      description: |
+        The field must be present: an explicit `null` clears the pairing, a UUID
+        pairs the citation with a reference of the same document.
+      required: [researched_document_reference_id]
+      properties:
+        researched_document_reference_id:
+          type: [string, 'null']
+          format: uuid
+
+    # --- Findings ------------------------------------------------------------
+    FindingHighlight:
+      type: object
+      description: One derived item of the findings/highlights feed.
+      required: [id, type, severity, message, reference_id, citation_id, text, start_offset, end_offset, locations]
+      properties:
+        id:
+          type: string
+          pattern: '^(ref-finding|citation):[0-9a-fA-F-]{36}$'
+          description: |
+            Synthetic identifier: `ref-finding:{findingId}` for reference
+            findings, `citation:{citationId}` for citation findings.
+        type:
+          $ref: '#/components/schemas/FindingType'
+        severity:
+          $ref: '#/components/schemas/FindingSeverity'
+        message: {type: [string, 'null']}
+        reference_id: {type: [string, 'null'], format: uuid}
+        citation_id: {type: [string, 'null'], format: uuid}
+        text: {type: [string, 'null']}
+        start_offset: {type: [integer, 'null']}
+        end_offset: {type: [integer, 'null']}
+        locations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Location'
+
+    # --- Reports -------------------------------------------------------------
+    ReportSummary:
+      type: object
+      description: A report list item / action response.
+      required: [id, document_id, status, download_url, generated_at]
+      properties:
+        id: {type: string, format: uuid}
+        document_id: {type: string, format: uuid}
+        status:
+          $ref: '#/components/schemas/ReportStatus'
+        download_url:
+          type: [string, 'null']
+          format: uri-reference
+          description: Temporary URL for the stored PDF; `null` until the report is `completed`.
+        generated_at: {type: [string, 'null'], format: date-time}
+    ReportDetail:
+      type: object
+      description: Full report detail.
+      required: [id, document_id, status, download_url, error, generated_at]
+      properties:
+        id: {type: string, format: uuid}
+        document_id: {type: string, format: uuid}
+        status:
+          $ref: '#/components/schemas/ReportStatus'
+        download_url:
+          type: [string, 'null']
+          format: uri-reference
+          description: Temporary URL for the stored PDF; `null` until the report is `completed`.
+        error:
+          type: [string, 'null']
+          description: Safe failure message; only set when `status = failed`.
+        generated_at: {type: [string, 'null'], format: date-time}
+
+  responses:
+    Unauthenticated:
+      description: Missing, expired or invalid bearer token (`401 UNAUTHENTICATED`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            unauthenticated:
+              value:
+                error:
+                  code: UNAUTHENTICATED
+                  message: Unauthenticated.
+    DocumentNotFound:
+      description: Unknown document id **or** document not owned by the caller (`404 NOT_FOUND`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            notFound:
+              value:
+                error:
+                  code: NOT_FOUND
+                  message: Dokumen tidak ditemukan.
+    ReferenceNotFound:
+      description: Unknown reference id **or** reference not owned by the caller (`404 NOT_FOUND`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            notFound:
+              value:
+                error:
+                  code: NOT_FOUND
+                  message: Referensi tidak ditemukan.
+    CitationNotFound:
+      description: Unknown citation id **or** citation not owned by the caller (`404 NOT_FOUND`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            notFound:
+              value:
+                error:
+                  code: NOT_FOUND
+                  message: Sitasi tidak ditemukan.
+    ReportNotFound:
+      description: Unknown report id **or** report not owned by the caller (`404 NOT_FOUND`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            notFound:
+              value:
+                error:
+                  code: NOT_FOUND
+                  message: Laporan tidak ditemukan.
+    ValidationError:
+      description: Field validation failed (`422 VALIDATION_ERROR`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            generic:
+              value:
+                error:
+                  code: VALIDATION_ERROR
+                  message: The given data was invalid.
+                  details:
+                    email:
+                      - The email field is required.
+            invalidCandidate:
+              summary: A selected candidate that does not belong to the finding.
+              value:
+                error:
+                  code: VALIDATION_ERROR
+                  message: The given data was invalid.
+                  details:
+                    selected_candidate_id:
+                      - Kandidat yang dipilih tidak valid untuk temuan ini.
+            invalidReferenceFilter:
+              summary: A `reference_id` filter that is not part of the document.
+              value:
+                error:
+                  code: VALIDATION_ERROR
+                  message: The given data was invalid.
+                  details:
+                    reference_id:
+                      - The selected reference is invalid for this document.
+            invalidPairingReference:
+              summary: A pairing target that is not part of the document.
+              value:
+                error:
+                  code: VALIDATION_ERROR
+                  message: The given data was invalid.
+                  details:
+                    researched_document_reference_id:
+                      - The selected reference is invalid for this document.
+    InvalidCredentials:
+      description: |
+        Invalid credentials (`422 VALIDATION_ERROR`). An unknown email and a wrong
+        password produce the same response.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            invalidCredentials:
+              value:
+                error:
+                  code: VALIDATION_ERROR
+                  message: Kredensial tidak valid.
+                  details:
+                    email:
+                      - These credentials do not match our records.
+    ConflictDocumentRetry:
+      description: Retry attempted while the document is not `failed` (`409 CONFLICT`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            conflict:
+              value:
+                error:
+                  code: CONFLICT
+                  message: Analisis hanya dapat diulang untuk dokumen yang gagal.
+    ConflictReportNotAllowed:
+      description: Report requested while the document is not `completed` (`409 CONFLICT`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            conflict:
+              value:
+                error:
+                  code: CONFLICT
+                  message: Laporan hanya dapat dibuat untuk dokumen yang selesai dianalisis.
+    ConflictFindingReview:
+      description: Finding review attempted while the document is `processing` (`409 CONFLICT`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            conflict:
+              value:
+                error:
+                  code: CONFLICT
+                  message: Status referensi tidak dapat diubah saat analisis sedang berjalan.
+    PayloadTooLarge:
+      description: Uploaded file exceeds 20 MB (`413 PAYLOAD_TOO_LARGE`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            payloadTooLarge:
+              value:
+                error:
+                  code: PAYLOAD_TOO_LARGE
+                  message: Ukuran file melebihi batas 20 MB.
+                  details:
+                    file:
+                      - Ukuran file melebihi batas 20 MB.
+    UnsupportedMediaType:
+      description: Uploaded file is not a PDF (`415 UNSUPPORTED_MEDIA_TYPE`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            unsupportedMediaType:
+              value:
+                error:
+                  code: UNSUPPORTED_MEDIA_TYPE
+                  message: Format file tidak didukung. Hanya PDF yang diterima.
+                  details:
+                    file:
+                      - Format file tidak didukung. Hanya PDF yang diterima.
+    RateLimited:
+      description: Rate limit exceeded (`429 RATE_LIMITED`).
+      headers:
+        Retry-After:
+          description: Seconds until the rate-limit window resets.
+          schema:
+            type: integer
+            minimum: 0
+        X-RateLimit-Limit:
+          description: Maximum number of requests allowed in the window.
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          description: Requests remaining in the current window (always `0` when limited).
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            rateLimited:
+              value:
+                error:
+                  code: RATE_LIMITED
+                  message: Too many attempts. Please try again later.
+    ServerError:
+      description: Unhandled server error (`500 SERVER_ERROR`). Internals are never disclosed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            serverError:
+              value:
+                error:
+                  code: SERVER_ERROR
+                  message: Terjadi kesalahan pada server.
+    InferenceUnavailable:
+      description: |
+        Internal inference service (GROBID/SBERT) unreachable or analysis failed
+        (`503 INFERENCE_UNAVAILABLE`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            inferenceUnavailable:
+              value:
+                error:
+                  code: INFERENCE_UNAVAILABLE
+                  message: Layanan analisis tidak tersedia. Coba lagi nanti.

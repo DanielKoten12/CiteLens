@@ -113,7 +113,13 @@ Hard rules:
 ```text
 /
 ├── AGENTS.md                  # this file
-├── README.md                  # project stub ("To be implemented")
+├── README.md                  # project overview + docker quick start
+├── compose.yaml               # development stack (amd64 default; see docker/README.md)
+├── compose.arm64.yaml         # arm64 overlay (GROBID CRF image, native arm64)
+├── compose.prod.yaml          # production-shaped overlay (built targets, SPA via nginx)
+├── compose.debug.yaml         # opt-in 127.0.0.1 publish for db/grobid/inference/gotenberg
+├── .env.example               # compose variable overrides (copy to .env, git-ignored)
+├── docker/                    # shared container config: php.ini, entrypoint, nginx vhosts
 ├── docs/
 │   ├── API_SPEC.md            # CANONICAL public API contract (English)
 │   ├── API_SPEC_ID.md         # Indonesian translation of API_SPEC.md
@@ -127,7 +133,8 @@ Hard rules:
 │   └── Proposal Capstone Project Kelompok 7.md    # Markdown rendering of the proposal
 ├── frontend/                  # Vue 3 SPA ("CiteLens")
 │   ├── package.json           # npm scripts (dev / build / preview / type-check)
-│   ├── vite.config.ts         # Vite 6 + Tailwind 4 plugin, alias @/ -> src/
+│   ├── Dockerfile             # dev (Vite HMR) + prod (baked bundle -> nginx) targets
+│   ├── vite.config.ts         # Vite 6 + Tailwind 4 plugin, alias @/ -> src/, /api dev proxy
 │   ├── components.json        # shadcn-vue config (style "new-york")
 │   ├── README.md              # frontend setup guide (Indonesian)
 │   └── src/
@@ -141,6 +148,7 @@ Hard rules:
 │                              # ResultView, HistoryView
 ├── backend/                   # Laravel application
 │   ├── artisan
+│   ├── Dockerfile             # php-fpm image for api + worker (dev/prod targets)
 │   ├── composer.json          # PHP ^8.3, laravel/framework ^13.17, Pest 5, Pint
 │   ├── phpunit.xml            # Pest/PHPUnit config (sqlite :memory:, sync queue)
 │   ├── .env.example
@@ -152,18 +160,29 @@ Hard rules:
 │   ├── config/                # app, auth, database, queue, services, ...
 │   ├── database/              # migrations (incl. canonical domain schema), factories, seeders
 │   └── tests/                 # Pest tests (tests/Feature, tests/Unit)
-└── inference/                 # FastAPI internal inference service (mostly a stub today)
-    ├── main.py                # FastAPI app (currently a hello-world stub)
+└── inference/                 # FastAPI internal inference service (GROBID slice implemented)
+    ├── Dockerfile             # uv-based image (dev/prod targets)
     ├── pyproject.toml         # uv-managed, requires Python >= 3.14, fastapi[standard]
     ├── uv.lock
-    └── src/inference/__init__.py
+    ├── scripts/               # dev-only GROBID exploration script (not packaged)
+    ├── src/inference/
+    │   ├── main.py            # create_app() + error handlers; run inference.main:app
+    │   ├── config.py          # Settings (GROBID URL/timeouts, upload cap)
+    │   ├── schemas.py         # wire models (`API_SPEC.md` §9)
+    │   ├── api/               # health.py, extract.py routers
+    │   └── grobid/            # client.py (GrobidClient), tei.py (TEI parser)
+    └── tests/                 # pytest (hermetic MockTransport; opt-in integration)
 ```
 
 Notes:
 
-- There is **no Docker/docker-compose, no CI configuration, no `.github/`, and no ESLint/Prettier
-  config** in this repo at the time of writing. Do not cite commands from tooling that does not
-  exist; if you add such tooling, do it deliberately and document it here.
+- The stack is **containerized**: root `compose.yaml` (development, amd64 GROBID full image) plus
+  the `compose.arm64.yaml`, `compose.prod.yaml` and `compose.debug.yaml` overlays; shared config
+  lives in `docker/`, per-component images in `backend/Dockerfile`, `frontend/Dockerfile` and
+  `inference/Dockerfile`. The runbook is `docker/README.md`; keep commands there, not duplicated.
+- There is **no CI configuration, no `.github/`, and no ESLint/Prettier config** in this repo. Do
+  not cite commands from tooling that does not exist; if you add such tooling, do it deliberately
+  and document it here.
 - `backend/.env` exists locally and is git-ignored. Never read secrets out of it into code or
   docs, never commit it.
 
@@ -173,15 +192,16 @@ Notes:
 |---|---|
 | Laravel HTTP bootstrap | `backend/bootstrap/app.php` |
 | Laravel routes | `backend/routes/api.php` (API under `/api/v1`), `backend/routes/web.php` |
-| Laravel models | `backend/app/Models/` (`User`, `ResearchedDocument`, `File` so far) |
-| Laravel DTOs | `backend/app/Data/` (spatie/laravel-data; e.g. `ResearchedDocumentDetailData`, `FilePreviewData`) |
-| Laravel controllers | `backend/app/Http/Controllers/` (`Api/UploadController` so far) |
+| Laravel models | `backend/app/Models/` (all nine domain models + `User`) |
+| Laravel DTOs | `backend/app/Data/` (spatie/laravel-data; e.g. `ResearchedDocument/ResearchedDocumentDetailData`, `ResearchedDocument/ResearchedDocumentSummaryData`, `File/FilePreviewData`) |
+| Laravel controllers | `backend/app/Http/Controllers/Api/` (`AuthController`, `UploadController`, `DocumentController`) |
 | Migrations | `backend/database/migrations/` (framework tables + `create_initial_tables` domain schema) |
 | Backend tests | `backend/tests/Feature/`, `backend/tests/Unit/` (Pest) |
 | Frontend API/auth state | `frontend/src/stores/auth.ts` (mock) |
+| Container stack / runbook | `compose.yaml` + overlays, `docker/` (runbook: `docker/README.md`) |
 | Frontend routes/guards | `frontend/src/router/index.ts` |
 | Frontend shared types | `frontend/src/types/index.ts` |
-| Inference service entry | `inference/main.py` |
+| Inference service entry | `inference/src/inference/main.py` (`uvicorn inference.main:app`) |
 | Canonical specs | `docs/API_SPEC.md`, `docs/DB_SCHEMA.md` |
 | Supporting docs | `docs/PRODUCT_REQUIREMENTS.md`, `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/TEST_PLAN.md` |
 | Source proposal | `docs/Proposal Capstone Project Kelompok 7.pdf` (+ `.md` rendering) |
@@ -441,27 +461,80 @@ documented production contract.
 Be aware of what is scaffold vs. contract before promising behavior:
 
 - **`backend/`** is a Laravel 13 app (`laravel/framework ^13.17`, PHP `^8.3`; local CLI is
-  PHP 8.5). It has the framework `User` model plus the domain models `ResearchedDocument` and
-  `File`, the canonical domain migration (`database/migrations/*_create_initial_tables.php`),
-  `routes/api.php` with the upload route under `/api/v1`, and the upload slice
+  PHP 8.5). It has the framework `User` model plus the domain models `ResearchedDocument`,
+  `ResearchedDocumentReference` (`+ Location`), `ResearchedDocumentCitation` (`+ Location`),
+  `ReferenceFinding` (`+ Candidate`), `GeneratedDocumentReport` and `File`, with factories; the
+  canonical enums in `app/Enums/`; the canonical domain migration
+  (`database/migrations/*_create_initial_tables.php`) plus the OQ-14 unique-index migration; the
+  shared response/error-envelope layer (`app/Http/Responses/{ApiResponse,ApiError}`,
+  `app/Exceptions/{ApiException,ApiExceptionRenderer}` + the per-resource 404/409/503
+  exceptions); ownership scoping via `app/Services/Ownership/OwnedResourceFinder` + the
+  `ScopesThroughDocument` trait; the `documents`/`document-status` rate limiters; the
+  `crossref`/`inference`/`scoring` config blocks plus `config/analysis.php`; the enforced morph map
+  (`user`, `researched_document`, `generated_document_report`); the **full `/documents` lifecycle**
+  in `routes/api.php` (`DocumentController` + `ListDocumentsRequest`; list/detail/status/retry/
+  delete/purge; `DocumentQueryService`, `DocumentSummaryService`, `DocumentLifecycleService`,
+  `DocumentAnalysisStateService`, `DocumentAnalysisResetService`, `DocumentDeletionService`,
+  `DocumentFileManager`, `CitationStatusResolver`); and the upload slice
   (`Http/Controllers/Api/UploadController`, `Http/Requests/UploadDocumentRequest`,
-  `Data/ResearchedDocumentDetailData` + `Data/FilePreviewData`, `Services/DocumentUploadService`,
-  `Exceptions/DocumentUploadFailedException`). API responses are shaped with
+  `Data/ResearchedDocument/*`, `Services/DocumentUploadService`,
+  `Exceptions/DocumentUploadFailedException`) which dispatches `AnalyzeDocumentJob` after commit
+  via the `RunsDocumentAnalysis` seam. Phase 03 binds that seam to `AnalysisPipeline`: the canonical
+  step machine (`AnalysisStepRegistry`, `AnalysisProgress`, `AnalysisFailureHandler`,
+  `AnalysisContext`), the implemented steps (`ExtractDocumentStep`, `PersistExtractionStep`,
+  `FinalizeAnalysisStep`), the internal inference client (`Services/Inference/InferenceClient` +
+  `Data/Inference/*` DTOs + `ExtractionFailedException`), `Services/Crossref/DoiNormalizer`, the
+  `WithoutOverlapping` job middleware and the inference fixtures/fakes (`tests/Support/InferenceFake`,
+  `AnalysisHarness`). Phase 04 adds the Crossref layer (`Services/Crossref/CrossrefClient` + query
+  builder/result mapper/value objects + `Exceptions/CrossrefUnavailableException`), the pure
+  scoring engine (`Services/Scoring/*`: string/author/semantic similarity, local-venue detection,
+  reason building, `ReferenceScorer`, `VerdictDecider`), the
+  `crossref_validation`/`embedding`/`scoring` steps (`ValidateReferencesStep`,
+  `EmbedReferencesStep`, `ScoreReferencesStep`), the transient
+  `ReferenceVerificationBatch`/`EmbeddingIndex` context artifacts and the single automated writer
+  (`Services/ReferenceFinding/ReferenceFindingWriter`). Phase 05 adds citation resolution
+  (`Services/Citations/*`: `CitationMarkerParser`, `CitationResolver`, `CitationMatchConfig`,
+  `CitationReference`/`CitationResolution`, `ResolveCitationsStep`), the verification read model
+  (`Services/Reference/ReferenceQueryService`, `Services/Citation/CitationQueryService`, the
+  reference/citation/finding DTOs and a shared `Data/Location/LocationPreviewData`), the manual
+  writers (`Services/ReferenceFinding/ReferenceFindingReviewService`,
+  `Services/Citation/CitationPairingService`) and the `/references` / `/citations` / `/findings`
+  endpoints (`ReferenceController`, `CitationController`, `FindingsController`; derived feed in
+  `Services/Findings/{FindingsFeedQuery,FindingsFeedComposer}`). Phase 05.1 hardens citation
+  resolution: `CitationMarkerParser` retains every APA pair/ordinal, `AuthorMatcher::names()` adds
+  initials, `CitationCandidateScorer`/`CitationDecisionPolicy`/`CitationBatchResolver` implement
+  soft-year scoring, ambiguity detection and cross-citation evidence consolidation, the GROBID
+  `reference_index` is consumed as a validated prior, resolution provenance
+  (`resolution_state`/`resolution_method`/`resolution_confidence`/`extraction_reference_index`) and
+  `citation_resolution_candidates` are persisted, `unresolved` is a fifth derived status (severity
+  `medium`), and `citations:evaluate` provides a seed evaluation harness. API responses are shaped with
   **`spatie/laravel-data`** DTOs in `app/Data/` (the former `Http/Resources` layer was replaced).
   **Sanctum is installed** and the `/auth/*` endpoints (register, login, logout, me) are
   implemented (`Http/Controllers/Api/AuthController`, `Services/AuthService`, `Http/Requests/Auth/*`,
   `Data/Auth/AuthenticationData` + `Data/User/UserDetailData`, `Data/Error/ErrorResponseData`,
-  `Exceptions/InvalidCredentialsException`); the rest of the endpoints, `AnalyzeDocumentJob`, the Crossref/inference clients, scoring and report
-  generation do not exist yet. Adding them is expected work — follow the contracts while doing it.
-  See `docs/ARCHITECTURE.md` §13 for the full status.
+  `Exceptions/InvalidCredentialsException`). Phase 06 adds report generation: the `files.disk`
+  column + report `file_id` FK migrations, `config/reports.php` + `services.gotenberg`, the
+  `ReportRenderer` seam with `GotenbergReportRenderer` (production dependency
+  `gotenberg/gotenberg-php ^2.25`, which pulls in `php-http/discovery`) over an injected Guzzle
+  PSR-18 client, `Services/Files/PrivateFileUrlResolver`, the disk-aware `DocumentFileManager`
+  (`storePdf`/`detachForReport`), the report read model/template (`ReportDataBuilder`,
+  `ReportPayload`, `ReportTemplateRenderer`, `resources/views/reports/document-report.blade.php`),
+  `GenerateDocumentReportJob` with `ReportStateService`/`ReportFailureHandler`/
+  `ReportDeletionService`, and the `/reports` endpoints (`ReportController`,
+  `ReportGenerationService`, `ReportQueryService`, `Data/Report/*` DTOs). The FastAPI inference
+  service implements the GROBID extraction slice (see the `inference/` bullet); SBERT embeddings
+  are still pending. See `docs/ARCHITECTURE.md` §13 for the full status.
 - **`frontend/`** is a working Vue 3 + Vite 6 + TypeScript + Tailwind 4 + Pinia + vue-router SPA
   with shadcn-vue (`reka-ui`) components. **`src/stores/auth.ts` is mocked** (setTimeout, no API
   calls) and `src/types/index.ts` uses prototype types (`valid | warning | halu`, numeric ids,
   `trustScore`, etc.) that do **not** match `API_SPEC.md`. When wiring the real API, map to the
   canonical enums/UUIDs — treat current types as disposable UI scaffolding, not as contract.
-- **`inference/`** is a FastAPI hello-world stub (`main.py`) managed by **uv** (Python 3.14,
-  `fastapi[standard]`). The internal API (`/health`, `POST /v1/extract`, `POST /v1/embeddings`)
-  from `API_SPEC.md` §9 is specified but not implemented yet.
+- **`inference/`** is the uv-managed FastAPI service (Python 3.14, `fastapi[standard]`) in
+  `src/inference/`: app factory + routers (`main.py`, `api/`), `Settings` (`config.py`), typed
+  wire models (`schemas.py`) and the GROBID capability (`grobid/client.py`, `grobid/tei.py`).
+  `GET /health` and `POST /v1/extract` are implemented and covered by the hermetic pytest suite
+  (`tests/`, `uv run pytest`); `POST /v1/embeddings` (SBERT) is not implemented yet. The service
+  is private-network only. See `docs/plans/inference/` for the phase plan.
 - Backend `AGENTS.md` / `CLAUDE.md` contain the Laravel Boost guidelines (PHP style, Pint, Pest,
   Artisan usage). Follow them when working inside `backend/`.
 
@@ -535,18 +608,47 @@ npm run preview
 ```bash
 cd inference
 uv sync
-uv run uvicorn main:app --reload     # internal service; app lives in inference/main.py
+uv run uvicorn inference.main:app --reload --env-file .env   # internal service
+uv run pytest                                                 # hermetic contract suite
+uv run pytest -m integration                                  # opt-in; needs a live GROBID
 ```
 
-- No tests configured yet (add pytest deliberately if you implement real endpoints).
+- pytest is configured (`[tool.pytest.ini_options]`, `tests/`); the default suite is hermetic
+  (`httpx.MockTransport`). The `integration` marker is skipped unless `GROBID_INTEGRATION_URL` and
+  `GROBID_INTEGRATION_PDF` are set. No Python linter/formatter is configured.
+
+### Docker (`compose.yaml`, `docker/`)
+
+```bash
+docker compose up -d --build                                            # dev, amd64 default
+docker compose -f compose.yaml -f compose.arm64.yaml up -d --build      # arm64 hosts
+docker compose -f compose.yaml -f compose.prod.yaml up -d --build       # production-shaped
+docker compose -f compose.yaml -f compose.debug.yaml up -d              # + 127.0.0.1 debug ports
+
+docker compose logs -f worker
+docker compose exec backend php artisan test      # Pest inside the API image
+docker compose exec inference uv run pytest       # inference contract suite
+docker compose down -v                            # also removes data volumes
+```
+
+- All images build from the repository root (`context: .`); `backend/vendor`,
+  `frontend/node_modules` and `inference/.venv` are container-local named volumes and are never
+  bound from the host.
+- Containers run with `SCORING_SEMANTIC_ENABLED=false`: SBERT (`POST /v1/embeddings`) is not
+  implemented yet and a 404 from that step is fatal to the pipeline. Full runbook:
+  `docker/README.md`.
 
 ## 17. Environment and Secrets
 
 - Backend env template: `backend/.env.example` (App/DB/session/queue/cache/mail settings;
   `QUEUE_CONNECTION=database` by default). Local `backend/.env` is git-ignored.
-- Frontend currently has **no** `.env` / `VITE_*` usage; the API base URL is not wired yet. When
-  wiring it, use a `VITE_API_BASE_URL`-style variable (see `frontend/README.md`), not hardcoded
-  URLs.
+- Frontend env template: `frontend/.env.example` (`VITE_API_BASE_URL=/api/v1`). The Vite dev
+  server and the production nginx edge both reverse-proxy `/api` to Laravel, so the value stays
+  relative — never hardcode an API host into the SPA. `frontend/src/vite-env.d.ts` types
+  `import.meta.env`.
+- Compose env template: root `.env.example` (ports, PostgreSQL credentials, `APP_KEY`,
+  `CROSSREF_MAILTO`, `SCORING_SEMANTIC_ENABLED`). Copy to `.env` (git-ignored) to override the
+  development defaults baked into `compose.yaml`.
 - Inference is uv-managed (`pyproject.toml`, `uv.lock`, `.python-version` = 3.14).
 - When external-service configuration is needed (e.g. inference base URL, Crossref access), add it
   through Laravel config (`backend/config/services.php`) + `.env.example` with placeholders such
@@ -573,8 +675,8 @@ behavior and no test covers it, add one (Pest feature test) when practical. Prio
 - manual review and report generation (report only for `completed` documents),
 - API response envelopes (`data`/`message`/`meta`, `error.code`) and rate-limit responses.
 
-For the inference service, test the internal contract (`/health`, `/v1/extract`,
-`/v1/embeddings`) when it gets implemented.
+For the inference service, test the internal contract (`/health`, `/v1/extract`; `/v1/embeddings`
+once implemented) with pytest (`docs/TEST_PLAN.md` §5.10).
 
 ## 19. Coding Conventions
 

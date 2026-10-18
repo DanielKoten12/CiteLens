@@ -1,0 +1,49 @@
+{
+  "documents": [
+    {
+      "name": "apa-exact-and-typo",
+      "references": [
+        { "id": "a1", "authors": "Hartono, D. B.", "publication_year": 2023, "text_start_offset": 100 },
+        { "id": "a2", "authors": "Tani, B.", "publication_year": 2021, "text_start_offset": 300 }
+      ],
+      "citations": [
+        { "id": "c1", "marker": "(Hartono, 2023)", "text": "(Hartono, 2023)", "expected_reference_id": "a1" },
+        { "id": "c2", "marker": "(Hartini)", "text": "(Hartini)", "expected_reference_id": "a1" },
+        { "id": "c3", "marker": "(Tani, 2021)", "text": "(Tani, 2021)", "expected_reference_id": "a2" },
+        { "id": "c4", "marker": "(Takdir, 2020)", "text": "(Takdir, 2020)", "expected_reference_id": null }
+      ]
+    },
+    {
+      "name": "ieee",
+      "references": [
+        { "id": "b1", "authors": "LeCun, Y.", "publication_year": 2015, "text_start_offset": 100 },
+        { "id": "b2", "authors": "Bengio, Y.", "publication_year": 2016, "text_start_offset": 200 },
+        { "id": "b3", "authors": "Hinton, G.", "publication_year": 2017, "text_start_offset": 300 }
+      ],
+      "citations": [
+        { "id": "d1", "marker": "[2]", "text": "[2]", "expected_reference_id": "b2" },
+        { "id": "d2", "marker": "[3-4]", "text": "[3-4]", "expected_reference_id": "b3" },
+        { "id": "d3", "marker": "[9]", "text": "[9]", "expected_reference_id": null }
+      ]
+    },
+    {
+      "name": "extraction-hint",
+      "references": [
+        { "id": "e1", "authors": "Koten, D.", "publication_year": 2023, "text_start_offset": 100 }
+      ],
+      "citations": [
+        { "id": "f1", "marker": null, "text": "lihat lampiran A", "hint_index": 0, "expected_reference_id": "e1" }
+      ]
+    },
+    {
+      "name": "initials",
+      "references": [
+        { "id": "g1", "authors": "Koten, D. B.", "publication_year": 2023, "text_start_offset": 100 },
+        { "id": "g2", "authors": "Koten, A.", "publication_year": 2023, "text_start_offset": 200 }
+      ],
+      "citations": [
+        { "id": "h1", "marker": "(Koten, A., 2023)", "text": "(Koten, A., 2023)", "expected_reference_id": "g2" }
+      ]
+    }
+  ]
+}

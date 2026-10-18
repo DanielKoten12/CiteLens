@@ -1,0 +1,39 @@
+{
+    "status": "ok",
+    "message-type": "work",
+    "message-version": "1.0.0",
+    "message": {
+        "DOI": "10.1038/nature14539",
+        "type": "journal-article",
+        "title": [
+            "Deep learning"
+        ],
+        "container-title": [
+            "Nature"
+        ],
+        "author": [
+            {
+                "given": "Yann",
+                "family": "LeCun"
+            },
+            {
+                "given": "Yoshua",
+                "family": "Bengio"
+            },
+            {
+                "given": "Geoffrey",
+                "family": "Hinton"
+            }
+        ],
+        "issued": {
+            "date-parts": [
+                [
+                    2015,
+                    5,
+                    27
+                ]
+            ]
+        },
+        "URL": "https://doi.org/10.1038/nature14539"
+    }
+}

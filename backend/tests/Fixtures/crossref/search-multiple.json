@@ -1,0 +1,60 @@
+{
+    "status": "ok",
+    "message-type": "work-list",
+    "message-version": "1.0.0",
+    "message": {
+        "total-results": 3,
+        "items": [
+            {
+                "DOI": "10.1234/example",
+                "type": "journal-article",
+                "title": [
+                    "Sistem Deteksi Plagiarisme Dokumen"
+                ],
+                "container-title": [
+                    "Jurnal Teknologi Informasi"
+                ],
+                "author": [
+                    {
+                        "given": "Daniel",
+                        "family": "Koten"
+                    }
+                ],
+                "issued": {
+                    "date-parts": [
+                        [
+                            2023,
+                            4,
+                            1
+                        ]
+                    ]
+                },
+                "URL": "https://doi.org/10.1234/example"
+            },
+            {
+                "DOI": "10.1234/distractor",
+                "type": "journal-article",
+                "title": [
+                    "Machine learning for bibliographic data"
+                ],
+                "container-title": [
+                    "Journal of Informetrics"
+                ],
+                "author": [
+                    {
+                        "given": "Alice",
+                        "family": "Zhang"
+                    }
+                ],
+                "issued": {
+                    "date-parts": [
+                        [
+                            2020
+                        ]
+                    ]
+                },
+                "URL": "https://doi.org/10.1234/distractor"
+            }
+        ]
+    }
+}

@@ -34,6 +34,10 @@ Laravel API  ── autentikasi, dokumen, referensi, sitasi, temuan, laporan, DB
 Laravel adalah sumber kebenaran. Algoritma GROBID/SBERT **tidak pernah** diekspos sebagai endpoint
 publik.
 
+> **Catatan (OQ-11):** REST API Crossref tidak memerlukan autentikasi pada v1; Laravel
+> mengidentifikasi dirinya melalui `CROSSREF_MAILTO` dan `User-Agent` kontak. Tidak ada
+> `CROSSREF_API_KEY` yang digunakan.
+
 ---
 
 ## 2. Konvensi
@@ -146,6 +150,13 @@ Setiap respons non-2xx memakai bentuk yang sama:
 | `suspicious` | Cocok tetapi confidence rendah / sebagian tidak cocok |
 | `invalid` | Kecocokan ditemukan tetapi metadata bertentangan |
 | `not_found` | Tidak ada kandidat ditemukan di Crossref |
+
+> **Catatan (OQ-02):** DOI yang ada di dokumen tetapi tidak dapat diresolusi di Crossref berstatus
+> `invalid` dengan alasan `"DOI tidak ditemukan di Crossref."` (DOI rusak bertentangan dengan klaim
+> dokumen itu sendiri). `not_found` hanya untuk referensi tanpa DOI dan tanpa kandidat Crossref;
+> DOI dengan format tidak valid berstatus `invalid` dengan alasan `"Format DOI tidak valid."`
+> `suspicious` mencakup kecocokan lemah/sebagian, termasuk kemungkinan venue lokal yang tidak
+> terindeks.
 
 **Status sitasi** (derived, tidak disimpan — dihitung ulang dari pasangan dan temuan referensi)
 
@@ -917,20 +928,22 @@ Filter: `type` (`reference_invalid|reference_suspicious|reference_not_found|cita
 
 ## 8. Laporan — `/reports`
 
-Didukung oleh `generated_document_reports`. Satu laporan per dokumen, dibuat secara asinkron dalam
-format **hanya PDF** (tanpa ekspor DOCX/Excel di v1). Lihat `docs/DB_SCHEMA.md` untuk skema
-lengkapnya.
+Didukung oleh `generated_document_reports`. Laporan dibuat sesuai permintaan, sehingga satu dokumen
+dapat memiliki **beberapa laporan**; laporan yang gagal dapat dibuat ulang dengan memanggil `POST`
+lagi. Pembuatan bersifat asinkron dan **hanya PDF** (tanpa ekspor DOCX/Excel di v1). Lihat
+`docs/DB_SCHEMA.md` untuk skema lengkapnya.
 
 ### POST `/documents/{document}/reports`
 
 **Perilaku**: membuat baris laporan (`status = pending`), dispatch job pembuatan, lalu merespons
-langsung. Hanya diizinkan saat dokumen `status = completed`.
+langsung. Hanya diizinkan saat dokumen `status = completed`. Body `202` memakai bentuk ringkasan di
+bawah ini, dengan `download_url: null` sampai job selesai.
 
 **Sukses — `202`**
 
 ```json
 {
-  "data": { "id": "rep-uuid", "document_id": "b2d4…", "status": "pending", "generated_at": null },
+  "data": { "id": "rep-uuid", "document_id": "b2d4…", "status": "pending", "download_url": null, "generated_at": null },
   "message": "Laporan sedang dibuat."
 }
 ```
@@ -947,6 +960,9 @@ langsung. Hanya diizinkan saat dokumen `status = completed`.
 ```
 
 ### GET `/documents/{document}/reports`
+
+Diurutkan berdasarkan `created_at` menurun. `download_url` bernilai `null` sampai laporan
+`completed`, lalu berupa URL sementara untuk file pada disk laporan privat.
 
 **Sukses — `200`**
 
@@ -966,6 +982,9 @@ langsung. Hanya diizinkan saat dokumen `status = completed`.
 ```
 
 ### GET `/reports/{report}`
+
+`download_url` bernilai `null` sampai laporan `completed`; `error` hanya berisi pesan aman saat
+laporan `failed`.
 
 **Sukses — `200`**
 
@@ -990,7 +1009,7 @@ langsung. Hanya diizinkan saat dokumen `status = completed`.
 
 ### DELETE `/reports/{report}`
 
-Hard delete laporan beserta file tersimpannya.
+Hard delete baris laporan, baris `files`-nya, dan file tersimpannya.
 
 **Sukses — `204`** (tanpa body) · **Gagal — `404`**
 
@@ -1005,7 +1024,10 @@ Base URL: `http://inference:8000` (internal).
 
 ### GET `/health`
 
-**Sukses — `200`**: `{ "status": "ok", "grobid": "up", "sbert": "up" }`
+**Sukses — `200`**: `{ "status": "ok", "grobid": "up" }`
+
+> `sbert` belum disertakan sampai irisan embedding SBERT mendarat (Fase 02); key ini ditambahkan
+> kembali ke respons ini begitu `POST /v1/embeddings` diimplementasikan.
 
 ### POST `/v1/extract` — GROBID
 
@@ -1017,8 +1039,16 @@ sitasi dalam teks, dan koordinat.
 ```json
 {
   "data": {
+    "header": {
+      "title": "Publication manual of the American Psychological Association",
+      "authors": ["American Psychological Association"],
+      "abstract": "…",
+      "publication_year": 2020,
+      "doi": "10.1037/0000165-000"
+    },
     "references": [
       {
+        "reference_index": 0,
         "raw_text": "LeCun, Y., …",
         "title": "Deep learning",
         "authors": "LeCun, Y., Bengio, Y., & Hinton, G.",
@@ -1028,7 +1058,7 @@ sitasi dalam teks, dan koordinat.
         "text_start_offset": 8120,
         "text_end_offset": 8295,
         "locations": [
-          { "page_number": 12, "x": 72.0, "y": 210.4, "width": 451.2, "height": 24.0, "page_width": 595.0, "page_height": 842.0 }
+          { "page_number": 12, "x": 72.0, "y": 210.4, "width": 451.2, "height": 24.0, "page_width": 595.0, "page_height": 842.0, "coordinate_system": "pdf_points_top_left", "location_index": 0 }
         ]
       }
     ],
@@ -1043,7 +1073,7 @@ sitasi dalam teks, dan koordinat.
         "occurrence_index": 0,
         "reference_index": 0,
         "locations": [
-          { "page_number": 3, "x": 120.5, "y": 640.2, "width": 48.0, "height": 11.0, "page_width": 595.0, "page_height": 842.0 }
+          { "page_number": 3, "x": 120.5, "y": 640.2, "width": 48.0, "height": 11.0, "page_width": 595.0, "page_height": 842.0, "coordinate_system": "pdf_points_top_left", "location_index": 0 }
         ]
       }
     ]
@@ -1051,13 +1081,27 @@ sitasi dalam teks, dan koordinat.
 }
 ```
 
-**Gagal — `422`** (PDF tidak dapat diparse) · **`503`** (GROBID mati)
+Catatan field:
+
+- `header` — metadata tingkat dokumen yang diekstraksi GROBID. `authors` berupa daftar string (bisa
+  kosong); `title`, `abstract`, `publication_year`, dan `doi` bernilai `null` jika tidak tersedia.
+- `reference_index` (references) — posisi entri berbasis 0 di dalam payload ini. Nilai inilah yang
+  dirujuk sitasi dalam teks melalui `reference_index` miliknya sendiri.
+- `reference_index` (citations) — entri bibliografi yang diresolusi oleh kemunculan ini, atau `null`
+  jika GROBID tidak dapat menghubungkannya.
+- `locations[]` — setiap kotak membawa `coordinate_system` (`pdf_points_top_left`) dan
+  `location_index` berbasis 0; satu referensi atau sitasi dapat mencakup beberapa kotak.
+- GROBID tidak selalu dapat memparse suatu field, sehingga `title`, `authors`, `publication_name`,
+  `doi`, dan `publication_year` dapat bernilai `null` pada sebuah referensi.
+
+**Gagal — `413`** (melebihi batas ukuran) · **`415`** (bukan PDF) · **`422`** (PDF tidak dapat
+diparse) · **`503`** (GROBID mati)
 
 ```json
 { "error": { "code": "EXTRACTION_FAILED", "message": "GROBID could not process the document." } }
 ```
 
-### POST `/v1/embeddings` — SBERT
+### POST `/v1/embeddings` — SBERT (Fase 02)
 
 **Permintaan**
 

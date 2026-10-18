@@ -1,6 +1,7 @@
 # Phase 01 — Foundation & Shared Primitives
 
-> **Status:** broad plan · **Depends on:** — · **Unblocks:** every later phase
+> **Status:** broad plan — detailed implementation plan: [`01-foundation-detail.md`](01-foundation-detail.md)
+> **Depends on:** — · **Unblocks:** every later phase
 > Canonical references: `docs/API_SPEC.md` §2, `docs/DB_SCHEMA.md` (first block),
 > `docs/SECURITY.md` §2/§3/§9, `AGENTS.md` §19/§20.
 
