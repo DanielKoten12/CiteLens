@@ -37,14 +37,18 @@ const router = createRouter({
       component: () => import("@/views/UploadView.vue"),
     },
     {
-      path: "/processing",
+      // :id = UUID dokumen. Dibuat opsional selama view lain masih memakai
+      // data mock; jadikan wajib (hapus "?") setelah semua pemanggil diperbarui.
+      path: "/processing/:id?",
       name: "processing",
       component: () => import("@/views/ProcessingView.vue"),
+      props: true,
     },
     {
-      path: "/hasil",
+      path: "/hasil/:id?",
       name: "result",
       component: () => import("@/views/ResultView.vue"),
+      props: true,
     },
     {
       path: "/riwayat",

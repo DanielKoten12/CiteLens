@@ -1,16 +1,20 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
+import { ApiError } from "@/lib/api";
+import { documentsApi } from "@/lib/documents";
 import { useDocumentStore } from "@/stores/document";
 
 const router = useRouter();
 const documentStore = useDocumentStore();
 
-const ACCEPTED_EXTENSIONS = [".pdf", ".docx"];
-const MAX_SIZE_MB = 50;
+// Sesuai API_SPEC: hanya PDF, maksimum 20 MB (DOCX belum didukung di v1).
+const ACCEPTED_EXTENSIONS = [".pdf"];
+const MAX_SIZE_MB = 20;
 
 const selectedFile = ref<File | null>(null);
 const isDragging = ref(false);
+const uploading = ref(false);
 const errorMessage = ref("");
 const fileInput = ref<HTMLInputElement | null>(null);
 
@@ -20,7 +24,10 @@ const fileSizeLabel = computed(() => {
   return mb < 0.1 ? `${Math.max(1, Math.round(selectedFile.value.size / 1024))} KB` : `${mb.toFixed(1)} MB`;
 });
 
-const ctaLabel = computed(() => (selectedFile.value ? "Mulai Periksa Sitasi" : "Pilih file untuk melanjutkan"));
+const ctaLabel = computed(() => {
+  if (uploading.value) return "Mengunggah...";
+  return selectedFile.value ? "Mulai Periksa Sitasi" : "Pilih file untuk melanjutkan";
+});
 
 function hasValidExtension(file: File) {
   const name = file.name.toLowerCase();
@@ -31,7 +38,7 @@ function validateAndSet(file: File) {
   errorMessage.value = "";
 
   if (!hasValidExtension(file)) {
-    errorMessage.value = "Format file tidak didukung. Unggah file PDF atau DOCX.";
+    errorMessage.value = "Format file tidak didukung. Unggah file PDF.";
     return;
   }
 
@@ -52,6 +59,7 @@ function onInputChange(event: Event) {
 
 function onDrop(event: DragEvent) {
   isDragging.value = false;
+  if (uploading.value) return;
   const file = event.dataTransfer?.files?.[0];
   if (file) validateAndSet(file);
 }
@@ -61,17 +69,51 @@ function openFilePicker() {
 }
 
 function removeFile() {
+  if (uploading.value) return;
   selectedFile.value = null;
   errorMessage.value = "";
 }
 
-function handleCta() {
+function uploadErrorMessage(e: unknown): string {
+  if (e instanceof ApiError) {
+    switch (e.status) {
+      case 413:
+        return `Ukuran file melebihi batas ${MAX_SIZE_MB} MB.`;
+      case 415:
+        return "Format file tidak didukung. Hanya PDF yang diterima.";
+      case 422:
+        return e.detailMessages;
+      case 429:
+        return "Terlalu banyak unggahan. Coba lagi dalam satu menit.";
+      case 503:
+        return "Layanan analisis sedang tidak tersedia. Coba lagi nanti.";
+      default:
+        return e.message;
+    }
+  }
+  return "Terjadi kesalahan tak terduga. Coba lagi.";
+}
+
+async function handleCta() {
+  if (uploading.value) return;
   if (!selectedFile.value) {
     openFilePicker();
     return;
   }
-  documentStore.setFile(selectedFile.value);
-  router.push({ name: "processing" });
+
+  errorMessage.value = "";
+  uploading.value = true;
+  try {
+    // Disimpan juga ke store lama supaya view yang masih membacanya tidak rusak.
+    documentStore.setFile(selectedFile.value);
+
+    const { data } = await documentsApi.upload(selectedFile.value);
+    router.push({ name: "processing", params: { id: data.id } });
+  } catch (e) {
+    errorMessage.value = uploadErrorMessage(e);
+  } finally {
+    uploading.value = false;
+  }
 }
 
 const howItWorks = [
@@ -79,7 +121,7 @@ const howItWorks = [
     icon: "upload",
     highlighted: true,
     title: "Unggah Dokumen",
-    desc: "PDF atau DOCX tugas akhir kamu",
+    desc: "PDF tugas akhir kamu",
   },
   {
     icon: "loading",
@@ -91,7 +133,7 @@ const howItWorks = [
     icon: "check",
     highlighted: false,
     title: "Validasi DOI",
-    desc: "Crossref, OpenAlex, Semantic Scholar",
+    desc: "Dicocokkan dengan database Crossref",
   },
   {
     icon: "report",
@@ -108,20 +150,6 @@ const dataSources = [
     dot: "#2d5be3",
     bg: "#eaf0fd",
     fg: "#1e3a6e",
-  },
-  {
-    name: "OpenAlex",
-    desc: "250M+ karya terbuka",
-    dot: "#16a34a",
-    bg: "#e9f8ee",
-    fg: "#15803d",
-  },
-  {
-    name: "Semantic Scholar",
-    desc: "200M+ paper",
-    dot: "#7c3aed",
-    bg: "#f2ecfd",
-    fg: "#6d28d9",
   },
 ];
 </script>
@@ -146,9 +174,8 @@ const dataSources = [
       </h1>
 
       <p class="mt-4 text-sm sm:text-base max-w-lg" :style="{ color: 'var(--muted-foreground)' }">
-        Unggah dokumen <strong :style="{ color: 'var(--foreground)' }">.pdf</strong> atau
-        <strong :style="{ color: 'var(--foreground)' }">.docx</strong> — semua referensi divalidasi otomatis ke
-        Crossref, OpenAlex, dan Semantic Scholar.
+        Unggah dokumen <strong :style="{ color: 'var(--foreground)' }">.pdf</strong> dan semua referensi
+        divalidasi otomatis ke Crossref.
       </p>
     </div>
 
@@ -157,7 +184,7 @@ const dataSources = [
         ref="fileInput"
         type="file"
         class="hidden"
-        accept=".pdf,.docx"
+        accept=".pdf,application/pdf"
         @change="onInputChange"
       />
 
@@ -171,7 +198,7 @@ const dataSources = [
           backgroundSize: '16px 16px',
           backgroundColor: 'var(--card)',
         }"
-        @click="!selectedFile && openFilePicker()"
+        @click="!selectedFile && !uploading && openFilePicker()"
         @dragover.prevent="isDragging = true"
         @dragleave.prevent="isDragging = false"
         @drop.prevent="onDrop"
@@ -202,16 +229,13 @@ const dataSources = [
           <div>
             <p class="text-base font-bold" :style="{ color: 'var(--foreground)' }">Ketuk atau seret file ke sini</p>
             <p class="text-sm mt-1" :style="{ color: 'var(--muted-foreground)' }">
-              Mendukung PDF dan DOCX hingga {{ MAX_SIZE_MB }} MB
+              Mendukung PDF hingga {{ MAX_SIZE_MB }} MB
             </p>
           </div>
 
           <div class="flex items-center gap-2">
             <span class="text-xs font-bold px-2.5 py-1 rounded-full" style="background: #fee2e2; color: #b91c1c">
               .PDF
-            </span>
-            <span class="text-xs font-bold px-2.5 py-1 rounded-full" style="background: #dbeafe; color: #1d4ed8">
-              .DOCX
             </span>
           </div>
         </template>
@@ -240,8 +264,9 @@ const dataSources = [
           </div>
 
           <button
-            class="text-xs font-semibold hover:underline"
+            class="text-xs font-semibold hover:underline disabled:opacity-50 disabled:no-underline"
             style="color: #b91c1c"
+            :disabled="uploading"
             @click.stop="removeFile"
           >
             Hapus &amp; pilih file lain
@@ -252,15 +277,16 @@ const dataSources = [
       <p v-if="errorMessage" class="text-sm text-center mt-3" style="color: #b91c1c">{{ errorMessage }}</p>
 
       <button
-        class="w-full mt-5 rounded-xl py-3.5 text-sm font-bold text-white transition-colors"
-        :style="{ background: selectedFile ? 'var(--accent)' : '#a6b0c9' }"
+        class="w-full mt-5 rounded-xl py-3.5 text-sm font-bold text-white transition-colors disabled:cursor-not-allowed"
+        :style="{ background: selectedFile ? 'var(--accent)' : '#a6b0c9', opacity: uploading ? 0.7 : 1 }"
+        :disabled="uploading"
         @click="handleCta"
       >
         {{ ctaLabel }}
       </button>
 
       <p class="flex items-center justify-center gap-1.5 text-xs mt-3" :style="{ color: 'var(--muted-foreground)' }">
-        🔒 Dokumen tidak disimpan di server kami
+        🔒 Dokumenmu hanya bisa diakses oleh akunmu dan bisa dihapus kapan saja dari Riwayat
       </p>
     </div>
 
@@ -327,7 +353,7 @@ const dataSources = [
         SUMBER DATABASE
       </p>
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 gap-4">
         <div
           v-for="source in dataSources"
           :key="source.name"

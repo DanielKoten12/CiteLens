@@ -4,10 +4,12 @@ import { useRouter } from "vue-router";
 import { CircleAlert, CircleCheck, LoaderCircle } from "lucide-vue-next";
 import AppLogo from "@/components/common/AppLogo.vue";
 import PasswordInput from "@/components/common/PasswordInput.vue";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth";
 
@@ -16,6 +18,7 @@ const auth = useAuthStore();
 
 const form = reactive({ name: "", email: "", password: "", confirmPassword: "" });
 const errors = ref<Record<string, string>>({});
+const generalError = ref("");
 const loading = ref(false);
 
 function validate() {
@@ -45,14 +48,52 @@ const strengthColors = ["", "#ef4444", "#f59e0b", "#3b82f6", "#22c55e"];
 const strengthLabel = computed(() => strengthLabels[strength.value]);
 const strengthColor = computed(() => strengthColors[strength.value]);
 
+/** Terjemahkan pesan validasi Laravel yang umum; selain itu tampilkan apa adanya. */
+function translateServerMessage(field: string, message: string): string {
+  const m = message.toLowerCase();
+  if (field === "email" && m.includes("taken")) return "Email sudah terdaftar.";
+  if (field === "email" && m.includes("valid")) return "Format email tidak valid.";
+  if (m.includes("confirmation")) return "Kata sandi tidak cocok.";
+  if (field === "password" && m.includes("at least")) return "Kata sandi minimal 8 karakter.";
+  return message;
+}
+
+/** Petakan details backend ke field form. */
+function applyServerErrors(details: Record<string, string[]>) {
+  const mapped: Record<string, string> = {};
+  for (const [field, messages] of Object.entries(details)) {
+    const key = field === "password_confirmation" ? "confirmPassword" : field;
+    const first = messages[0];
+    if (first) mapped[key] = translateServerMessage(field, first);
+  }
+  errors.value = mapped;
+}
+
 async function handleSubmit() {
+  generalError.value = "";
   const errs = validate();
   errors.value = errs;
   if (Object.keys(errs).length > 0) return;
+
   loading.value = true;
-  await auth.register(form.name, form.email, form.password);
-  loading.value = false;
-  router.push({ name: "upload" });
+  try {
+    await auth.register(form.name, form.email, form.password, form.confirmPassword);
+    router.push({ name: "upload" });
+  } catch (e) {
+    if (e instanceof ApiError) {
+      if (e.status === 422 && e.details) {
+        applyServerErrors(e.details);
+      } else if (e.code === "RATE_LIMITED") {
+        generalError.value = "Terlalu banyak percobaan. Coba lagi dalam satu menit.";
+      } else {
+        generalError.value = e.message;
+      }
+    } else {
+      generalError.value = "Terjadi kesalahan tak terduga. Coba lagi.";
+    }
+  } finally {
+    loading.value = false;
+  }
 }
 </script>
 
@@ -167,6 +208,11 @@ async function handleSubmit() {
               {{ errors.confirmPassword }}
             </p>
           </div>
+
+          <Alert v-if="generalError" variant="destructive">
+            <CircleAlert />
+            <AlertDescription>{{ generalError }}</AlertDescription>
+          </Alert>
 
           <Button type="submit" size="lg" class="mt-1 rounded-xl" :disabled="loading">
             <LoaderCircle v-if="loading" class="h-4 w-4 animate-spin" />
