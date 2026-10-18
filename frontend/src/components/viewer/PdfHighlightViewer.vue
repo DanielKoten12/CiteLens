@@ -4,7 +4,7 @@ import type { ComponentPublicInstance } from "vue";
 import { ChevronLeft, ChevronRight, Minus, Plus, RotateCcw } from "lucide-vue-next";
 import { getDocument, GlobalWorkerOptions, type PDFDocumentProxy, type PDFPageProxy } from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-import type { HighlightItem } from "@/types/api";
+import type { HighlightItem } from "@/types/viewer";
 
 GlobalWorkerOptions.workerSrc = workerUrl;
 

@@ -3,7 +3,7 @@ import { onMounted, ref } from "vue";
 import PdfHighlightViewer from "@/components/viewer/PdfHighlightViewer.vue";
 import { useHighlights } from "@/composables/useHighlights";
 import { getCitations, getReferences } from "@/services/documentsApi";
-import type { Citation, Reference } from "@/types/api";
+import type { Citation, Reference } from "@/types/viewer";
 
 const viewer = ref<InstanceType<typeof PdfHighlightViewer> | null>(null);
 const references = ref<Reference[]>([]);

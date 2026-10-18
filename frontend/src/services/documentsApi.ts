@@ -1,7 +1,7 @@
 import referencesJson from "@/mocks/references.json";
 import citationsJson from "@/mocks/citations.json";
 import findingsJson from "@/mocks/findings.json";
-import type { ApiCollection, Citation, Finding, Reference } from "@/types/api";
+import type { ApiCollection, Citation, Finding, Reference } from "@/types/viewer";
 
 const mockMeta = (total: number) => ({
   current_page: 1,

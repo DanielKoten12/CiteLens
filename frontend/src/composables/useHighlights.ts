@@ -1,5 +1,5 @@
 import { computed, type MaybeRefOrGetter, toValue } from "vue";
-import type { Citation, HighlightItem, Reference } from "@/types/api";
+import type { Citation, HighlightItem, Reference } from "@/types/viewer";
 
 export function useHighlights(
   references: MaybeRefOrGetter<Reference[]>,
