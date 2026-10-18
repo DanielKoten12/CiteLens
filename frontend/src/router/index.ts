@@ -76,7 +76,6 @@ const router = createRouter({
             path: "/dev/viewer",
             name: "viewer-demo",
             component: () => import("@/views/ViewerDemoView.vue"),
-            meta: { public: true },
           },
         ]
       : []),
