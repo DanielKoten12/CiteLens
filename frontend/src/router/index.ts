@@ -66,6 +66,16 @@ const router = createRouter({
       name: "settings",
       component: () => import("@/views/SettingsView.vue"),
     },
+    ...(import.meta.env.DEV
+      ? [
+          {
+            path: "/dev/viewer",
+            name: "viewer-demo",
+            component: () => import("@/views/ViewerDemoView.vue"),
+            meta: { public: true },
+          },
+        ]
+      : []),
   ],
   scrollBehavior() {
     return { top: 0 };

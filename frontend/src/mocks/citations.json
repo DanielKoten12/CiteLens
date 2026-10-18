@@ -1,0 +1,572 @@
+[
+  {
+    "id": "cit-7710ecf3-909e-5b04-900b-9051a15b960e",
+    "citation_text": "(Niron et al., n.d.)",
+    "citation_marker": "Niron et al., n.d.",
+    "context_before": null,
+    "context_after": null,
+    "text_start_offset": 1,
+    "text_end_offset": 21,
+    "occurrence_index": 1,
+    "status": "unreliable",
+    "reference": {
+      "id": "ref-e27d4c93-c383-58f1-8310-6bb87c205007",
+      "title": "Faktor-Faktor Penyebab Kemacetan Lalu Lintas Di Ruas Jalan Herman Fernandez Larantuka Kabupaten Flores Timur"
+    },
+    "locations": [
+      {
+        "page_number": 1,
+        "x": 322.75,
+        "y": 544.7556,
+        "width": 73.9929,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      }
+    ]
+  },
+  {
+    "id": "cit-39b6bd24-0c8a-5ed4-8a21-e43a3800e789",
+    "citation_text": "(Farhan Raihan Wahidin et al., 2025)",
+    "citation_marker": "Farhan Raihan Wahidin et al., 2025",
+    "context_before": null,
+    "context_after": null,
+    "text_start_offset": 2,
+    "text_end_offset": 38,
+    "occurrence_index": 2,
+    "status": "valid",
+    "reference": {
+      "id": "ref-bd7d5b9a-4be0-5621-9a0a-3ed62ae56e56",
+      "title": "Pengontrolan Lampu Lalu Lintas Menggunakan Teknologi Deteksi Kendaraan YOLOV4"
+    },
+    "locations": [
+      {
+        "page_number": 1,
+        "x": 329.35,
+        "y": 636.7056,
+        "width": 152.3201,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      }
+    ]
+  },
+  {
+    "id": "cit-f3e914d3-1990-5092-8f21-240367161ae7",
+    "citation_text": "(Febrianto et al., 2024)",
+    "citation_marker": "Febrianto et al., 2024",
+    "context_before": null,
+    "context_after": null,
+    "text_start_offset": 3,
+    "text_end_offset": 27,
+    "occurrence_index": 3,
+    "status": "valid",
+    "reference": {
+      "id": "ref-ce8b905b-4a76-524d-a81e-2508265fb84e",
+      "title": "Prediksi Situasi Lalu Lintas Menggunakan Machine Learning Dengan Algoritma K-Nearest Neighbors Classifier"
+    },
+    "locations": [
+      {
+        "page_number": 1,
+        "x": 262.73,
+        "y": 694.1856,
+        "width": 92.6978,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      }
+    ]
+  },
+  {
+    "id": "cit-0b60ceeb-c815-517d-b8da-d81e06e44563",
+    "citation_text": "(Yao & Ye, 2020)",
+    "citation_marker": "Yao & Ye, 2020",
+    "context_before": null,
+    "context_after": null,
+    "text_start_offset": 4,
+    "text_end_offset": 20,
+    "occurrence_index": 4,
+    "status": "valid",
+    "reference": {
+      "id": "ref-18be178a-a912-5267-ab9d-9f7e5efff7f8",
+      "title": "The effect of image recognition traffic prediction method under deep learning and naive Bayes algorithm on freeway traffic safety"
+    },
+    "locations": [
+      {
+        "page_number": 1,
+        "x": 474.58,
+        "y": 705.7056,
+        "width": 78.2257,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      }
+    ]
+  },
+  {
+    "id": "cit-efa2d485-db18-5f40-812e-91fac56e1ee6",
+    "citation_text": "(Rahayu et al., 2023)",
+    "citation_marker": "Rahayu et al., 2023",
+    "context_before": null,
+    "context_after": null,
+    "text_start_offset": 5,
+    "text_end_offset": 26,
+    "occurrence_index": 5,
+    "status": "valid",
+    "reference": {
+      "id": "ref-e12503a3-e2ba-56b6-85a3-9def7ddfc403",
+      "title": "Classification of Congestion in Jakarta Using KNN, Naïve Bayes and Decision Tree Method"
+    },
+    "locations": [
+      {
+        "page_number": 1,
+        "x": 249.17,
+        "y": 728.7456,
+        "width": 36.3043,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      },
+      {
+        "page_number": 1,
+        "x": 287.775,
+        "y": 728.7456,
+        "width": 9.6811,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 1
+      },
+      {
+        "page_number": 1,
+        "x": 299.7669,
+        "y": 728.7456,
+        "width": 14.8304,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 2
+      },
+      {
+        "page_number": 1,
+        "x": 316.898,
+        "y": 728.7456,
+        "width": 23.3264,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 3
+      }
+    ]
+  },
+  {
+    "id": "cit-0dc2d617-32f5-5e0b-8751-01c279797102",
+    "citation_text": "(Pranadjaya et al., 2024)",
+    "citation_marker": "Pranadjaya et al., 2024",
+    "context_before": null,
+    "context_after": null,
+    "text_start_offset": 6,
+    "text_end_offset": 31,
+    "occurrence_index": 6,
+    "status": "valid",
+    "reference": {
+      "id": "ref-81eb904f-536f-5dd5-aca4-dcbe299e5217",
+      "title": "Perbandingan Algoritma Machine Learning menggunakan Orange Data Mining untuk Klasifikasi Jenis Kendaraan pada Sistem Tilang Digital"
+    },
+    "locations": [
+      {
+        "page_number": 1,
+        "x": 415.15,
+        "y": 751.7816,
+        "width": 50.059,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      },
+      {
+        "page_number": 1,
+        "x": 469.691,
+        "y": 751.7816,
+        "width": 9.6811,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 1
+      },
+      {
+        "page_number": 1,
+        "x": 483.8441,
+        "y": 751.7816,
+        "width": 14.7109,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 2
+      },
+      {
+        "page_number": 1,
+        "x": 503.0171,
+        "y": 751.7816,
+        "width": 23.4358,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 3
+      }
+    ]
+  },
+  {
+    "id": "cit-3b5bd089-23a3-5c8b-97c5-16cccad5b041",
+    "citation_text": "(Dima et al., 2025)",
+    "citation_marker": "Dima et al., 2025",
+    "context_before": null,
+    "context_after": null,
+    "text_start_offset": 10007,
+    "text_end_offset": 10026,
+    "occurrence_index": 7,
+    "status": "valid",
+    "reference": {
+      "id": "ref-c93ea97e-af28-50b2-8439-e233d7ab4c53",
+      "title": "Tinjauan Literatur tentang Pemanfaatan Algoritma Greedy untuk Pencarian Jalur Terpendek"
+    },
+    "locations": [
+      {
+        "page_number": 2,
+        "x": 468.1,
+        "y": 142.7056,
+        "width": 27.888,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      },
+      {
+        "page_number": 2,
+        "x": 498.1892,
+        "y": 142.7056,
+        "width": 9.6811,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 1
+      },
+      {
+        "page_number": 2,
+        "x": 510.0615,
+        "y": 142.7056,
+        "width": 14.7108,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 2
+      },
+      {
+        "page_number": 2,
+        "x": 526.9536,
+        "y": 142.7056,
+        "width": 23.4358,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 3
+      }
+    ]
+  },
+  {
+    "id": "cit-80db5e59-582e-525a-a9d3-5fc69b7769fb",
+    "citation_text": "(Febrianto et al., 2024)",
+    "citation_marker": "Febrianto et al., 2024",
+    "context_before": null,
+    "context_after": null,
+    "text_start_offset": 8,
+    "text_end_offset": 32,
+    "occurrence_index": 8,
+    "status": "valid",
+    "reference": {
+      "id": "ref-ce8b905b-4a76-524d-a81e-2508265fb84e",
+      "title": "Prediksi Situasi Lalu Lintas Menggunakan Machine Learning Dengan Algoritma K-Nearest Neighbors Classifier"
+    },
+    "locations": [
+      {
+        "page_number": 1,
+        "x": 262.73,
+        "y": 694.1856,
+        "width": 92.6978,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      }
+    ]
+  },
+  {
+    "id": "cit-aa8d9e92-f5b9-5118-af0f-52a5933a206a",
+    "citation_text": "(Kiswanto et al., 2025)",
+    "citation_marker": "Kiswanto et al., 2025",
+    "context_before": null,
+    "context_after": null,
+    "text_start_offset": 10009,
+    "text_end_offset": 10032,
+    "occurrence_index": 9,
+    "status": "valid",
+    "reference": {
+      "id": "ref-4af5fe9e-4f82-5dd5-8d46-b33bf106c0b0",
+      "title": "Pengembangan dan Implementasi Sistem Deteksi Serangan DDoS Berbasis Algoritma Random Forest"
+    },
+    "locations": [
+      {
+        "page_number": 2,
+        "x": 440.62,
+        "y": 177.1456,
+        "width": 92.3491,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      }
+    ]
+  },
+  {
+    "id": "cit-4d9bf2c6-62dc-573f-b7b4-1d90086677a2",
+    "citation_text": "(Gullam Almuzadid & Egia Rosi Subhiyakto, 2025)",
+    "citation_marker": "Gullam Almuzadid & Egia Rosi Subhiyakto, 2025",
+    "context_before": null,
+    "context_after": null,
+    "text_start_offset": 10010,
+    "text_end_offset": 10057,
+    "occurrence_index": 10,
+    "status": "valid",
+    "reference": {
+      "id": "ref-aa5f9d5a-2573-5461-abb6-b39b7265eece",
+      "title": "Stroke Risk Classification Using the Ensemble Learning Method of XGBoost and Random Forest"
+    },
+    "locations": [
+      {
+        "page_number": 2,
+        "x": 244.49,
+        "y": 280.7356,
+        "width": 35.8161,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      },
+      {
+        "page_number": 2,
+        "x": 283.2045,
+        "y": 280.7356,
+        "width": 46.9615,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 1
+      },
+      {
+        "page_number": 2,
+        "x": 332.9448,
+        "y": 280.7356,
+        "width": 10.1691,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 2
+      },
+      {
+        "page_number": 2,
+        "x": 345.8928,
+        "y": 280.7356,
+        "width": 20.9872,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 3
+      },
+      {
+        "page_number": 2,
+        "x": 369.67,
+        "y": 280.7356,
+        "width": 20.8364,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 4
+      },
+      {
+        "page_number": 2,
+        "x": 393.2852,
+        "y": 280.7356,
+        "width": 50.5471,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 5
+      },
+      {
+        "page_number": 2,
+        "x": 446.6112,
+        "y": 280.7356,
+        "width": 23.3264,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 6
+      }
+    ]
+  },
+  {
+    "id": "cit-648c5fc2-f02c-5f92-bd65-4ce39df17264",
+    "citation_text": "(Zul et al., 2025)",
+    "citation_marker": "Zul et al., 2025",
+    "context_before": null,
+    "context_after": null,
+    "text_start_offset": 10011,
+    "text_end_offset": 10029,
+    "occurrence_index": 11,
+    "status": "valid",
+    "reference": {
+      "id": "ref-4ab85dfc-2564-59d0-b3c2-a286e5b62018",
+      "title": "Analisis Komparatif Akurasi Prediksi Kanker Payudara Menggunakan Algoritma Random Forest dan Logistic Regression"
+    },
+    "locations": [
+      {
+        "page_number": 2,
+        "x": 138.62,
+        "y": 292.2556,
+        "width": 72.8076,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      }
+    ]
+  },
+  {
+    "id": "cit-24aad819-a6d9-5709-943f-d51857c0ac3e",
+    "citation_text": "(Pranata et al., 2024)",
+    "citation_marker": "Pranata et al., 2024",
+    "context_before": null,
+    "context_after": null,
+    "text_start_offset": 10012,
+    "text_end_offset": 10034,
+    "occurrence_index": 12,
+    "status": "valid",
+    "reference": {
+      "id": "ref-2f8c6652-edbe-5410-a789-ef7351a597a4",
+      "title": "Penggunaan Model Bahasa indoBERT pada metode Random Forest untuk Klasifikasi Sentimen dengan Dataset Terbatas"
+    },
+    "locations": [
+      {
+        "page_number": 2,
+        "x": 70.944,
+        "y": 361.2556,
+        "width": 84.2018,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      }
+    ]
+  },
+  {
+    "id": "cit-82c6e96b-9d19-5fb5-8f1e-739af64fa0b2",
+    "citation_text": "(Kusuma et al., 2025)",
+    "citation_marker": "Kusuma et al., 2025",
+    "context_before": null,
+    "context_after": null,
+    "text_start_offset": 10013,
+    "text_end_offset": 10034,
+    "occurrence_index": 13,
+    "status": "pending",
+    "reference": {
+      "id": "ref-2a357779-fa56-5a91-8457-43d4ae97be26",
+      "title": "Pendekatan Analisis Prediktif Regresi Menggunakan Metode Pembelajaran Mesin Untuk Memperkirakan Effort"
+    },
+    "locations": [
+      {
+        "page_number": 2,
+        "x": 308.57,
+        "y": 740.6216,
+        "width": 87.0804,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      }
+    ]
+  },
+  {
+    "id": "cit-0c354676-7e9b-5b0f-9856-199ceb3e4d5c",
+    "citation_text": "(Kurniawan & Salam, 2025)",
+    "citation_marker": "Kurniawan & Salam, 2025",
+    "context_before": null,
+    "context_after": null,
+    "text_start_offset": 20014,
+    "text_end_offset": 20039,
+    "occurrence_index": 14,
+    "status": "valid",
+    "reference": {
+      "id": "ref-ec135f55-70f1-55ed-bcf7-72cd2b03c352",
+      "title": "Penggunaan Feature Space SMOTE Untuk Mengurangi Overfitting Akibat Imbalance Dataset"
+    },
+    "locations": [
+      {
+        "page_number": 3,
+        "x": 375.43,
+        "y": 200.6656,
+        "width": 113.9325,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      }
+    ]
+  },
+  {
+    "id": "cit-656ae248-3a5e-57fd-b710-c047f6df7ba6",
+    "citation_text": "(Andi, 2022)",
+    "citation_marker": "Andi, 2022",
+    "context_before": null,
+    "context_after": null,
+    "text_start_offset": 999999,
+    "text_end_offset": 1000011,
+    "occurrence_index": 15,
+    "status": "hallucination",
+    "reference": null,
+    "locations": []
+  }
+]

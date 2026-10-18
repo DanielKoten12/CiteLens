@@ -1,0 +1,65 @@
+[
+  {
+    "id": "citation:cit-7710ecf3-909e-5b04-900b-9051a15b960e",
+    "type": "citation_mismatch",
+    "status": "unreliable",
+    "severity": "high",
+    "reason": "Sitasi tidak memiliki pasangan referensi yang dapat dipercaya.",
+    "citation_id": "cit-7710ecf3-909e-5b04-900b-9051a15b960e",
+    "text_start_offset": 1
+  },
+  {
+    "id": "ref-finding:ref-bd7d5b9a-4be0-5621-9a0a-3ed62ae56e56",
+    "type": "metadata_mismatch",
+    "status": "suspicious",
+    "severity": "medium",
+    "reason": "DOI ditemukan, tetapi metadata Crossref perlu ditinjau.",
+    "reference_id": "ref-bd7d5b9a-4be0-5621-9a0a-3ed62ae56e56",
+    "text_start_offset": 50002
+  },
+  {
+    "id": "ref-finding:ref-4af5fe9e-4f82-5dd5-8d46-b33bf106c0b0",
+    "type": "metadata_mismatch",
+    "status": "suspicious",
+    "severity": "medium",
+    "reason": "DOI ditemukan, tetapi metadata Crossref perlu ditinjau.",
+    "reference_id": "ref-4af5fe9e-4f82-5dd5-8d46-b33bf106c0b0",
+    "text_start_offset": 50005
+  },
+  {
+    "id": "ref-finding:ref-2a357779-fa56-5a91-8457-43d4ae97be26",
+    "type": "reference_pending",
+    "status": "pending",
+    "severity": "info",
+    "reason": "Menunggu verifikasi Crossref.",
+    "reference_id": "ref-2a357779-fa56-5a91-8457-43d4ae97be26",
+    "text_start_offset": 50007
+  },
+  {
+    "id": "ref-finding:ref-e27d4c93-c383-58f1-8310-6bb87c205007",
+    "type": "metadata_mismatch",
+    "status": "invalid",
+    "severity": "high",
+    "reason": "DOI tidak ditemukan di Crossref.",
+    "reference_id": "ref-e27d4c93-c383-58f1-8310-6bb87c205007",
+    "text_start_offset": 50009
+  },
+  {
+    "id": "ref-finding:ref-72b55f20-7d1a-5334-a1e6-81af73eba21e",
+    "type": "metadata_mismatch",
+    "status": "not_found",
+    "severity": "high",
+    "reason": "Tidak ada kandidat Crossref yang cocok.",
+    "reference_id": "ref-72b55f20-7d1a-5334-a1e6-81af73eba21e",
+    "text_start_offset": 50013
+  },
+  {
+    "id": "citation:cit-656ae248-3a5e-57fd-b710-c047f6df7ba6",
+    "type": "citation_mismatch",
+    "status": "hallucination",
+    "severity": "high",
+    "reason": "Sitasi tidak memiliki pasangan referensi yang dapat dipercaya.",
+    "citation_id": "cit-656ae248-3a5e-57fd-b710-c047f6df7ba6",
+    "text_start_offset": 999999
+  }
+]
