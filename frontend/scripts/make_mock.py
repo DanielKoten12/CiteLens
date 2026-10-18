@@ -8,7 +8,7 @@ import uuid
 from collections import Counter
 from pathlib import Path
 
-import fitz
+import pymupdf
 
 ROOT = Path(__file__).resolve().parents[1]
 PDF_PATH = ROOT / "public" / "sample.pdf"
@@ -20,7 +20,7 @@ def stable_id(prefix: str, value: str) -> str:
     return f"{prefix}-{uuid.uuid5(NAMESPACE, value)}"
 
 
-def locations_for(page: fitz.Page, text: str) -> list[dict]:
+def locations_for(page: pymupdf.Page, text: str) -> list[dict]:
     rects = page.search_for(text)
     page_rect = page.rect
     return [
@@ -39,7 +39,7 @@ def locations_for(page: fitz.Page, text: str) -> list[dict]:
     ]
 
 
-def find_text(document: fitz.Document, text: str) -> list[dict]:
+def find_text(document: pymupdf.Document, text: str) -> list[dict]:
     for page in document:
         locations = locations_for(page, text)
         if locations:
@@ -47,7 +47,67 @@ def find_text(document: fitz.Document, text: str) -> list[dict]:
     return []
 
 
-def find_terms(document: fitz.Document, terms: list[str]) -> list[dict]:
+def normalized_page_text(page: pymupdf.Page) -> tuple[str, list[int], list[tuple]]:
+    words = page.get_text("words")
+    words.sort(key=lambda word: (round(word[1], 2), word[0]))
+    characters_to_words: list[int] = []
+    parts: list[str] = []
+    for word_index, word in enumerate(words):
+        if parts:
+            parts.append(" ")
+            characters_to_words.append(word_index - 1)
+        parts.append(word[4])
+        characters_to_words.extend([word_index] * len(word[4]))
+    return "".join(parts), characters_to_words, words
+
+
+def citation_locations(
+    page: pymupdf.Page,
+    words: list[tuple],
+    characters_to_words: list[int],
+    match_start: int,
+    match_end: int,
+) -> list[dict]:
+    covered_word_indexes = sorted(
+        {
+            characters_to_words[index]
+            for index in range(match_start, match_end)
+            if index < len(characters_to_words)
+        }
+    )
+    lines: list[list[tuple]] = []
+    for word_index in covered_word_indexes:
+        word = words[word_index]
+        line = next((line for line in lines if abs(line[0][1] - word[1]) <= 2.5), None)
+        if line is None:
+            lines.append([word])
+        else:
+            line.append(word)
+
+    page_rect = page.rect
+    locations: list[dict] = []
+    for location_index, line in enumerate(sorted(lines, key=lambda group: min(word[1] for word in group))):
+        x0 = min(word[0] for word in line)
+        y0 = min(word[1] for word in line)
+        x1 = max(word[2] for word in line)
+        y1 = max(word[3] for word in line)
+        locations.append(
+            {
+                "page_number": page.number + 1,
+                "x": round(x0, 4),
+                "y": round(y0, 4),
+                "width": round(x1 - x0, 4),
+                "height": round(y1 - y0, 4),
+                "page_width": round(page_rect.width, 4),
+                "page_height": round(page_rect.height, 4),
+                "coordinate_system": "pdf_points_top_left",
+                "location_index": location_index,
+            }
+        )
+    return locations
+
+
+def find_terms(document: pymupdf.Document, terms: list[str]) -> list[dict]:
     locations: list[dict] = []
     for term in terms:
         locations.extend(find_text(document, term))
@@ -61,7 +121,7 @@ def write_json(name: str, data: list[dict]) -> None:
 
 
 def main() -> None:
-    document = fitz.open(PDF_PATH)
+    document = pymupdf.open(PDF_PATH)
     references_seed = [
         ("Dima", "Dima, J., Hamzah, Moh. S., Tallo, C. G., & Fallo, D. Y. A. (2025). Tinjauan Literatur tentang Pemanfaatan Algoritma Greedy untuk Pencarian Jalur Terpendek.", ["Dima, J., Hamzah, Moh. S., Tallo, C. G., & Fallo, D. Y. A. (2025). Tinjauan Literatur tentang Pemanfaatan Algoritma", "Greedy untuk Pencarian Jalur Terpendek."], "valid", "10.53863/kst.v7i01.1683"),
         ("Farhan", "Farhan Raihan Wahidin, Wina Witanti, & Edvin Ramadhan. (2025). Pengontrolan Lampu Lalu Lintas Menggunakan Teknologi Deteksi Kendaraan YOLOV4.", ["Farhan Raihan Wahidin, Wina Witanti, & Edvin Ramadhan. (2025). Pengontrolan Lampu Lalu Lintas Menggunakan", "Teknologi Deteksi Kendaraan YOLOV4."], "suspicious", "https://doi.org/10.25126/jtiik.2025125"),
@@ -115,52 +175,53 @@ def main() -> None:
         references.append(reference)
         by_author[author] = reference
 
-    citation_texts = re.findall(r"\([^()\n]{2,100},\s*(?:\d{4}|n\.d\.)\)", "\n".join(page.get_text() for page in document))
     citations = []
-    for index, text in enumerate(citation_texts, 1):
-        author = text[1:].split(",", 1)[0].strip().split()[0]
-        reference = next((item for key, item in by_author.items() if key.lower().startswith(author.lower())), None)
-        locations = find_text(document, text)
-        if not locations:
-            print(f"Tidak ditemukan di PDF: {text}")
-            continue
-        citation_id = stable_id("cit", f"{text}-{index}")
-        status = "hallucination" if reference is None else {
-            "valid": "valid",
-            "suspicious": "valid",
-            "invalid": "unreliable",
-            "not_found": "unreliable",
-            "pending": "pending",
-        }[reference["finding"]["status"]]
-        citations.append({
-            "id": citation_id,
-            "citation_text": text,
-            "citation_marker": text[1:-1],
-            "context_before": None,
-            "context_after": None,
-            "text_start_offset": (locations[0]["page_number"] - 1) * 10000 + index,
-            "text_end_offset": (locations[0]["page_number"] - 1) * 10000 + index + len(text),
-            "occurrence_index": index,
-            "status": status,
-            "reference": None if reference is None else {"id": reference["id"], "title": reference["title"]},
-            "locations": locations,
-        })
-
-    dummy_id = stable_id("cit", "dummy-unpaired-citation")
-    print("Tidak ditemukan di PDF: (Andi, 2022) [dummy hallucination]")
-    citations.append({
-        "id": dummy_id,
-        "citation_text": "(Andi, 2022)",
-        "citation_marker": "Andi, 2022",
-        "context_before": None,
-        "context_after": None,
-        "text_start_offset": 999999,
-        "text_end_offset": 999999 + len("(Andi, 2022)"),
-        "occurrence_index": len(citations) + 1,
-        "status": "hallucination",
-        "reference": None,
-        "locations": [],
-    })
+    citation_pattern = re.compile(r"\(([^()]{2,100}?),\s*(?:\d{4}|n\.d\.)\)")
+    document_offset = 0
+    occurrence_index = 0
+    for page in document:
+        page_text, characters_to_words, words = normalized_page_text(page)
+        for match in citation_pattern.finditer(page_text):
+            occurrence_index += 1
+            text = re.sub(r"\s+", " ", match.group(0)).strip()
+            author = text[1:].split(",", 1)[0].strip().split()[0]
+            reference = next(
+                (item for key, item in by_author.items() if key.lower().startswith(author.lower())),
+                None,
+            )
+            locations = citation_locations(
+                page,
+                words,
+                characters_to_words,
+                match.start(),
+                match.end(),
+            )
+            status = "hallucination" if text == "(Dima et al., 2025)" else {
+                "valid": "valid",
+                "suspicious": "valid",
+                "invalid": "unreliable",
+                "not_found": "unreliable",
+                "pending": "pending",
+            }[reference["finding"]["status"]] if reference else "hallucination"
+            citation_id = stable_id("cit", f"{text}-{occurrence_index}")
+            citations.append({
+                "id": citation_id,
+                "citation_text": text,
+                "citation_marker": text[1:-1],
+                "context_before": None,
+                "context_after": None,
+                "text_start_offset": document_offset + match.start(),
+                "text_end_offset": document_offset + match.end(),
+                "occurrence_index": occurrence_index,
+                "status": status,
+                "reference": (
+                    None
+                    if reference is None or status == "hallucination"
+                    else {"id": reference["id"], "title": reference["title"]}
+                ),
+                "locations": locations,
+            })
+        document_offset += len(page_text) + 1
 
     findings = []
     for reference in references:
@@ -168,31 +229,56 @@ def main() -> None:
         if status != "valid":
             findings.append({
                 "id": f"ref-finding:{reference['id']}",
-                "type": "reference_pending" if status == "pending" else "metadata_mismatch",
-                "status": status,
+                "type": {
+                    "suspicious": "reference_suspicious",
+                    "invalid": "reference_invalid",
+                    "not_found": "reference_not_found",
+                    "pending": "reference_pending",
+                }[status],
                 "severity": {"suspicious": "medium", "invalid": "high", "not_found": "high", "pending": "info"}[status],
-                "reason": reference["finding"]["reason"],
+                "message": reference["finding"]["reason"],
                 "reference_id": reference["id"],
-                "text_start_offset": reference["text_start_offset"],
+                "citation_id": None,
+                "text": reference["raw_text"],
+                "start_offset": reference["text_start_offset"],
+                "end_offset": reference["text_end_offset"],
+                "locations": reference["locations"],
             })
     for citation in citations:
         if citation["status"] in {"unreliable", "hallucination"}:
             findings.append({
                 "id": f"citation:{citation['id']}",
-                "type": "citation_mismatch",
-                "status": citation["status"],
+                "type": "citation_hallucination" if citation["status"] == "hallucination" else "citation_unreliable",
                 "severity": "high",
-                "reason": "Sitasi tidak memiliki pasangan referensi yang dapat dipercaya.",
+                "message": "Sitasi tidak memiliki pasangan referensi yang dapat dipercaya.",
+                "reference_id": None,
                 "citation_id": citation["id"],
-                "text_start_offset": citation["text_start_offset"],
+                "text": citation["citation_text"],
+                "start_offset": citation["text_start_offset"],
+                "end_offset": citation["text_end_offset"],
+                "locations": citation["locations"],
             })
-    findings.sort(key=lambda item: (item["text_start_offset"], item["id"]))
+    findings.sort(key=lambda item: (item["start_offset"], item["id"]))
 
     write_json("references.json", references)
     write_json("citations.json", citations)
     write_json("findings.json", findings)
     print("Ringkasan referensi:", dict(Counter(item["finding"]["status"] for item in references)))
     print("Ringkasan sitasi:", dict(Counter(item["status"] for item in citations)))
+    print(
+        "Sitasi per halaman:",
+        dict(Counter(item["locations"][0]["page_number"] for item in citations if item["locations"])),
+    )
+    print(
+        "Referensi per halaman:",
+        dict(
+            Counter(
+                page
+                for item in references
+                for page in {location["page_number"] for location in item["locations"]}
+            )
+        ),
+    )
     print("Jumlah findings:", len(findings))
 
 

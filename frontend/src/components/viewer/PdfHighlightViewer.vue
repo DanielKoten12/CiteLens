@@ -50,7 +50,7 @@ function highlightsForPage(page: number) {
 
 function highlightStyle(item: HighlightItem, location: HighlightItem["locations"][number], pageIndex: number) {
   const metric = pageMetrics.value[pageIndex];
-  const width = metric?.width || location.page_width;
+  const width = metric?.width ?? location.page_width ?? 1;
   const ratio = (metric?.renderWidth || 0) / width;
   const selected = props.selectedId === item.id;
   return {

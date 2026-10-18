@@ -1,20 +1,33 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
+import { useRoute } from "vue-router";
 import PdfHighlightViewer from "@/components/viewer/PdfHighlightViewer.vue";
-import { useHighlights } from "@/composables/useHighlights";
-import { getCitations, getReferences } from "@/services/documentsApi";
-import type { Citation, Reference } from "@/types/viewer";
+import { useDocumentHighlights } from "@/composables/useDocumentHighlights";
+import { ApiError } from "@/lib/api";
 
+const route = useRoute();
 const viewer = ref<InstanceType<typeof PdfHighlightViewer> | null>(null);
-const references = ref<Reference[]>([]);
-const citations = ref<Citation[]>([]);
 const selectedId = ref<string | null>(null);
-const { highlights } = useHighlights(references, citations);
+const documentId = typeof route.query.document === "string" ? route.query.document : undefined;
+const usingMock = !documentId;
+const {
+  document,
+  highlights,
+  loading,
+  error,
+  load,
+} = useDocumentHighlights(documentId, { mock: usingMock });
+const source = computed(() => document.value?.file?.url ?? "/sample.pdf");
+const errorMessage = computed(() => {
+  if (!error.value) return "";
+  if (error.value instanceof ApiError) {
+    return error.value.detailMessages;
+  }
+  return error.value.message;
+});
 
-onMounted(async () => {
-  const [referenceResponse, citationResponse] = await Promise.all([getReferences(), getCitations()]);
-  references.value = referenceResponse.data;
-  citations.value = citationResponse.data;
+onMounted(() => {
+  void load();
 });
 
 function selectHighlight(item: { id: string; kind: "reference" | "citation" }) {
@@ -32,12 +45,20 @@ function focusHighlight(id: string) {
     <div>
       <p class="text-xs font-bold uppercase tracking-[0.2em] text-blue-600">Demo internal</p>
       <h1 class="mt-2 text-2xl font-extrabold text-slate-900">PDF viewer dan highlight sitasi</h1>
-      <p class="mt-1 text-sm text-slate-500">Fixture: <code>/sample.pdf</code></p>
+      <p class="mt-1 text-sm text-slate-500">
+        {{ usingMock ? "Fixture: /sample.pdf" : `Dokumen: ${document?.name ?? documentId}` }}
+      </p>
+    </div>
+    <div v-if="loading" class="rounded-xl border bg-white p-4 text-sm text-slate-500">
+      Memuat dokumen dan lokasi highlight...
+    </div>
+    <div v-else-if="error" class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+      {{ errorMessage }}
     </div>
     <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">
       <PdfHighlightViewer
         ref="viewer"
-        src="/sample.pdf"
+        :src="source"
         :highlights="highlights"
         :selected-id="selectedId"
         @select="selectHighlight"

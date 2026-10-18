@@ -1,65 +1,425 @@
 [
   {
     "id": "citation:cit-7710ecf3-909e-5b04-900b-9051a15b960e",
-    "type": "citation_mismatch",
-    "status": "unreliable",
+    "type": "citation_unreliable",
     "severity": "high",
-    "reason": "Sitasi tidak memiliki pasangan referensi yang dapat dipercaya.",
+    "message": "Sitasi tidak memiliki pasangan referensi yang dapat dipercaya.",
+    "reference_id": null,
     "citation_id": "cit-7710ecf3-909e-5b04-900b-9051a15b960e",
-    "text_start_offset": 1
+    "text": "(Niron et al., n.d.)",
+    "start_offset": 4124,
+    "end_offset": 4144,
+    "locations": [
+      {
+        "page_number": 1,
+        "x": 322.75,
+        "y": 544.7556,
+        "width": 76.65,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      }
+    ]
+  },
+  {
+    "id": "citation:cit-3b5bd089-23a3-5c8b-97c5-16cccad5b041",
+    "type": "citation_hallucination",
+    "severity": "high",
+    "message": "Sitasi tidak memiliki pasangan referensi yang dapat dipercaya.",
+    "reference_id": null,
+    "citation_id": "cit-3b5bd089-23a3-5c8b-97c5-16cccad5b041",
+    "text": "(Dima et al., 2025)",
+    "start_offset": 7287,
+    "end_offset": 7306,
+    "locations": [
+      {
+        "page_number": 2,
+        "x": 468.1,
+        "y": 142.7056,
+        "width": 84.81,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      }
+    ]
+  },
+  {
+    "id": "citation:cit-a35f3ff1-8fc2-57f1-9b07-e5690b151ddf",
+    "type": "citation_unreliable",
+    "severity": "high",
+    "message": "Sitasi tidak memiliki pasangan referensi yang dapat dipercaya.",
+    "reference_id": null,
+    "citation_id": "cit-a35f3ff1-8fc2-57f1-9b07-e5690b151ddf",
+    "text": "(Rodji et al., 2025)",
+    "start_offset": 7860,
+    "end_offset": 7880,
+    "locations": [
+      {
+        "page_number": 2,
+        "x": 516.7,
+        "y": 211.7056,
+        "width": 36.1746,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      },
+      {
+        "page_number": 2,
+        "x": 70.944,
+        "y": 223.2256,
+        "width": 40.2185,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 1
+      }
+    ]
   },
   {
     "id": "ref-finding:ref-bd7d5b9a-4be0-5621-9a0a-3ed62ae56e56",
-    "type": "metadata_mismatch",
-    "status": "suspicious",
+    "type": "reference_suspicious",
     "severity": "medium",
-    "reason": "DOI ditemukan, tetapi metadata Crossref perlu ditinjau.",
+    "message": "DOI ditemukan, tetapi metadata Crossref perlu ditinjau.",
     "reference_id": "ref-bd7d5b9a-4be0-5621-9a0a-3ed62ae56e56",
-    "text_start_offset": 50002
+    "citation_id": null,
+    "text": "Farhan Raihan Wahidin, Wina Witanti, & Edvin Ramadhan. (2025). Pengontrolan Lampu Lalu Lintas Menggunakan Teknologi Deteksi Kendaraan YOLOV4.",
+    "start_offset": 50002,
+    "end_offset": 50143,
+    "locations": [
+      {
+        "page_number": 6,
+        "x": 70.944,
+        "y": 328.6156,
+        "width": 481.1678,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 340.1356,
+        "width": 43.5153,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 1
+      },
+      {
+        "page_number": 6,
+        "x": 134.6262,
+        "y": 340.1356,
+        "width": 32.9676,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 2
+      },
+      {
+        "page_number": 6,
+        "x": 170.8408,
+        "y": 340.1356,
+        "width": 45.7861,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 3
+      },
+      {
+        "page_number": 6,
+        "x": 219.8838,
+        "y": 340.1356,
+        "width": 42.4296,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 4
+      }
+    ]
   },
   {
     "id": "ref-finding:ref-4af5fe9e-4f82-5dd5-8d46-b33bf106c0b0",
-    "type": "metadata_mismatch",
-    "status": "suspicious",
+    "type": "reference_suspicious",
     "severity": "medium",
-    "reason": "DOI ditemukan, tetapi metadata Crossref perlu ditinjau.",
+    "message": "DOI ditemukan, tetapi metadata Crossref perlu ditinjau.",
     "reference_id": "ref-4af5fe9e-4f82-5dd5-8d46-b33bf106c0b0",
-    "text_start_offset": 50005
+    "citation_id": null,
+    "text": "Kiswanto, D., Ramadhani, F., Surbakti, N. M., & Nasution, N. A. (2025). Pengembangan dan Implementasi Sistem Deteksi Serangan DDoS Berbasis Algoritma Random Forest.",
+    "start_offset": 50005,
+    "end_offset": 50169,
+    "locations": [
+      {
+        "page_number": 6,
+        "x": 70.944,
+        "y": 443.5956,
+        "width": 481.6693,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      }
+    ]
   },
   {
     "id": "ref-finding:ref-2a357779-fa56-5a91-8457-43d4ae97be26",
     "type": "reference_pending",
-    "status": "pending",
     "severity": "info",
-    "reason": "Menunggu verifikasi Crossref.",
+    "message": "Menunggu verifikasi Crossref.",
     "reference_id": "ref-2a357779-fa56-5a91-8457-43d4ae97be26",
-    "text_start_offset": 50007
+    "citation_id": null,
+    "text": "Kusuma, M. R., Informasi, P. S., Mandiri, U., Sistem, P., Informasi, T., Darunnajah, U., Seleksi, F., & Learning, A. M. (2025). Pendekatan Analisis Prediktif Regresi Menggunakan Metode Pembelajaran Mesin Untuk Memperkirakan Effort.",
+    "start_offset": 50007,
+    "end_offset": 50238,
+    "locations": [
+      {
+        "page_number": 6,
+        "x": 70.944,
+        "y": 501.0756,
+        "width": 413.2605,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      },
+      {
+        "page_number": 6,
+        "x": 487.0032,
+        "y": 501.0756,
+        "width": 67.5586,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 1
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 512.5956,
+        "width": 464.5711,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 2
+      }
+    ]
   },
   {
     "id": "ref-finding:ref-e27d4c93-c383-58f1-8310-6bb87c205007",
-    "type": "metadata_mismatch",
-    "status": "invalid",
+    "type": "reference_invalid",
     "severity": "high",
-    "reason": "DOI tidak ditemukan di Crossref.",
+    "message": "DOI tidak ditemukan di Crossref.",
     "reference_id": "ref-e27d4c93-c383-58f1-8310-6bb87c205007",
-    "text_start_offset": 50009
+    "citation_id": null,
+    "text": "Niron, W. P., Kuswara, K. M., Paul, D., & Tamelan, G. (n.d.). Faktor-Faktor Penyebab Kemacetan Lalu Lintas Di Ruas Jalan Herman Fernandez Larantuka Kabupaten Flores Timur.",
+    "start_offset": 50009,
+    "end_offset": 50180,
+    "locations": [
+      {
+        "page_number": 6,
+        "x": 70.944,
+        "y": 570.0756,
+        "width": 481.8166,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      }
+    ]
   },
   {
     "id": "ref-finding:ref-72b55f20-7d1a-5334-a1e6-81af73eba21e",
-    "type": "metadata_mismatch",
-    "status": "not_found",
+    "type": "reference_not_found",
     "severity": "high",
-    "reason": "Tidak ada kandidat Crossref yang cocok.",
+    "message": "Tidak ada kandidat Crossref yang cocok.",
     "reference_id": "ref-72b55f20-7d1a-5334-a1e6-81af73eba21e",
-    "text_start_offset": 50013
-  },
-  {
-    "id": "citation:cit-656ae248-3a5e-57fd-b710-c047f6df7ba6",
-    "type": "citation_mismatch",
-    "status": "hallucination",
-    "severity": "high",
-    "reason": "Sitasi tidak memiliki pasangan referensi yang dapat dipercaya.",
-    "citation_id": "cit-656ae248-3a5e-57fd-b710-c047f6df7ba6",
-    "text_start_offset": 999999
+    "citation_id": null,
+    "text": "Rodji, A. P., Studi, P., Ilmu, M., Nusa, U., Jakarta, M., Melayu, J. C., Timur, K. J., Ibukota, D. K., Sipil, S. T., Teknik, F., Krisnadwipayana, U., Gede, P., Bekasi, K., Tree, D., & Keparahan, K. (2025). Klasifikasi Keparahan Kecelakaan Lalu Lintas Menggunakan Machine Learning.",
+    "start_offset": 50013,
+    "end_offset": 50293,
+    "locations": [
+      {
+        "page_number": 6,
+        "x": 70.944,
+        "y": 708.1056,
+        "width": 481.1343,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      },
+      {
+        "page_number": 6,
+        "x": 104.1585,
+        "y": 719.6256,
+        "width": 74.7996,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 1
+      },
+      {
+        "page_number": 6,
+        "x": 182.2151,
+        "y": 719.6256,
+        "width": 14.7109,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 2
+      },
+      {
+        "page_number": 6,
+        "x": 200.183,
+        "y": 719.6256,
+        "width": 26.1151,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 3
+      },
+      {
+        "page_number": 6,
+        "x": 229.555,
+        "y": 719.6256,
+        "width": 13.0377,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 4
+      },
+      {
+        "page_number": 6,
+        "x": 245.8496,
+        "y": 719.6256,
+        "width": 32.121,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 5
+      },
+      {
+        "page_number": 6,
+        "x": 281.2375,
+        "y": 719.6256,
+        "width": 14.7109,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 6
+      },
+      {
+        "page_number": 6,
+        "x": 299.0858,
+        "y": 719.6256,
+        "width": 23.4558,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 7
+      },
+      {
+        "page_number": 6,
+        "x": 325.679,
+        "y": 719.6256,
+        "width": 14.7109,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 8
+      },
+      {
+        "page_number": 6,
+        "x": 343.6468,
+        "y": 719.6256,
+        "width": 10.1691,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 9
+      },
+      {
+        "page_number": 6,
+        "x": 357.0729,
+        "y": 719.6256,
+        "width": 48.1866,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 10
+      },
+      {
+        "page_number": 6,
+        "x": 408.5164,
+        "y": 719.6256,
+        "width": 12.201,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 11
+      },
+      {
+        "page_number": 6,
+        "x": 423.9743,
+        "y": 719.6256,
+        "width": 31.7027,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 12
+      },
+      {
+        "page_number": 6,
+        "x": 459.46,
+        "y": 719.6256,
+        "width": 45.089,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 13
+      },
+      {
+        "page_number": 6,
+        "x": 507.7959,
+        "y": 719.6256,
+        "width": 45.0191,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 14
+      }
+    ]
   }
 ]
