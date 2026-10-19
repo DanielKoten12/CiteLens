@@ -32,7 +32,7 @@
         "page_number": 6,
         "x": 87.864,
         "y": 305.5757,
-        "width": 31.7425,
+        "width": 465.0362,
         "height": 11.0257,
         "page_width": 595.32,
         "page_height": 841.92,
@@ -41,47 +41,14 @@
       },
       {
         "page_number": 6,
-        "x": 125.9909,
-        "y": 305.5757,
-        "width": 25.149,
+        "x": 87.864,
+        "y": 317.0956,
+        "width": 158.852,
         "height": 11.0257,
         "page_width": 595.32,
         "page_height": 841.92,
         "coordinate_system": "pdf_points_top_left",
         "location_index": 2
-      },
-      {
-        "page_number": 6,
-        "x": 157.4047,
-        "y": 305.5757,
-        "width": 41.822,
-        "height": 11.0257,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 3
-      },
-      {
-        "page_number": 6,
-        "x": 205.4916,
-        "y": 305.5757,
-        "width": 22.0315,
-        "height": 11.0257,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 4
-      },
-      {
-        "page_number": 6,
-        "x": 233.788,
-        "y": 305.5757,
-        "width": 45.2981,
-        "height": 11.0257,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 5
       }
     ]
   },
@@ -118,7 +85,7 @@
         "page_number": 6,
         "x": 87.864,
         "y": 340.1356,
-        "width": 43.5153,
+        "width": 465.0362,
         "height": 11.0257,
         "page_width": 595.32,
         "page_height": 841.92,
@@ -127,36 +94,14 @@
       },
       {
         "page_number": 6,
-        "x": 134.6262,
-        "y": 340.1356,
-        "width": 32.9676,
+        "x": 87.864,
+        "y": 351.6556,
+        "width": 211.9877,
         "height": 11.0257,
         "page_width": 595.32,
         "page_height": 841.92,
         "coordinate_system": "pdf_points_top_left",
         "location_index": 2
-      },
-      {
-        "page_number": 6,
-        "x": 170.8408,
-        "y": 340.1356,
-        "width": 45.7861,
-        "height": 11.0257,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 3
-      },
-      {
-        "page_number": 6,
-        "x": 219.8838,
-        "y": 340.1356,
-        "width": 42.4296,
-        "height": 11.0257,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 4
       }
     ]
   },
@@ -182,199 +127,12 @@
         "page_number": 6,
         "x": 70.944,
         "y": 363.0556,
-        "width": 43.2463,
+        "width": 481.1577,
         "height": 11.0257,
         "page_width": 595.32,
         "page_height": 841.92,
         "coordinate_system": "pdf_points_top_left",
         "location_index": 0
-      },
-      {
-        "page_number": 6,
-        "x": 116.2521,
-        "y": 363.0556,
-        "width": 13.8842,
-        "height": 11.0257,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 1
-      },
-      {
-        "page_number": 6,
-        "x": 132.198,
-        "y": 363.0556,
-        "width": 13.0377,
-        "height": 11.0257,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 2
-      },
-      {
-        "page_number": 6,
-        "x": 147.2974,
-        "y": 363.0556,
-        "width": 38.9038,
-        "height": 11.0257,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 3
-      },
-      {
-        "page_number": 6,
-        "x": 188.3824,
-        "y": 363.0556,
-        "width": 14.5914,
-        "height": 11.0257,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 4
-      },
-      {
-        "page_number": 6,
-        "x": 205.155,
-        "y": 363.0556,
-        "width": 31.613,
-        "height": 11.0257,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 5
-      },
-      {
-        "page_number": 6,
-        "x": 238.8298,
-        "y": 363.0556,
-        "width": 14.7109,
-        "height": 11.0257,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 6
-      },
-      {
-        "page_number": 6,
-        "x": 255.6024,
-        "y": 363.0556,
-        "width": 33.884,
-        "height": 11.0257,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 7
-      },
-      {
-        "page_number": 6,
-        "x": 291.6876,
-        "y": 363.0556,
-        "width": 12.0815,
-        "height": 11.0257,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 8
-      },
-      {
-        "page_number": 6,
-        "x": 305.9503,
-        "y": 363.0556,
-        "width": 13.0376,
-        "height": 11.0257,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 9
-      },
-      {
-        "page_number": 6,
-        "x": 321.1691,
-        "y": 363.0556,
-        "width": 49.2523,
-        "height": 11.0257,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 10
-      },
-      {
-        "page_number": 6,
-        "x": 372.6026,
-        "y": 363.0556,
-        "width": 14.1133,
-        "height": 11.0257,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 11
-      },
-      {
-        "page_number": 6,
-        "x": 388.7776,
-        "y": 363.0556,
-        "width": 38.595,
-        "height": 11.0257,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 12
-      },
-      {
-        "page_number": 6,
-        "x": 429.4145,
-        "y": 363.0556,
-        "width": 40.5074,
-        "height": 11.0257,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 13
-      },
-      {
-        "page_number": 6,
-        "x": 471.9836,
-        "y": 363.0556,
-        "width": 13.7448,
-        "height": 11.0257,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 14
-      },
-      {
-        "page_number": 6,
-        "x": 487.7901,
-        "y": 363.0556,
-        "width": 37.609,
-        "height": 11.0257,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 15
-      },
-      {
-        "page_number": 6,
-        "x": 527.4608,
-        "y": 363.0556,
-        "width": 14.7109,
-        "height": 11.0257,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 16
-      },
-      {
-        "page_number": 6,
-        "x": 544.3528,
-        "y": 363.0556,
-        "width": 7.7489,
-        "height": 11.0257,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 17
       },
       {
         "page_number": 6,
@@ -385,7 +143,29 @@
         "page_width": 595.32,
         "page_height": 841.92,
         "coordinate_system": "pdf_points_top_left",
-        "location_index": 18
+        "location_index": 1
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 386.0956,
+        "width": 465.0465,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 2
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 397.6156,
+        "width": 161.0034,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 3
       }
     ]
   },
@@ -417,6 +197,28 @@
         "page_height": 841.92,
         "coordinate_system": "pdf_points_top_left",
         "location_index": 0
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 420.6556,
+        "width": 465.0362,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 1
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 432.0756,
+        "width": 156.5712,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 2
       }
     ]
   },
@@ -448,6 +250,17 @@
         "page_height": 841.92,
         "coordinate_system": "pdf_points_top_left",
         "location_index": 0
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 455.1156,
+        "width": 422.0371,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 1
       }
     ]
   },
@@ -473,7 +286,7 @@
         "page_number": 6,
         "x": 70.944,
         "y": 466.6356,
-        "width": 435.4117,
+        "width": 481.8875,
         "height": 11.0257,
         "page_width": 595.32,
         "page_height": 841.92,
@@ -482,14 +295,25 @@
       },
       {
         "page_number": 6,
-        "x": 508.42,
-        "y": 466.6356,
-        "width": 44.4115,
+        "x": 87.864,
+        "y": 478.1556,
+        "width": 465.0362,
         "height": 11.0257,
         "page_width": 595.32,
         "page_height": 841.92,
         "coordinate_system": "pdf_points_top_left",
         "location_index": 1
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 489.5556,
+        "width": 205.3554,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 2
       }
     ]
   },
@@ -515,7 +339,7 @@
         "page_number": 6,
         "x": 70.944,
         "y": 501.0756,
-        "width": 413.2605,
+        "width": 481.078,
         "height": 11.0257,
         "page_width": 595.32,
         "page_height": 841.92,
@@ -524,10 +348,10 @@
       },
       {
         "page_number": 6,
-        "x": 487.0032,
-        "y": 501.0756,
-        "width": 67.5586,
-        "height": 11.0257,
+        "x": 87.864,
+        "y": 512.5956,
+        "width": 464.5711,
+        "height": 11.0258,
         "page_width": 595.32,
         "page_height": 841.92,
         "coordinate_system": "pdf_points_top_left",
@@ -536,8 +360,8 @@
       {
         "page_number": 6,
         "x": 87.864,
-        "y": 512.5956,
-        "width": 464.5711,
+        "y": 524.1156,
+        "width": 82.646,
         "height": 11.0258,
         "page_width": 595.32,
         "page_height": 841.92,
@@ -568,7 +392,7 @@
         "page_number": 6,
         "x": 70.944,
         "y": 535.6356,
-        "width": 38.8341,
+        "width": 481.2276,
         "height": 11.0258,
         "page_width": 595.32,
         "page_height": 841.92,
@@ -577,9 +401,9 @@
       },
       {
         "page_number": 6,
-        "x": 112.0788,
-        "y": 535.6356,
-        "width": 13.0376,
+        "x": 87.864,
+        "y": 547.1556,
+        "width": 465.0362,
         "height": 11.0258,
         "page_width": 595.32,
         "page_height": 841.92,
@@ -588,135 +412,14 @@
       },
       {
         "page_number": 6,
-        "x": 127.5367,
-        "y": 535.6356,
-        "width": 10.1692,
+        "x": 87.864,
+        "y": 558.5556,
+        "width": 157.6369,
         "height": 11.0258,
         "page_width": 595.32,
         "page_height": 841.92,
         "coordinate_system": "pdf_points_top_left",
         "location_index": 2
-      },
-      {
-        "page_number": 6,
-        "x": 140.1262,
-        "y": 535.6356,
-        "width": 29.3222,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 3
-      },
-      {
-        "page_number": 6,
-        "x": 171.7491,
-        "y": 535.6356,
-        "width": 11.2349,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 4
-      },
-      {
-        "page_number": 6,
-        "x": 185.2848,
-        "y": 535.6356,
-        "width": 31.7027,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 5
-      },
-      {
-        "page_number": 6,
-        "x": 219.2882,
-        "y": 535.6356,
-        "width": 35.109,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 6
-      },
-      {
-        "page_number": 6,
-        "x": 256.688,
-        "y": 535.6356,
-        "width": 59.6904,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 7
-      },
-      {
-        "page_number": 6,
-        "x": 318.6792,
-        "y": 535.6356,
-        "width": 27.5494,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 8
-      },
-      {
-        "page_number": 6,
-        "x": 348.5294,
-        "y": 535.6356,
-        "width": 28.625,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 9
-      },
-      {
-        "page_number": 6,
-        "x": 379.4551,
-        "y": 535.6356,
-        "width": 26.3542,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 10
-      },
-      {
-        "page_number": 6,
-        "x": 408.1201,
-        "y": 535.6356,
-        "width": 33.6549,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 11
-      },
-      {
-        "page_number": 6,
-        "x": 444.0757,
-        "y": 535.6356,
-        "width": 59.6805,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 12
-      },
-      {
-        "page_number": 6,
-        "x": 506.0569,
-        "y": 535.6356,
-        "width": 46.1147,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 13
       }
     ]
   },
@@ -748,6 +451,39 @@
         "page_height": 841.92,
         "coordinate_system": "pdf_points_top_left",
         "location_index": 0
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 581.5956,
+        "width": 464.5746,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 1
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 593.1156,
+        "width": 464.9843,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 2
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 604.6356,
+        "width": 356.5684,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 3
       }
     ]
   },
@@ -773,7 +509,7 @@
         "page_number": 6,
         "x": 70.944,
         "y": 616.1856,
-        "width": 49.3618,
+        "width": 481.3267,
         "height": 11.0258,
         "page_width": 595.32,
         "page_height": 841.92,
@@ -782,9 +518,9 @@
       },
       {
         "page_number": 6,
-        "x": 122.6065,
-        "y": 616.1856,
-        "width": 13.6153,
+        "x": 87.864,
+        "y": 627.5856,
+        "width": 464.5546,
         "height": 11.0258,
         "page_width": 595.32,
         "page_height": 841.92,
@@ -793,157 +529,14 @@
       },
       {
         "page_number": 6,
-        "x": 138.5226,
-        "y": 616.1856,
-        "width": 40.8659,
+        "x": 87.864,
+        "y": 639.1056,
+        "width": 350.9137,
         "height": 11.0258,
         "page_width": 595.32,
         "page_height": 841.92,
         "coordinate_system": "pdf_points_top_left",
         "location_index": 2
-      },
-      {
-        "page_number": 6,
-        "x": 181.6892,
-        "y": 616.1856,
-        "width": 11.2249,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 3
-      },
-      {
-        "page_number": 6,
-        "x": 195.2149,
-        "y": 616.1856,
-        "width": 13.0377,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 4
-      },
-      {
-        "page_number": 6,
-        "x": 210.5533,
-        "y": 616.1856,
-        "width": 32.9175,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 5
-      },
-      {
-        "page_number": 6,
-        "x": 245.7816,
-        "y": 616.1856,
-        "width": 11.6034,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 6
-      },
-      {
-        "page_number": 6,
-        "x": 259.6857,
-        "y": 616.1856,
-        "width": 14.7109,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 7
-      },
-      {
-        "page_number": 6,
-        "x": 276.6974,
-        "y": 616.1856,
-        "width": 43.7344,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 8
-      },
-      {
-        "page_number": 6,
-        "x": 322.7524,
-        "y": 616.1856,
-        "width": 13.0376,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 9
-      },
-      {
-        "page_number": 6,
-        "x": 338.0908,
-        "y": 616.1856,
-        "width": 10.1691,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 10
-      },
-      {
-        "page_number": 6,
-        "x": 350.5607,
-        "y": 616.1856,
-        "width": 48.7742,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 11
-      },
-      {
-        "page_number": 6,
-        "x": 401.6356,
-        "y": 616.1856,
-        "width": 13.8842,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 12
-      },
-      {
-        "page_number": 6,
-        "x": 417.8206,
-        "y": 616.1856,
-        "width": 31.7027,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 13
-      },
-      {
-        "page_number": 6,
-        "x": 451.7045,
-        "y": 616.1856,
-        "width": 57.29,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 14
-      },
-      {
-        "page_number": 6,
-        "x": 511.4148,
-        "y": 616.1856,
-        "width": 40.8559,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 15
       }
     ]
   },
@@ -975,6 +568,28 @@
         "page_height": 841.92,
         "coordinate_system": "pdf_points_top_left",
         "location_index": 0
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 662.1456,
+        "width": 464.7863,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 1
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 673.6656,
+        "width": 259.9179,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 2
       }
     ]
   },
@@ -1006,6 +621,17 @@
         "page_height": 841.92,
         "coordinate_system": "pdf_points_top_left",
         "location_index": 0
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 696.5856,
+        "width": 413.2809,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 1
       }
     ]
   },
@@ -1040,9 +666,9 @@
       },
       {
         "page_number": 6,
-        "x": 104.1585,
+        "x": 87.864,
         "y": 719.6256,
-        "width": 74.7996,
+        "width": 464.951,
         "height": 11.0258,
         "page_width": 595.32,
         "page_height": 841.92,
@@ -1051,146 +677,14 @@
       },
       {
         "page_number": 6,
-        "x": 182.2151,
-        "y": 719.6256,
-        "width": 14.7109,
+        "x": 87.864,
+        "y": 731.1456,
+        "width": 291.256,
         "height": 11.0258,
         "page_width": 595.32,
         "page_height": 841.92,
         "coordinate_system": "pdf_points_top_left",
         "location_index": 2
-      },
-      {
-        "page_number": 6,
-        "x": 200.183,
-        "y": 719.6256,
-        "width": 26.1151,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 3
-      },
-      {
-        "page_number": 6,
-        "x": 229.555,
-        "y": 719.6256,
-        "width": 13.0377,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 4
-      },
-      {
-        "page_number": 6,
-        "x": 245.8496,
-        "y": 719.6256,
-        "width": 32.121,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 5
-      },
-      {
-        "page_number": 6,
-        "x": 281.2375,
-        "y": 719.6256,
-        "width": 14.7109,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 6
-      },
-      {
-        "page_number": 6,
-        "x": 299.0858,
-        "y": 719.6256,
-        "width": 23.4558,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 7
-      },
-      {
-        "page_number": 6,
-        "x": 325.679,
-        "y": 719.6256,
-        "width": 14.7109,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 8
-      },
-      {
-        "page_number": 6,
-        "x": 343.6468,
-        "y": 719.6256,
-        "width": 10.1691,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 9
-      },
-      {
-        "page_number": 6,
-        "x": 357.0729,
-        "y": 719.6256,
-        "width": 48.1866,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 10
-      },
-      {
-        "page_number": 6,
-        "x": 408.5164,
-        "y": 719.6256,
-        "width": 12.201,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 11
-      },
-      {
-        "page_number": 6,
-        "x": 423.9743,
-        "y": 719.6256,
-        "width": 31.7027,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 12
-      },
-      {
-        "page_number": 6,
-        "x": 459.46,
-        "y": 719.6256,
-        "width": 45.089,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 13
-      },
-      {
-        "page_number": 6,
-        "x": 507.7959,
-        "y": 719.6256,
-        "width": 45.0191,
-        "height": 11.0258,
-        "page_width": 595.32,
-        "page_height": 841.92,
-        "coordinate_system": "pdf_points_top_left",
-        "location_index": 14
       }
     ]
   },
@@ -1222,6 +716,28 @@
         "page_height": 841.92,
         "coordinate_system": "pdf_points_top_left",
         "location_index": 0
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 754.0616,
+        "width": 464.9925,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 1
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 765.5816,
+        "width": 181.3461,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 2
       }
     ]
   },
@@ -1253,6 +769,17 @@
         "page_height": 841.92,
         "coordinate_system": "pdf_points_top_left",
         "location_index": 0
+      },
+      {
+        "page_number": 7,
+        "x": 87.864,
+        "y": 96.7456,
+        "width": 438.2051,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 1
       }
     ]
   }

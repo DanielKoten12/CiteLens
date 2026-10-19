@@ -57,7 +57,7 @@ function focusHighlight(id: string) {
     <div v-else-if="error" class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
       {{ errorMessage }}
     </div>
-    <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">
+    <div class="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">
       <PdfHighlightViewer
         ref="viewer"
         :src="source"
@@ -65,20 +65,6 @@ function focusHighlight(id: string) {
         :selected-id="selectedId"
         @select="selectHighlight"
       />
-      <div v-if="isDev" class="rounded-xl border bg-white p-3 text-xs">
-        <h2 class="mb-2 font-bold text-slate-800">Debug render per halaman</h2>
-        <div class="overflow-auto">
-          <table class="w-full text-left">
-            <thead><tr><th>Hal</th><th>Status</th><th>CSS</th><th>Canvas</th><th>Style</th><th>Key</th></tr></thead>
-            <tbody>
-              <tr v-for="(page, index) in debugPages" :key="index">
-                <td>{{ index + 1 }}</td><td>{{ page.status }}</td><td>{{ page.cssWidth.toFixed(1) }}</td>
-                <td>{{ page.canvasWidth }}</td><td>{{ page.canvasStyleWidth }}</td><td>{{ page.key }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
       <aside class="max-h-[620px] overflow-auto rounded-xl border bg-white p-3">
         <h2 class="mb-2 px-2 text-sm font-bold text-slate-800">Highlight ({{ highlights.length }})</h2>
         <button
@@ -92,5 +78,19 @@ function focusHighlight(id: string) {
         </button>
       </aside>
     </div>
+    <details v-if="isDev" class="rounded-xl border bg-white p-3 text-xs">
+      <summary class="cursor-pointer font-bold text-slate-800">Debug render per halaman</summary>
+      <div class="mt-2 overflow-auto">
+        <table class="w-full text-left">
+          <thead><tr><th>Hal</th><th>Status</th><th>CSS</th><th>Canvas</th><th>Style</th><th>Key</th></tr></thead>
+          <tbody>
+            <tr v-for="(page, index) in debugPages" :key="index">
+              <td>{{ index + 1 }}</td><td>{{ page.status }}</td><td>{{ page.cssWidth.toFixed(1) }}</td>
+              <td>{{ page.canvasWidth }}</td><td>{{ page.canvasStyleWidth }}</td><td>{{ page.key }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
   </main>
 </template>

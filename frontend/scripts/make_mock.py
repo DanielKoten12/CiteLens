@@ -107,6 +107,118 @@ def citation_locations(
     return locations
 
 
+def normalized_word(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", value.lower())
+
+
+def find_word_sequence(page_words: list[tuple], phrase: str) -> int | None:
+    target = [normalized_word(word) for word in phrase.split() if normalized_word(word)]
+    if not target:
+        return None
+    normalized = [(index, normalized_word(word[4])) for index, word in enumerate(page_words)]
+    normalized = [(index, value) for index, value in normalized if value]
+    values = [value for _, value in normalized]
+    for start in range(len(values) - len(target) + 1):
+        if values[start : start + len(target)] == target:
+            return normalized[start][0]
+    return None
+
+
+def reference_content_words(
+    pages: list[pymupdf.Page],
+    page_words: list[list[tuple]],
+) -> list[list[tuple]]:
+    """Keep article content while excluding repeated page furniture."""
+    line_counts: Counter[str] = Counter()
+    page_lines: list[list[tuple[str, list[tuple]]]] = []
+    for page, words in zip(pages, page_words):
+        lines: list[list[tuple]] = []
+        for word in words:
+            line = next((line for line in lines if abs(line[0][1] - word[1]) <= 2.5), None)
+            if line is None:
+                lines.append([word])
+            else:
+                line.append(word)
+        page_line_data: list[tuple[str, list[tuple]]] = []
+        for line in lines:
+            text = " ".join(word[4] for word in sorted(line, key=lambda word: word[0]))
+            line_counts[normalized_word(text)] += 1
+            page_line_data.append((text, line))
+        page_lines.append(page_line_data)
+
+    content: list[list[tuple]] = []
+    for page, lines in zip(pages, page_lines):
+        page_content: list[tuple] = []
+        for text, line in lines:
+            y = min(word[1] for word in line)
+            in_header_or_footer_band = y < 80 or y > page.rect.height - 60
+            repeated_line = line_counts[normalized_word(text)] > 1
+            if not in_header_or_footer_band and not repeated_line:
+                page_content.extend(sorted(line, key=lambda word: word[0]))
+        content.append(sorted(page_content, key=lambda word: (word[1], word[0])))
+    return content
+
+
+def line_locations(
+    page: pymupdf.Page,
+    words: list[tuple],
+    location_index_start: int = 0,
+) -> list[dict]:
+    lines: list[list[tuple]] = []
+    for word in words:
+        line = next((line for line in lines if abs(line[0][1] - word[1]) <= 2.5), None)
+        if line is None:
+            lines.append([word])
+        else:
+            line.append(word)
+    page_rect = page.rect
+    locations: list[dict] = []
+    for offset, line in enumerate(sorted(lines, key=lambda group: min(word[1] for word in group))):
+        x0 = min(word[0] for word in line)
+        y0 = min(word[1] for word in line)
+        x1 = max(word[2] for word in line)
+        y1 = max(word[3] for word in line)
+        locations.append(
+            {
+                "page_number": page.number + 1,
+                "x": round(x0, 4),
+                "y": round(y0, 4),
+                "width": round(x1 - x0, 4),
+                "height": round(y1 - y0, 4),
+                "page_width": round(page_rect.width, 4),
+                "page_height": round(page_rect.height, 4),
+                "coordinate_system": "pdf_points_top_left",
+                "location_index": location_index_start + offset,
+            }
+        )
+    return locations
+
+
+def reference_locations(
+    pages: list[pymupdf.Page],
+    page_words: list[list[tuple]],
+    starts: list[tuple[int, int]],
+    reference_index: int,
+) -> list[dict]:
+    start_page, start_word = starts[reference_index]
+    if reference_index + 1 < len(starts) and starts[reference_index + 1][0] == start_page:
+        end_page, end_word = starts[reference_index + 1]
+    else:
+        end_page, end_word = start_page, len(page_words[start_page])
+    locations: list[dict] = []
+    location_index = 0
+    for page_index in range(start_page, min(end_page, start_page) + 1):
+        first = start_word if page_index == start_page else 0
+        last = end_word if page_index == end_page else len(page_words[page_index])
+        if first >= last:
+            continue
+        page = pages[page_index]
+        page_locations = line_locations(page, page_words[page_index][first:last], location_index)
+        locations.extend(page_locations)
+        location_index += len(page_locations)
+    return locations
+
+
 def find_terms(document: pymupdf.Document, terms: list[str]) -> list[dict]:
     locations: list[dict] = []
     for term in terms:
@@ -122,6 +234,14 @@ def write_json(name: str, data: list[dict]) -> None:
 
 def main() -> None:
     document = pymupdf.open(PDF_PATH)
+    pages = list(document)
+    page_words = []
+    page_texts = []
+    for page in pages:
+        page_text, _, words = normalized_page_text(page)
+        page_texts.append(page_text)
+        page_words.append(words)
+    reference_page_words = reference_content_words(pages, page_words)
     references_seed = [
         ("Dima", "Dima, J., Hamzah, Moh. S., Tallo, C. G., & Fallo, D. Y. A. (2025). Tinjauan Literatur tentang Pemanfaatan Algoritma Greedy untuk Pencarian Jalur Terpendek.", ["Dima, J., Hamzah, Moh. S., Tallo, C. G., & Fallo, D. Y. A. (2025). Tinjauan Literatur tentang Pemanfaatan Algoritma", "Greedy untuk Pencarian Jalur Terpendek."], "valid", "10.53863/kst.v7i01.1683"),
         ("Farhan", "Farhan Raihan Wahidin, Wina Witanti, & Edvin Ramadhan. (2025). Pengontrolan Lampu Lalu Lintas Menggunakan Teknologi Deteksi Kendaraan YOLOV4.", ["Farhan Raihan Wahidin, Wina Witanti, & Edvin Ramadhan. (2025). Pengontrolan Lampu Lalu Lintas Menggunakan", "Teknologi Deteksi Kendaraan YOLOV4."], "suspicious", "https://doi.org/10.25126/jtiik.2025125"),
@@ -139,10 +259,27 @@ def main() -> None:
         ("Yao", "Yao, J., & Ye, Y. (2020). The effect of image recognition traffic prediction method under deep learning and naive Bayes algorithm on freeway traffic safety.", ["Yao, J., & Ye, Y. (2020). The effect of image recognition traffic prediction method under deep learning and naive"], "valid", "10.1016/j.imavis.2020.103971"),
         ("Zul", "Zul, Z., Al, H., & Subhiyakto, E. R. (2025). Analisis Komparatif Akurasi Prediksi Kanker Payudara Menggunakan Algoritma Random Forest dan Logistic Regression.", ["Zul, Z., Al, H., & Subhiyakto, E. R. (2025). Analisis Komparatif Akurasi Prediksi Kanker Payudara Menggunakan"], "valid", "10.33364/algoritma/v.22-1.2164"),
     ]
+    reference_starts: list[tuple[int, int]] = []
+    for _, _, search_terms, _, _ in references_seed:
+        found = next(
+            (
+                (page_index, word_index)
+                for page_index, words in enumerate(reference_page_words)
+                for word_index in [find_word_sequence(words, search_terms[0])]
+                if word_index is not None
+            ),
+            None,
+        )
+        if found is not None:
+            reference_starts.append(found)
+
     references = []
     by_author: dict[str, dict] = {}
     for index, (author, raw_text, search_terms, status, doi) in enumerate(references_seed, 1):
-        locations = find_terms(document, search_terms)
+        if index > len(reference_starts):
+            locations = []
+        else:
+            locations = reference_locations(pages, reference_page_words, reference_starts, index - 1)
         if not locations:
             print(f"Tidak ditemukan di PDF: {raw_text}")
             continue
@@ -174,6 +311,7 @@ def main() -> None:
         }
         references.append(reference)
         by_author[author] = reference
+        print(f"Referensi: {reference['title']} | halaman {sorted({location['page_number'] for location in locations})} | {len(locations)} location")
 
     citations = []
     citation_pattern = re.compile(r"\(([^()]{2,100}?),\s*(?:\d{4}|n\.d\.)\)")

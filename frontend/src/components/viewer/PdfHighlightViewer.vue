@@ -19,6 +19,7 @@ const props = defineProps<{
   src: string;
   highlights?: HighlightItem[];
   selectedId?: string | null;
+  maxPageWidth?: number;
 }>();
 
 const emit = defineEmits<{
@@ -66,6 +67,7 @@ let dprMediaQuery: MediaQueryList | null = null;
 const pageLabel = computed(() =>
   pdf.value ? `Halaman ${pageNumber.value} dari ${pdf.value.numPages}` : "Memuat PDF...",
 );
+const maxPageWidth = computed(() => props.maxPageWidth ?? 900);
 
 const debugPages = computed<DebugPage[]>(() =>
   pageStates.value.map((state, index) => ({
@@ -145,7 +147,7 @@ function colorFor(item: HighlightItem) {
 function updateFitWidth() {
   const width = container.value?.clientWidth ?? 0;
   if (width <= 0) return;
-  fitWidthValue.value = width - 32;
+  fitWidthValue.value = Math.min(maxPageWidth.value, Math.max(320, width - 32));
 }
 
 function updateDpr() {
@@ -266,11 +268,15 @@ function scheduleRenderPipeline(debounced = false) {
 function updateActivePage() {
   const root = container.value;
   if (!root) return;
-  const top = root.getBoundingClientRect().top;
+  const rootRect = root.getBoundingClientRect();
+  const center = rootRect.top + rootRect.height / 2;
   let closest = 0;
   let distance = Number.POSITIVE_INFINITY;
   pageRefs.value.forEach((shell, index) => {
-    const value = Math.abs(shell.getBoundingClientRect().top - top - 16);
+    const rect = shell.getBoundingClientRect();
+    const value = center >= rect.top && center <= rect.bottom
+      ? 0
+      : Math.min(Math.abs(center - rect.top), Math.abs(center - rect.bottom));
     if (value < distance) {
       closest = index;
       distance = value;
@@ -454,7 +460,7 @@ onBeforeUnmount(() => {
       </div>
     </header>
 
-    <div ref="container" class="flex h-[560px] max-h-[560px] min-h-0 flex-none justify-center overflow-auto p-4">
+    <div ref="container" class="flex h-[560px] max-h-[560px] min-w-0 w-full min-h-0 flex-none justify-center overflow-auto p-4">
       <div v-if="error" class="flex min-h-[560px] max-w-md flex-col items-center justify-center gap-2 text-center text-sm text-red-700"><strong>PDF tidak dapat dimuat</strong><span>{{ error }}</span></div>
       <div v-else-if="!pdf" class="flex min-h-[560px] items-center text-sm text-slate-500">Memuat dokumen PDF...</div>
       <div v-else class="flex flex-col gap-4">
