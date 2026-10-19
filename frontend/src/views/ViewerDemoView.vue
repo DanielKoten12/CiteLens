@@ -8,6 +8,7 @@ import { ApiError } from "@/lib/api";
 const route = useRoute();
 const viewer = ref<InstanceType<typeof PdfHighlightViewer> | null>(null);
 const selectedId = ref<string | null>(null);
+const isDev = import.meta.env.DEV;
 const documentId = typeof route.query.document === "string" ? route.query.document : undefined;
 const usingMock = !documentId;
 const {
@@ -25,6 +26,7 @@ const errorMessage = computed(() => {
   }
   return error.value.message;
 });
+const debugPages = computed(() => viewer.value?.debugPages ?? []);
 
 onMounted(() => {
   void load();
@@ -63,6 +65,20 @@ function focusHighlight(id: string) {
         :selected-id="selectedId"
         @select="selectHighlight"
       />
+      <div v-if="isDev" class="rounded-xl border bg-white p-3 text-xs">
+        <h2 class="mb-2 font-bold text-slate-800">Debug render per halaman</h2>
+        <div class="overflow-auto">
+          <table class="w-full text-left">
+            <thead><tr><th>Hal</th><th>Status</th><th>CSS</th><th>Canvas</th><th>Style</th><th>Key</th></tr></thead>
+            <tbody>
+              <tr v-for="(page, index) in debugPages" :key="index">
+                <td>{{ index + 1 }}</td><td>{{ page.status }}</td><td>{{ page.cssWidth.toFixed(1) }}</td>
+                <td>{{ page.canvasWidth }}</td><td>{{ page.canvasStyleWidth }}</td><td>{{ page.key }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
       <aside class="max-h-[620px] overflow-auto rounded-xl border bg-white p-3">
         <h2 class="mb-2 px-2 text-sm font-bold text-slate-800">Highlight ({{ highlights.length }})</h2>
         <button
