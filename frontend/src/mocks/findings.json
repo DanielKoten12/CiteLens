@@ -1,0 +1,315 @@
+[
+  {
+    "id": "citation:cit-7710ecf3-909e-5b04-900b-9051a15b960e",
+    "type": "citation_unreliable",
+    "severity": "high",
+    "message": "Sitasi tidak memiliki pasangan referensi yang dapat dipercaya.",
+    "reference_id": null,
+    "citation_id": "cit-7710ecf3-909e-5b04-900b-9051a15b960e",
+    "text": "(Niron et al., n.d.)",
+    "start_offset": 4124,
+    "end_offset": 4144,
+    "locations": [
+      {
+        "page_number": 1,
+        "x": 322.75,
+        "y": 544.7556,
+        "width": 76.65,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      }
+    ]
+  },
+  {
+    "id": "citation:cit-3b5bd089-23a3-5c8b-97c5-16cccad5b041",
+    "type": "citation_hallucination",
+    "severity": "high",
+    "message": "Sitasi tidak memiliki pasangan referensi yang dapat dipercaya.",
+    "reference_id": null,
+    "citation_id": "cit-3b5bd089-23a3-5c8b-97c5-16cccad5b041",
+    "text": "(Dima et al., 2025)",
+    "start_offset": 7287,
+    "end_offset": 7306,
+    "locations": [
+      {
+        "page_number": 2,
+        "x": 468.1,
+        "y": 142.7056,
+        "width": 84.81,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      }
+    ]
+  },
+  {
+    "id": "citation:cit-a35f3ff1-8fc2-57f1-9b07-e5690b151ddf",
+    "type": "citation_unreliable",
+    "severity": "high",
+    "message": "Sitasi tidak memiliki pasangan referensi yang dapat dipercaya.",
+    "reference_id": null,
+    "citation_id": "cit-a35f3ff1-8fc2-57f1-9b07-e5690b151ddf",
+    "text": "(Rodji et al., 2025)",
+    "start_offset": 7860,
+    "end_offset": 7880,
+    "locations": [
+      {
+        "page_number": 2,
+        "x": 516.7,
+        "y": 211.7056,
+        "width": 36.1746,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      },
+      {
+        "page_number": 2,
+        "x": 70.944,
+        "y": 223.2256,
+        "width": 40.2185,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 1
+      }
+    ]
+  },
+  {
+    "id": "ref-finding:ref-bd7d5b9a-4be0-5621-9a0a-3ed62ae56e56",
+    "type": "reference_suspicious",
+    "severity": "medium",
+    "message": "DOI ditemukan, tetapi metadata Crossref perlu ditinjau.",
+    "reference_id": "ref-bd7d5b9a-4be0-5621-9a0a-3ed62ae56e56",
+    "citation_id": null,
+    "text": "Farhan Raihan Wahidin, Wina Witanti, & Edvin Ramadhan. (2025). Pengontrolan Lampu Lalu Lintas Menggunakan Teknologi Deteksi Kendaraan YOLOV4.",
+    "start_offset": 50002,
+    "end_offset": 50143,
+    "locations": [
+      {
+        "page_number": 6,
+        "x": 70.944,
+        "y": 328.6156,
+        "width": 481.1678,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 340.1356,
+        "width": 465.0362,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 1
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 351.6556,
+        "width": 211.9877,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 2
+      }
+    ]
+  },
+  {
+    "id": "ref-finding:ref-4af5fe9e-4f82-5dd5-8d46-b33bf106c0b0",
+    "type": "reference_suspicious",
+    "severity": "medium",
+    "message": "DOI ditemukan, tetapi metadata Crossref perlu ditinjau.",
+    "reference_id": "ref-4af5fe9e-4f82-5dd5-8d46-b33bf106c0b0",
+    "citation_id": null,
+    "text": "Kiswanto, D., Ramadhani, F., Surbakti, N. M., & Nasution, N. A. (2025). Pengembangan dan Implementasi Sistem Deteksi Serangan DDoS Berbasis Algoritma Random Forest.",
+    "start_offset": 50005,
+    "end_offset": 50169,
+    "locations": [
+      {
+        "page_number": 6,
+        "x": 70.944,
+        "y": 443.5956,
+        "width": 481.6693,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 455.1156,
+        "width": 422.0371,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 1
+      }
+    ]
+  },
+  {
+    "id": "ref-finding:ref-2a357779-fa56-5a91-8457-43d4ae97be26",
+    "type": "reference_pending",
+    "severity": "info",
+    "message": "Menunggu verifikasi Crossref.",
+    "reference_id": "ref-2a357779-fa56-5a91-8457-43d4ae97be26",
+    "citation_id": null,
+    "text": "Kusuma, M. R., Informasi, P. S., Mandiri, U., Sistem, P., Informasi, T., Darunnajah, U., Seleksi, F., & Learning, A. M. (2025). Pendekatan Analisis Prediktif Regresi Menggunakan Metode Pembelajaran Mesin Untuk Memperkirakan Effort.",
+    "start_offset": 50007,
+    "end_offset": 50238,
+    "locations": [
+      {
+        "page_number": 6,
+        "x": 70.944,
+        "y": 501.0756,
+        "width": 481.078,
+        "height": 11.0257,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 512.5956,
+        "width": 464.5711,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 1
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 524.1156,
+        "width": 82.646,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 2
+      }
+    ]
+  },
+  {
+    "id": "ref-finding:ref-e27d4c93-c383-58f1-8310-6bb87c205007",
+    "type": "reference_invalid",
+    "severity": "high",
+    "message": "DOI tidak ditemukan di Crossref.",
+    "reference_id": "ref-e27d4c93-c383-58f1-8310-6bb87c205007",
+    "citation_id": null,
+    "text": "Niron, W. P., Kuswara, K. M., Paul, D., & Tamelan, G. (n.d.). Faktor-Faktor Penyebab Kemacetan Lalu Lintas Di Ruas Jalan Herman Fernandez Larantuka Kabupaten Flores Timur.",
+    "start_offset": 50009,
+    "end_offset": 50180,
+    "locations": [
+      {
+        "page_number": 6,
+        "x": 70.944,
+        "y": 570.0756,
+        "width": 481.8166,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 581.5956,
+        "width": 464.5746,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 1
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 593.1156,
+        "width": 464.9843,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 2
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 604.6356,
+        "width": 356.5684,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 3
+      }
+    ]
+  },
+  {
+    "id": "ref-finding:ref-72b55f20-7d1a-5334-a1e6-81af73eba21e",
+    "type": "reference_not_found",
+    "severity": "high",
+    "message": "Tidak ada kandidat Crossref yang cocok.",
+    "reference_id": "ref-72b55f20-7d1a-5334-a1e6-81af73eba21e",
+    "citation_id": null,
+    "text": "Rodji, A. P., Studi, P., Ilmu, M., Nusa, U., Jakarta, M., Melayu, J. C., Timur, K. J., Ibukota, D. K., Sipil, S. T., Teknik, F., Krisnadwipayana, U., Gede, P., Bekasi, K., Tree, D., & Keparahan, K. (2025). Klasifikasi Keparahan Kecelakaan Lalu Lintas Menggunakan Machine Learning.",
+    "start_offset": 50013,
+    "end_offset": 50293,
+    "locations": [
+      {
+        "page_number": 6,
+        "x": 70.944,
+        "y": 708.1056,
+        "width": 481.1343,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 0
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 719.6256,
+        "width": 464.951,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 1
+      },
+      {
+        "page_number": 6,
+        "x": 87.864,
+        "y": 731.1456,
+        "width": 291.256,
+        "height": 11.0258,
+        "page_width": 595.32,
+        "page_height": 841.92,
+        "coordinate_system": "pdf_points_top_left",
+        "location_index": 2
+      }
+    ]
+  }
+]
