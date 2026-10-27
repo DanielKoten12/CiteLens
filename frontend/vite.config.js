@@ -1,4 +1,4 @@
-var _a;
+var _a, _b;
 import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
@@ -21,6 +21,10 @@ export default defineConfig({
         proxy: {
             "/api": {
                 target: (_a = process.env.API_PROXY_TARGET) !== null && _a !== void 0 ? _a : "http://localhost:8000",
+                changeOrigin: true,
+            },
+            "/storage": {
+                target: (_b = process.env.API_PROXY_TARGET) !== null && _b !== void 0 ? _b : "http://localhost:8000",
                 changeOrigin: true,
             },
         },
