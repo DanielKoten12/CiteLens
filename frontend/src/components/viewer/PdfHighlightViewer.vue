@@ -139,6 +139,7 @@ function colorFor(item: HighlightItem) {
   return ({
     hallucination: "var(--highlight-citation-hallucination)",
     unreliable: "var(--highlight-citation-unreliable)",
+    unresolved: "var(--highlight-citation-unresolved)",
     pending: "var(--highlight-citation-pending)",
     valid: "var(--highlight-citation-valid)",
   } as Record<string, string>)[item.status] ?? "var(--highlight-neutral)";
@@ -440,7 +441,7 @@ onBeforeUnmount(() => {
 <template>
   <section
     class="flex min-h-[620px] flex-col overflow-hidden rounded-xl border bg-slate-100 shadow-sm"
-    style="--highlight-reference-valid: #22c55e; --highlight-reference-suspicious: #f59e0b; --highlight-reference-invalid: #ef4444; --highlight-reference-pending: #94a3b8; --highlight-citation-valid: #22c55e; --highlight-citation-hallucination: #eab308; --highlight-citation-unreliable: #fb7185; --highlight-citation-pending: #cbd5e1; --highlight-neutral: #94a3b8"
+    style="--highlight-reference-valid: #22c55e; --highlight-reference-suspicious: #f59e0b; --highlight-reference-invalid: #ef4444; --highlight-reference-pending: #94a3b8; --highlight-citation-valid: #22c55e; --highlight-citation-hallucination: #eab308; --highlight-citation-unreliable: #fb7185; --highlight-citation-unresolved: #f97316; --highlight-citation-pending: #cbd5e1; --highlight-neutral: #94a3b8"
   >
     <header class="flex flex-wrap items-center justify-between gap-3 border-b bg-white px-4 py-3">
       <div class="flex items-center gap-2">

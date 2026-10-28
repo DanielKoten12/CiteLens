@@ -45,7 +45,7 @@ const router = createRouter({
       props: true,
     },
     {
-      path: "/hasil/:id?",
+      path: "/hasil/:id",
       name: "result",
       component: () => import("@/views/ResultView.vue"),
       props: true,

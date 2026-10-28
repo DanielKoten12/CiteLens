@@ -8,6 +8,8 @@ const route = useRoute();
 <template>
   <div class="min-h-full flex flex-col" :style="{ background: 'var(--background)', color: 'var(--foreground)' }">
     <AppHeader v-if="!route.meta.hideHeader" />
-    <RouterView />
+    <RouterView v-slot="{ Component }">
+      <component :is="Component" :key="route.fullPath" />
+    </RouterView>
   </div>
 </template>

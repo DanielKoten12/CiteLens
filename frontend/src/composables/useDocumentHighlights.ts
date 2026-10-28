@@ -22,8 +22,6 @@ type HighlightSource = {
   references: (id: string, params?: { page?: number; per_page?: number }) => Promise<Paginated<ApiReference>>;
   citations: (id: string, params?: { page?: number; per_page?: number }) => Promise<Paginated<ApiCitation>>;
   findings: (id: string, params?: { page?: number; per_page?: number }) => Promise<Paginated<ApiFinding>>;
-  reference: (id: string) => Promise<{ data: ApiReference }>;
-  citation: (id: string) => Promise<{ data: ApiCitation }>;
 };
 
 const cache = new Map<string, DocumentHighlightsResult>();
@@ -61,38 +59,12 @@ async function allPages<T>(
   return items;
 }
 
-async function mapWithConcurrency<T, R>(
-  values: T[],
-  limit: number,
-  mapper: (value: T) => Promise<R>,
-): Promise<R[]> {
-  const results = new Array<R>(values.length);
-  let next = 0;
-
-  async function worker() {
-    while (next < values.length) {
-      const index = next;
-      next += 1;
-      results[index] = await mapper(values[index]);
-    }
-  }
-
-  await Promise.all(Array.from({ length: Math.min(limit, values.length) }, worker));
-  return results;
-}
-
 function createMockSource(): HighlightSource {
   return {
     get: async () => ({ data: mockDocument }),
-    references: async () => mockPage(mockReferences.map(({ locations: _locations, ...reference }) => reference)),
-    citations: async () => mockPage(mockCitations.map(({ locations: _locations, ...citation }) => citation)),
+    references: async () => mockPage(mockReferences),
+    citations: async () => mockPage(mockCitations),
     findings: async () => mockPage(mockFindings),
-    reference: async (id) => ({
-      data: mockReferences.find((reference) => reference.id === id) ?? mockReferences[0],
-    }),
-    citation: async (id) => ({
-      data: mockCitations.find((citation) => citation.id === id) ?? mockCitations[0],
-    }),
   };
 }
 
@@ -178,42 +150,18 @@ export function useDocumentHighlights(
 
       const locations = locationsByEntity(findingItems);
 
-      // TODO: hapus fallback detail ini jika endpoint list sudah memuat locations.
-      const referenceDetails = await mapWithConcurrency(
-        referenceItems.filter((reference) => !reference.locations?.length),
-        4,
-        (reference) => withRateLimitRetry(() => source.reference(reference.id)),
-      );
-      const citationDetails = await mapWithConcurrency(
-        citationItems.filter((citation) => !citation.locations?.length),
-        4,
-        (citation) => withRateLimitRetry(() => source.citation(citation.id)),
-      );
-      const detailReferences = new Map(referenceDetails.map(({ data }) => [data.id, data]));
-      const detailCitations = new Map(citationDetails.map(({ data }) => [data.id, data]));
-
       const enrichedReferences = referenceItems.map((reference) => {
-        const detail = detailReferences.get(reference.id);
-        const findingLocations = locations.references.get(reference.id);
+        const findingLocations = locations.references.get(reference.id) ?? [];
         return {
           ...reference,
-          locations: findingLocations?.length
-            ? findingLocations
-            : reference.locations?.length
-              ? reference.locations
-              : detail?.locations ?? [],
+          locations: findingLocations.length ? findingLocations : reference.locations ?? [],
         };
       });
       const enrichedCitations = citationItems.map((citation) => {
-        const detail = detailCitations.get(citation.id);
-        const findingLocations = locations.citations.get(citation.id);
+        const findingLocations = locations.citations.get(citation.id) ?? [];
         return {
           ...citation,
-          locations: findingLocations?.length
-            ? findingLocations
-            : citation.locations?.length
-              ? citation.locations
-              : detail?.locations ?? [],
+          locations: findingLocations.length ? findingLocations : citation.locations ?? [],
         };
       });
 

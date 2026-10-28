@@ -42,6 +42,7 @@ export type CitationStatus =
   | "valid"
   | "unreliable"
   | "pending"
+  | "unresolved"
   | "hallucination";
 
 export type Severity = "high" | "medium" | "low" | "info";
@@ -50,7 +51,9 @@ export type FindingType =
   | "reference_invalid"
   | "reference_suspicious"
   | "reference_not_found"
+  | "reference_pending"
   | "citation_unreliable"
+  | "citation_unresolved"
   | "citation_hallucination";
 
 export type ReportStatus = "pending" | "processing" | "completed" | "failed";
@@ -67,6 +70,7 @@ export interface DocumentSummary {
   valid_citations: number;
   unreliable_citations: number;
   pending_citations: number;
+  unresolved_citations: number;
   hallucination_citations: number;
 }
 
@@ -130,8 +134,8 @@ export interface Candidate {
 export interface Finding {
   id: string;
   status: FindingStatus;
-  confidence: number; // 0-1, tampilkan sebagai persen
-  reason: string;
+  confidence: number | null; // 0-1, tampilkan sebagai persen
+  reason: string | null;
   selected_candidate_id: string | null;
   is_manual?: boolean;
   reviewed_by?: string | null;
@@ -170,6 +174,7 @@ export interface ApiCitation {
   text_end_offset: number;
   occurrence_index: number;
   status: CitationStatus;
+  resolution_method?: string | null;
   reference: { id: string; title: string } | null;
   locations?: Location[];
 }
