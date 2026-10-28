@@ -59,6 +59,13 @@ final class ValidateReferencesStep implements PipelineStep
             $doiLookup = DoiLookup::NotPresent;
             $candidates = [];
 
+            if (! ReferenceQuery::isSearchable($reference)) {
+                $verifications[] = new ReferenceVerification($referenceValue, $doiLookup, []);
+                $this->progress->report($document, $this->step(), $index + 1, $total);
+
+                continue;
+            }
+
             if ($referenceValue->doi !== null) {
                 if (! $referenceValue->doiValid) {
                     $doiLookup = DoiLookup::Malformed;

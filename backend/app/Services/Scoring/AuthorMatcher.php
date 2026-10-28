@@ -139,6 +139,18 @@ final class AuthorMatcher
                 continue;
             }
 
+            if (count($tokens) > 1 && $this->areCompleteNames($tokens)) {
+                foreach ($tokens as $token) {
+                    $name = $this->nameFromSingleToken($token);
+
+                    if ($name !== null) {
+                        $names[] = $name;
+                    }
+                }
+
+                continue;
+            }
+
             if (count($tokens) === 1) {
                 $name = $this->nameFromSingleToken($tokens[0]);
 
@@ -162,6 +174,23 @@ final class AuthorMatcher
         }
 
         return $names;
+    }
+
+    /**
+     * @param  list<string>  $tokens
+     */
+    private function areCompleteNames(array $tokens): bool
+    {
+        foreach ($tokens as $token) {
+            $words = preg_split('/\s+/u', $token) ?: [];
+            $last = end($words);
+
+            if (count($words) < 2 || ! is_string($last) || $this->looksLikeInitial($last)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

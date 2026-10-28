@@ -124,16 +124,19 @@ def get_authors(bibl: ET.Element) -> str | None:
 
 
 def get_title(bibl: ET.Element) -> str | None:
+    titles: list[str] = []
     analytic = bibl.find("tei:analytic", TEI_NS)
     monogr = bibl.find("tei:monogr", TEI_NS)
-    title = find_first(analytic, [
-        "tei:title[@level='a']",
-        "tei:title[@type='main']",
-        "tei:title",
-    ])
-    if title is None:
-        title = find_first(monogr, ["tei:title[@level='m']", "tei:title[@level='j']", "tei:title"])
-    return clean_text(title)
+    title_elements = []
+    if analytic is not None:
+        title_elements.extend(analytic.findall("tei:title", TEI_NS))
+    if not title_elements and monogr is not None:
+        title_elements.extend(monogr.findall("tei:title[@level='m']", TEI_NS))
+    for title in title_elements:
+        value = clean_text(title)
+        if value and value not in titles:
+            titles.append(value)
+    return " ".join(titles) or None
 
 
 def get_publication_name(bibl: ET.Element) -> str | None:
@@ -177,6 +180,35 @@ def locate_text(full_text: str, needle: str | None, start_at: int = 0) -> tuple[
     return position, position + len(normalized)
 
 
+def context_snippet(full_text: str, start: int | None, end: int | None) -> tuple[str | None, str | None]:
+    if start is None or end is None:
+        return None, None
+
+    before_start = max(0, start - 120)
+    if before_start > 0:
+        first_boundary = full_text.find(" ", before_start, start)
+        if first_boundary >= 0:
+            before_start = first_boundary + 1
+    before = full_text[before_start:start].rstrip()
+    if before_start > 0:
+        before = before.lstrip()
+        if before:
+            before = "... " + before
+
+    after_end = min(len(full_text), end + 120)
+    if after_end < len(full_text):
+        last_boundary = full_text.rfind(" ", end, after_end)
+        if last_boundary > end:
+            after_end = last_boundary
+    after = full_text[end:after_end].lstrip()
+    if after_end < len(full_text):
+        after = after.rstrip()
+        if after:
+            after = after + " ..."
+
+    return before, after
+
+
 def extract_citations(root: ET.Element, full_text: str, page_sizes: dict[int, tuple[float | None, float | None]], reference_indices: dict[str, int]) -> list[dict[str, Any]]:
     citations: list[dict[str, Any]] = []
     cursor = 0
@@ -187,13 +219,14 @@ def extract_citations(root: ET.Element, full_text: str, page_sizes: dict[int, tu
         start, end = locate_text(full_text, citation_text, cursor)
         if start is not None and end is not None:
             cursor = end
+        context_before, context_after = context_snippet(full_text, start, end)
         target = (ref.get("target") or "").strip().split()
         target_id = target[0].lstrip("#") if target else None
         citations.append({
             "citation_text": citation_text,
             "citation_marker": citation_text,
-            "context_before": full_text[max(0, start - 120):start] if start is not None else None,
-            "context_after": full_text[end:min(len(full_text), end + 120)] if end is not None else None,
+            "context_before": context_before,
+            "context_after": context_after,
             "text_start_offset": start,
             "text_end_offset": end,
             "occurrence_index": len(citations),
@@ -225,6 +258,84 @@ def parse_reference(bibl: ET.Element, index: int, full_text: str, cursor: int, p
     return reference, cursor
 
 
+def is_bibliography_entry(reference: dict[str, Any]) -> bool:
+    """Reject headings and prose that GROBID sometimes wraps as biblStruct."""
+    raw_text = " ".join((reference.get("raw_text") or "").split()).strip()
+    normalized = raw_text.casefold().strip(" .:-")
+
+    if not raw_text or normalized in {
+        "daftar pustaka",
+        "references",
+        "bibliography",
+        "saran",
+        "kesimpulan",
+    }:
+        return False
+
+    if reference.get("doi"):
+        return True
+
+    has_title = bool(reference.get("title"))
+    has_authors = bool(reference.get("authors"))
+    has_publication = bool(reference.get("publication_name"))
+    has_year = reference.get("publication_year") is not None
+
+    return has_year and (has_title or has_authors or has_publication) or has_authors and (
+        has_title or has_publication
+    )
+
+
+def merge_reference_parts(
+    reference: dict[str, Any],
+    fragment: dict[str, Any],
+) -> dict[str, Any]:
+    merged = dict(reference)
+    for field in ("raw_text", "title"):
+        values = [merged.get(field), fragment.get(field)]
+        values = [" ".join(value.split()) for value in values if value]
+        merged[field] = " ".join(dict.fromkeys(values)) or None
+
+    for field in ("authors", "publication_name", "doi", "publication_year"):
+        if not merged.get(field) and fragment.get(field):
+            merged[field] = fragment[field]
+
+    merged["text_end_offset"] = fragment.get("text_end_offset") or merged.get("text_end_offset")
+    merged["locations"] = merged.get("locations", []) + fragment.get("locations", [])
+    return merged
+
+
+def is_reference_fragment(reference: dict[str, Any], primary: dict[str, Any]) -> bool:
+    raw_text = " ".join((reference.get("raw_text") or "").split())
+    if not raw_text or len(raw_text) > 180:
+        return False
+    if raw_text.casefold().strip(" .:-") in {
+        "daftar pustaka",
+        "references",
+        "bibliography",
+        "saran",
+        "kesimpulan",
+    }:
+        return False
+    publication_name = reference.get("publication_name")
+    title = reference.get("title")
+    if any(reference.get(field) for field in ("doi", "authors")):
+        return False
+    if publication_name and title and publication_name.casefold() != title.casefold():
+        return False
+    if not reference.get("title"):
+        return False
+    primary_locations = primary.get("locations") or []
+    fragment_locations = reference.get("locations") or []
+    if not primary_locations or not fragment_locations:
+        return False
+    first = primary_locations[-1]
+    second = fragment_locations[0]
+    return (
+        first["page_number"] == second["page_number"]
+        and second["y"] - (first["y"] + first["height"]) <= 48
+    )
+
+
 def parse_tei(tei_xml: str) -> dict[str, Any]:
     try:
         root = ET.fromstring(tei_xml)
@@ -238,15 +349,34 @@ def parse_tei(tei_xml: str) -> dict[str, Any]:
     page_sizes = extract_page_sizes(root)
     header = extract_header(root)
 
-    bibl_structs = root.findall(".//tei:listBibl/tei:biblStruct", TEI_NS)
+    bibl_structs = root.findall(".//tei:text/tei:back//tei:listBibl/tei:biblStruct", TEI_NS)
+    if not bibl_structs:
+        bibl_structs = root.findall(".//tei:listBibl/tei:biblStruct", TEI_NS)
     references: list[dict[str, Any]] = []
     reference_indices: dict[str, int] = {}
     cursor = 0
-    for index, bibl in enumerate(bibl_structs):
-        reference, cursor = parse_reference(bibl, index, full_text, cursor, page_sizes)
-        references.append(reference)
-        if reference.get("xml_id"):
-            reference_indices[reference["xml_id"]] = index
+    index = 0
+    while index < len(bibl_structs):
+        bibl = bibl_structs[index]
+        candidate, next_cursor = parse_reference(bibl, len(references), full_text, cursor, page_sizes)
+        if not is_bibliography_entry(candidate):
+            index += 1
+            continue
+
+        if index + 1 < len(bibl_structs):
+            fragment, fragment_cursor = parse_reference(
+                bibl_structs[index + 1], len(references), full_text, next_cursor, page_sizes
+            )
+            if is_reference_fragment(fragment, candidate):
+                candidate = merge_reference_parts(candidate, fragment)
+                next_cursor = fragment_cursor
+                index += 1
+
+        cursor = next_cursor
+        references.append(candidate)
+        if candidate.get("xml_id"):
+            reference_indices[candidate["xml_id"]] = candidate["reference_index"]
+        index += 1
 
     citations = extract_citations(root, body_text, page_sizes, reference_indices)
     for reference in references:

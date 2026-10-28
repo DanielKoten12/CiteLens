@@ -30,6 +30,17 @@ final class VerdictDecider
         bool $transientFailure,
         array $ranked,
     ): ReferenceVerdict {
+        if ($reference->doi === null && $this->isInstitutionalDocument($reference)) {
+            return $this->verdict(
+                $reference,
+                ReferenceFindingStatus::Suspicious,
+                null,
+                'Dokumen lembaga atau standar tanpa DOI perlu dicek secara manual.',
+                null,
+                $ranked,
+            );
+        }
+
         if ($transientFailure) {
             return $this->verdict($reference, ReferenceFindingStatus::Pending, null, MatchReasonBuilder::TRANSIENT, null, $ranked);
         }
@@ -129,6 +140,24 @@ final class VerdictDecider
         }
 
         return $this->verdict($reference, ReferenceFindingStatus::NotFound, null, MatchReasonBuilder::NOT_FOUND, null, $ranked);
+    }
+
+    private function isInstitutionalDocument(ScoringReference $reference): bool
+    {
+        $text = mb_strtolower(implode(' ', array_filter([
+            $reference->rawText,
+            $reference->title,
+            $reference->authors,
+            $reference->publicationName,
+        ])));
+
+        foreach (['bsn', 'sni', 'badan', 'kementerian', 'laporan'] as $keyword) {
+            if (str_contains($text, $keyword)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

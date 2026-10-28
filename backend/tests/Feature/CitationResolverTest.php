@@ -95,7 +95,7 @@ it('leaves a low-similarity answer unmatched', function () {
         ->and($resolution->candidates)->toBe([]);
 });
 
-it('treats an exact tie as unresolved and orders candidates by bibliography position', function () {
+it('chooses the earliest candidate when duplicate entries tie', function () {
     $resolution = $this->resolver->resolve(
         $this->parser->parse('(Koten, 2023)'),
         citationReferences([
@@ -104,8 +104,8 @@ it('treats an exact tie as unresolved and orders candidates by bibliography posi
         ]),
     );
 
-    expect($resolution->state)->toBe(CitationResolutionState::Unresolved)
-        ->and($resolution->referenceId)->toBeNull()
+    expect($resolution->state)->toBe(CitationResolutionState::Paired)
+        ->and($resolution->referenceId)->toBe('ref-earliest')
         ->and($resolution->candidates[0]->referenceId)->toBe('ref-earliest')
         ->and($resolution->candidates[1]->referenceId)->toBe('ref-later');
 });

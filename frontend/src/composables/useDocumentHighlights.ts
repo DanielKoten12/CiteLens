@@ -209,6 +209,10 @@ export function useDocumentHighlights(
         const findingLocations = locations.citations.get(citation.id);
         return {
           ...citation,
+          context_before: detail?.context_before ?? citation.context_before,
+          context_after: detail?.context_after ?? citation.context_after,
+          reference: detail?.reference ?? citation.reference,
+          status: detail?.status ?? citation.status,
           locations: findingLocations?.length
             ? findingLocations
             : citation.locations?.length

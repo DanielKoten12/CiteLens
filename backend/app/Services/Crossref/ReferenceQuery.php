@@ -21,9 +21,10 @@ final class ReferenceQuery
     public static function fromReference(ResearchedDocumentReference $reference): self
     {
         $author = self::firstAuthorSurname($reference->authors);
+        $title = self::queryTitle($reference);
 
         $parts = array_values(array_filter([
-            $reference->title,
+            $title,
             $author,
             $reference->publication_year !== null ? (string) $reference->publication_year : null,
         ], static fn (?string $value): bool => $value !== null && trim($value) !== ''));
@@ -33,6 +34,28 @@ final class ReferenceQuery
             author: $author,
             year: $reference->publication_year,
         );
+    }
+
+    public static function isSearchable(ResearchedDocumentReference $reference): bool
+    {
+        return $reference->doi !== null
+                || $reference->title !== null
+                || $reference->authors !== null
+                || $reference->publication_name !== null
+                || $reference->publication_year !== null;
+    }
+
+    private static function queryTitle(ResearchedDocumentReference $reference): ?string
+    {
+        $title = trim((string) $reference->title);
+        $wordCount = $title === '' ? 0 : count(preg_split('/\s+/u', $title) ?: []);
+
+        $rawText = trim((string) $reference->raw_text);
+
+        return $wordCount < 4 && $rawText !== ''
+            && str_contains(mb_strtolower($rawText), mb_strtolower($title))
+            ? trim($reference->raw_text)
+            : ($title !== '' ? $title : null);
     }
 
     /**

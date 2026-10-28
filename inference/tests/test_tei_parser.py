@@ -7,7 +7,13 @@ from pathlib import Path
 import pytest
 
 from inference.grobid import TEIParseError, parse_tei
-from inference.grobid.tei import extract_page_sizes, get_doi, get_publication_year, parse_coords
+from inference.grobid.tei import (
+    context_snippet,
+    extract_page_sizes,
+    get_doi,
+    get_publication_year,
+    parse_coords,
+)
 from inference.schemas import ExtractionData
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -58,6 +64,18 @@ def test_parse_coords_keeps_unknown_page_sizes_null() -> None:
 
     assert boxes[0]["page_width"] is None
     assert boxes[0]["page_height"] is None
+
+
+def test_context_snippet_truncates_at_word_boundaries() -> None:
+    text = "prefix " + ("kata " * 40) + " (Koten, 2020) " + ("lanjutan " * 40)
+    start = text.index("(Koten")
+    before, after = context_snippet(text, start, start + len("(Koten, 2020)"))
+
+    assert before is not None and after is not None
+    assert before.startswith("...")
+    assert before.rstrip().endswith("kata")
+    assert after.lstrip().startswith("lanjutan")
+    assert after.endswith("...")
 
 
 def test_extract_page_sizes_subtracts_the_upper_left_origin(fulltext_tei: str) -> None:
@@ -124,6 +142,90 @@ def test_parse_tei_extracts_header_references_and_citations(fulltext_tei: str) -
 def test_parse_tei_rejects_malformed_xml() -> None:
     with pytest.raises(TEIParseError):
         parse_tei("<broken")
+
+
+def test_parse_tei_ignores_back_matter_headings_wrapped_as_references() -> None:
+    tei = f"""
+    <TEI xmlns="{TEI_NS}">
+      <text>
+        <back>
+          <div><head>SARAN</head>
+            <listBibl>
+              <biblStruct xml:id="heading"><analytic><title>Daftar Pustaka</title></analytic></biblStruct>
+              <biblStruct xml:id="real">
+                <analytic><title>Metode Penelitian</title>
+                  <author><persName><surname>Fidiani</surname></persName></author>
+                </analytic>
+                <monogr><title level="j">Jurnal Riset</title>
+                  <imprint><date when="2022">2022</date></imprint>
+                </monogr>
+              </biblStruct>
+            </listBibl>
+          </div>
+        </back>
+      </text>
+    </TEI>
+    """
+
+    parsed = parse_tei(tei)
+
+    assert len(parsed["references"]) == 1
+    assert parsed["references"][0]["title"] == "Metode Penelitian"
+    assert parsed["references"][0]["reference_index"] == 0
+
+
+def test_parse_tei_rejects_long_saran_prose_wrapped_as_reference() -> None:
+    tei = f"""
+    <TEI xmlns="{TEI_NS}">
+      <text>
+        <back><div><head>SARAN</head><listBibl>
+          <biblStruct xml:id="saran">
+            <analytic><title>
+              Penelitian selanjutnya dapat mengembangkan kajian ini dengan memperhatikan
+              berbagai faktor lain agar hasil analisis dapat digunakan oleh masyarakat.
+            </title></analytic>
+          </biblStruct>
+          <biblStruct xml:id="real">
+            <analytic>
+              <title>Metode Penelitian</title>
+              <author><persName><surname>Fidiani</surname></persName></author>
+            </analytic>
+            <monogr><imprint><date when="2022">2022</date></imprint></monogr>
+          </biblStruct>
+        </listBibl></div></back>
+      </text>
+    </TEI>
+    """
+
+    parsed = parse_tei(tei)
+
+    assert len(parsed["references"]) == 1
+    assert parsed["references"][0]["title"] == "Metode Penelitian"
+
+
+def test_parse_tei_merges_split_institutional_reference_fragments() -> None:
+    tei = f"""
+    <TEI xmlns="{TEI_NS}">
+      <facsimile><surface lrx="595" lry="842"/></facsimile>
+      <text><back><listBibl>
+        <biblStruct xml:id="bsn" coords="1,80,200,200,10">
+          <analytic><title>SNI Nomor</title>
+            <author><persName><surname>BSN</surname></persName></author>
+          </analytic>
+          <monogr><imprint><date when="2004">2004</date></imprint></monogr>
+        </biblStruct>
+        <biblStruct coords="1,80,212,400,10">
+          <analytic><title>Tentang Tata Cara Perencanaan Lingkungan Perumahan</title></analytic>
+        </biblStruct>
+      </listBibl></back></text>
+    </TEI>
+    """
+
+    parsed = parse_tei(tei)
+
+    assert len(parsed["references"]) == 1
+    assert parsed["references"][0]["title"] == "SNI Nomor Tentang Tata Cara Perencanaan Lingkungan Perumahan"
+    assert len(parsed["references"][0]["locations"]) == 2
 
 
 def test_captured_real_response_matches_the_contract_models() -> None:
