@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class LocationData(BaseModel):
@@ -81,14 +81,43 @@ class ExtractResponse(BaseModel):
 
 
 class HealthData(BaseModel):
-    """Liveness payload of ``GET /health``.
-
-    ``sbert`` is intentionally absent until the SBERT slice lands (Phase 02);
-    tests tolerate its future addition.
-    """
+    """Liveness payload of ``GET /health``."""
 
     status: Literal["ok", "degraded"]
     grobid: Literal["up", "down"]
+    sbert: Literal["up", "down"]
+
+
+class EmbeddingRequest(BaseModel):
+    """Body of ``POST /v1/embeddings``.
+
+    ``model`` is the logical model name of the contract (`"sbert"`); the concrete
+    checkpoint is service configuration (``SBERT_MODEL``), not a client choice.
+    """
+
+    texts: list[str] = Field(min_length=1)
+    model: Literal["sbert"] = "sbert"
+
+    @field_validator("texts")
+    @classmethod
+    def texts_must_not_be_blank(cls, texts: list[str]) -> list[str]:
+        if any(not text.strip() for text in texts):
+            raise ValueError("Setiap teks harus berisi minimal satu karakter.")
+        return texts
+
+
+class EmbeddingData(BaseModel):
+    """Embedding payload returned in ``data``: one vector per requested text, in order."""
+
+    model: Literal["sbert"]
+    dimensions: int
+    embeddings: list[list[float]]
+
+
+class EmbeddingResponse(BaseModel):
+    """Envelope of ``POST /v1/embeddings``."""
+
+    data: EmbeddingData
 
 
 class ErrorBody(BaseModel):
