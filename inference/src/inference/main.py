@@ -2,12 +2,15 @@
 
 Wiring only: the exception handlers that render the standard error envelope
 (`docs/API_SPEC.md` §2.5) and the capability routers. Capability code lives in
-``inference.grobid`` and will grow ``inference.sbert`` for embeddings.
+``inference.grobid`` (extraction) and ``inference.sbert`` (embeddings).
 """
 
 from __future__ import annotations
 
 import logging
+import threading
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -15,7 +18,9 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from inference.api import extract, health
+from inference.api import embeddings, extract, health
+from inference.config import get_settings
+from inference.sbert import get_sbert_encoder
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +30,7 @@ _DEFAULT_ERRORS: dict[int, tuple[str, str]] = {
     413: ("PAYLOAD_TOO_LARGE", "Ukuran file melewati batas yang diizinkan."),
     415: ("UNSUPPORTED_MEDIA_TYPE", "Hanya file PDF yang diterima."),
     422: ("VALIDATION_ERROR", "Data permintaan tidak valid."),
-    503: ("INFERENCE_UNAVAILABLE", "Layanan ekstraksi tidak tersedia."),
+    503: ("INFERENCE_UNAVAILABLE", "Layanan inferensi tidak tersedia."),
 }
 
 
@@ -79,12 +84,29 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     return error_response("SERVER_ERROR", "Terjadi kesalahan.", 500)
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Optionally load SBERT in the background so the first request is not the slow one.
+
+    A daemon thread keeps startup (and the container healthcheck) responsive; a
+    failed preload is logged and retried by the first ``/v1/embeddings`` call.
+    """
+
+    settings = get_settings()
+    if settings.sbert_preload:
+        encoder = get_sbert_encoder(settings)
+        threading.Thread(target=encoder.warm_up, name="sbert-preload", daemon=True).start()
+    yield
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
+        lifespan=lifespan,
         title="Dafpus Cek Document Extraction API",
         description=(
             "Internal-only service for extracting document metadata, bibliography references, "
-            "in-text citations, and PDF locations through GROBID."
+            "in-text citations, and PDF locations through GROBID, and for SBERT sentence "
+            "embeddings."
         ),
         version="1.1.0",
     )
@@ -95,6 +117,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(extract.router)
+    app.include_router(embeddings.router)
 
     return app
 
