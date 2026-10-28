@@ -29,9 +29,9 @@ it('serializes a citation summary with its derived status and reference preview'
         'text_end_offset' => 60,
         'occurrence_index' => 7,
         'resolution_method' => CitationResolutionMethod::Apa,
-    ]);
+    ], locations: 2);
 
-    $citation->load('reference.finding');
+    $citation->load(['reference.finding', 'locations']);
 
     $status = app(CitationStatusResolver::class)->resolve(
         CitationResolutionState::Paired,
@@ -51,7 +51,11 @@ it('serializes a citation summary with its derived status and reference preview'
             'id' => $reference->getKey(),
             'title' => 'Sistem deteksi plagiarisme',
         ])
-        ->and($data)->not->toHaveKey('locations');
+        ->and($data['locations'])->toHaveCount(2)
+        ->and($data['locations'][0])->toHaveKeys([
+            'page_number', 'x', 'y', 'width', 'height',
+            'page_width', 'page_height', 'coordinate_system', 'location_index',
+        ]);
 });
 
 it('serializes an unpaired citation as hallucination with a null reference', function () {

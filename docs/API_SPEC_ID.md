@@ -536,7 +536,9 @@ tersimpan di `reference_findings`; kandidatnya di `reference_finding_candidates`
 
 ### GET `/documents/{document}/references`
 
-Filter: `status` (status temuan), `has_doi` (bool). Dipaginasi.
+Filter: `status` (status temuan), `has_doi` (bool). Dipaginasi. Setiap item menyertakan
+`locations` (bentuk sama dengan respons detail), sehingga viewer tidak perlu memanggil detail per
+referensi.
 
 **Sukses — `200`**
 
@@ -559,7 +561,20 @@ Filter: `status` (status temuan), `has_doi` (bool). Dipaginasi.
         "confidence": 0.9500,
         "reason": "Exact DOI match with Crossref.",
         "selected_candidate_id": "c-101-uuid"
-      }
+      },
+      "locations": [
+        {
+          "page_number": 12,
+          "x": 72.0,
+          "y": 210.4,
+          "width": 451.2,
+          "height": 24.0,
+          "page_width": 595.0,
+          "page_height": 842.0,
+          "coordinate_system": "pdf_points_top_left",
+          "location_index": 0
+        }
+      ]
     },
     {
       "id": "r-102-uuid",
@@ -737,7 +752,20 @@ Filter: `status` (`valid|unreliable|pending|hallucination`), `reference_id`. Dip
       "text_end_offset": 2162,
       "occurrence_index": 4,
       "status": "valid",
-      "reference": { "id": "r-102-uuid", "title": "Sistem Deteksi Plagiarisme" }
+      "reference": { "id": "r-102-uuid", "title": "Sistem Deteksi Plagiarisme" },
+      "locations": [
+        {
+          "page_number": 3,
+          "x": 120.5,
+          "y": 640.2,
+          "width": 48.0,
+          "height": 11.0,
+          "page_width": 595.0,
+          "page_height": 842.0,
+          "coordinate_system": "pdf_points_top_left",
+          "location_index": 0
+        }
+      ]
     },
     {
       "id": "cit-203-uuid",

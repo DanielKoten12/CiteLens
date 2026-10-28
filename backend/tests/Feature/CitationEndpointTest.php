@@ -4,6 +4,7 @@ use App\Enums\CitationResolutionMethod;
 use App\Enums\CitationResolutionState;
 use App\Models\CitationResolutionCandidate;
 use App\Models\ReferenceFinding;
+use Illuminate\Support\Facades\DB;
 use Tests\Support\DocumentTree;
 
 beforeEach(function () {
@@ -30,7 +31,7 @@ it('lists citations with the derived status and reference filters', function () 
     $this->actingAs($this->user)->getJson($this->base)
         ->assertOk()
         ->assertJsonStructure([
-            'data' => [['id', 'citation_text', 'citation_marker', 'context_before', 'context_after', 'text_start_offset', 'text_end_offset', 'occurrence_index', 'status', 'resolution_method', 'reference']],
+            'data' => [['id', 'citation_text', 'citation_marker', 'context_before', 'context_after', 'text_start_offset', 'text_end_offset', 'occurrence_index', 'status', 'resolution_method', 'reference', 'locations']],
             'meta' => ['current_page', 'per_page', 'total', 'last_page'],
         ])
         ->assertJsonPath('meta.total', 2)
@@ -49,6 +50,30 @@ it('lists citations with the derived status and reference filters', function () 
 
     $this->actingAs($this->user)->getJson($this->base."?reference_id={$reference->getKey()}")
         ->assertOk()->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.id', $paired->getKey());
+});
+
+it('keeps the list query count constant as citations grow', function () {
+    $reference = $this->tree->reference();
+    ReferenceFinding::factory()->forReference($reference)->valid()->create();
+
+    $this->tree->citation($reference, locations: 1);
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+    $this->actingAs($this->user)->getJson($this->base.'?per_page=100')->assertOk();
+    $queriesForOne = count(DB::getQueryLog());
+
+    foreach (range(1, 4) as $index) {
+        $this->tree->citation($index % 2 === 0 ? $reference : null, locations: 2);
+    }
+
+    DB::flushQueryLog();
+    $this->actingAs($this->user)->getJson($this->base.'?per_page=100')->assertOk();
+    $queriesForFive = count(DB::getQueryLog());
+    DB::disableQueryLog();
+
+    // Locations are eager-loaded: no detail request (or query) per citation.
+    expect($queriesForFive)->toBe($queriesForOne);
 });
 
 it('rejects invalid list filters with 422', function (string $query) {

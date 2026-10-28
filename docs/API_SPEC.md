@@ -539,7 +539,8 @@ Filters: `status` (finding status), `has_doi` (bool). Paginated.
 
 > **Note:** ordering is document position (`text_start_offset` ASC, nulls last, then `id`). The
 > `status=pending` filter also matches references whose finding row does not exist yet. `has_doi`
-> accepts `true/false` and `1/0`.
+> accepts `true/false` and `1/0`. Each item embeds its highlight `locations` (same shape as the
+> detail response) so a viewer can render highlights without a detail request per reference.
 
 **Success — `200`**
 
@@ -562,7 +563,20 @@ Filters: `status` (finding status), `has_doi` (bool). Paginated.
         "confidence": 0.9500,
         "reason": "Exact DOI match with Crossref.",
         "selected_candidate_id": "c-101-uuid"
-      }
+      },
+      "locations": [
+        {
+          "page_number": 12,
+          "x": 72.0,
+          "y": 210.4,
+          "width": 451.2,
+          "height": 24.0,
+          "page_width": 595.0,
+          "page_height": 842.0,
+          "coordinate_system": "pdf_points_top_left",
+          "location_index": 0
+        }
+      ]
     },
     {
       "id": "r-102-uuid",
@@ -731,6 +745,9 @@ locations (`researched_document_citation_locations`).
 
 Filters: `status` (`valid|unreliable|pending|unresolved|hallucination`), `reference_id`. Paginated.
 
+> **Note:** each item embeds its highlight `locations` (same shape as the detail response) so a
+> viewer can render highlights without a detail request per citation.
+
 > **Note:** ordering is document position (`text_start_offset` ASC, nulls last, then `id`).
 > `reference_id` must belong to the same document, otherwise `422`; a foreign or missing reference
 > id is not disclosed.
@@ -751,7 +768,20 @@ Filters: `status` (`valid|unreliable|pending|unresolved|hallucination`), `refere
       "occurrence_index": 4,
       "status": "valid",
       "resolution_method": "apa",
-      "reference": { "id": "r-102-uuid", "title": "Sistem Deteksi Plagiarisme" }
+      "reference": { "id": "r-102-uuid", "title": "Sistem Deteksi Plagiarisme" },
+      "locations": [
+        {
+          "page_number": 3,
+          "x": 120.5,
+          "y": 640.2,
+          "width": 48.0,
+          "height": 11.0,
+          "page_width": 595.0,
+          "page_height": 842.0,
+          "coordinate_system": "pdf_points_top_left",
+          "location_index": 0
+        }
+      ]
     },
     {
       "id": "cit-203-uuid",

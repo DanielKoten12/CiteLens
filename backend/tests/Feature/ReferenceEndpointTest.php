@@ -3,6 +3,7 @@
 use App\Enums\DocumentStatus;
 use App\Enums\ReferenceFindingStatus;
 use App\Models\ReferenceFinding;
+use Illuminate\Support\Facades\DB;
 use Tests\Support\DocumentTree;
 
 beforeEach(function () {
@@ -28,7 +29,7 @@ it('lists references with filters and pagination', function () {
     $this->actingAs($this->user)->getJson($this->base)
         ->assertOk()
         ->assertJsonStructure([
-            'data' => [['id', 'raw_text', 'doi', 'title', 'authors', 'publication_name', 'publication_year', 'text_start_offset', 'text_end_offset', 'finding']],
+            'data' => [['id', 'raw_text', 'doi', 'title', 'authors', 'publication_name', 'publication_year', 'text_start_offset', 'text_end_offset', 'finding', 'locations']],
             'meta' => ['current_page', 'per_page', 'total', 'last_page'],
         ])
         ->assertJsonPath('meta.total', 2)
@@ -56,6 +57,27 @@ it('lists references with filters and pagination', function () {
 
     $this->actingAs($this->user)->getJson($this->base.'?has_doi=0')
         ->assertOk()->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.id', $pending->getKey());
+});
+
+it('keeps the list query count constant as references grow', function () {
+    $this->tree->reference([], locations: 1);
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+    $this->actingAs($this->user)->getJson($this->base.'?per_page=100')->assertOk();
+    $queriesForOne = count(DB::getQueryLog());
+
+    foreach (range(1, 4) as $index) {
+        $this->tree->reference(['text_start_offset' => 1000 * $index], locations: 2);
+    }
+
+    DB::flushQueryLog();
+    $this->actingAs($this->user)->getJson($this->base.'?per_page=100')->assertOk();
+    $queriesForFive = count(DB::getQueryLog());
+    DB::disableQueryLog();
+
+    // Locations are eager-loaded: no detail request (or query) per reference.
+    expect($queriesForFive)->toBe($queriesForOne);
 });
 
 it('rejects invalid list filters with 422', function (string $query) {

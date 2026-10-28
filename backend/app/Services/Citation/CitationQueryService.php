@@ -16,7 +16,8 @@ use Illuminate\Support\Collection;
  * The derived-status filter goes through the single
  * {@see CitationStatusResolver::sqlExpression()} so it cannot drift from the PHP
  * resolver used by the DTOs (F-DERIV-01). Ordering is document position
- * (`text_start_offset` ASC, nulls last, then `id`) per D-05-03.
+ * (`text_start_offset` ASC, nulls last, then `id`) per D-05-03. Locations are
+ * eager-loaded so the viewer never needs a detail request per citation.
  */
 final class CitationQueryService
 {
@@ -39,7 +40,7 @@ final class CitationQueryService
             ->leftJoin('reference_findings as f', 'f.researched_document_reference_id', '=', 'r.id')
             ->where('c.researched_document_id', $document->getKey())
             ->select('c.*')
-            ->with('reference.finding');
+            ->with(['reference.finding', 'locations']);
 
         if ($status !== null) {
             $derived = $this->resolver->sqlExpression('c.resolution_state', 'f.status');

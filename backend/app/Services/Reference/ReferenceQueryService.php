@@ -15,7 +15,8 @@ use Illuminate\Support\Collection;
  *
  * Ordering is document position (`text_start_offset` ASC, nulls last, then `id`)
  * so the list matches the bibliography and the findings feed (D-05-03/OQ-18).
- * The finding is always eager-loaded, so the DTO mapping cannot trigger N+1.
+ * The finding and highlight locations are always eager-loaded, so neither the
+ * list DTO mapping nor the viewer can trigger N+1 (D-05-11).
  */
 final class ReferenceQueryService
 {
@@ -29,7 +30,7 @@ final class ReferenceQueryService
         int $perPage = 15,
     ): LengthAwarePaginator {
         return $document->references()
-            ->with('finding')
+            ->with(['finding', 'locations'])
             ->when($status !== null, fn (Builder $query): Builder => $this->filterStatus($query, $status))
             ->when($hasDoi !== null, fn (Builder $query): Builder => $this->filterDoi($query, $hasDoi))
             ->tap(fn (Builder $query): Builder => $this->ordered($query))

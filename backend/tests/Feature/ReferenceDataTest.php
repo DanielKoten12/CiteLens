@@ -14,14 +14,14 @@ it('serializes a reference summary with its finding preview', function () {
         'publication_year' => 2023,
         'text_start_offset' => 100,
         'text_end_offset' => 250,
-    ]);
+    ], locations: 2);
 
     $finding = $tree->finding($reference, [
         'status' => ReferenceFindingStatus::Valid,
         'confidence' => 0.95,
     ], 1);
 
-    $reference->load('finding');
+    $reference->load(['finding', 'locations']);
 
     $data = ReferenceSummaryData::forReference($reference)->toArray();
 
@@ -31,6 +31,11 @@ it('serializes a reference summary with its finding preview', function () {
         ->and($data['publication_year'])->toBe(2023)
         ->and($data['text_start_offset'])->toBe(100)
         ->and($data['text_end_offset'])->toBe(250)
+        ->and($data['locations'])->toHaveCount(2)
+        ->and($data['locations'][0])->toHaveKeys([
+            'page_number', 'x', 'y', 'width', 'height',
+            'page_width', 'page_height', 'coordinate_system', 'location_index',
+        ])
         ->and($data['finding']['id'])->toBe($finding->getKey())
         ->and($data['finding']['status'])->toBe('valid')
         ->and($data['finding']['confidence'])->toBe(0.95)
