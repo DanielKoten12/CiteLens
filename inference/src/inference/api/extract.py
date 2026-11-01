@@ -72,7 +72,7 @@ async def extract(
 
     try:
         tei_xml = await grobid.extract_tei(pdf_bytes, filename)
-        parsed = parse_tei(tei_xml)
+        parsed = parse_tei(tei_xml, pdf_bytes=pdf_bytes)
     except GrobidUnavailableError as exc:
         raise HTTPException(
             status_code=503,

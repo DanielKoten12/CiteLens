@@ -2,6 +2,8 @@ import re
 import xml.etree.ElementTree as ET
 from typing import Any
 
+from inference.citations import extract_pdf_citations, merge_citations
+
 TEI_NS = {"tei": "http://www.tei-c.org/ns/1.0"}
 XML_NS = "http://www.w3.org/XML/1998/namespace"
 
@@ -324,6 +326,8 @@ def is_reference_fragment(reference: dict[str, Any], primary: dict[str, Any]) ->
         return False
     if not reference.get("title"):
         return False
+    if re.search(r"\([A-Za-z][A-Za-z ]{2,}\)", reference.get("title") or ""):
+        return False
     primary_locations = primary.get("locations") or []
     fragment_locations = reference.get("locations") or []
     if not primary_locations or not fragment_locations:
@@ -336,7 +340,7 @@ def is_reference_fragment(reference: dict[str, Any], primary: dict[str, Any]) ->
     )
 
 
-def parse_tei(tei_xml: str) -> dict[str, Any]:
+def parse_tei(tei_xml: str, pdf_bytes: bytes | None = None) -> dict[str, Any]:
     try:
         root = ET.fromstring(tei_xml)
     except ET.ParseError as exc:
@@ -379,6 +383,21 @@ def parse_tei(tei_xml: str) -> dict[str, Any]:
         index += 1
 
     citations = extract_citations(root, body_text, page_sizes, reference_indices)
+    if pdf_bytes:
+        author_years: set[tuple[str, int]] = set()
+        for reference in references:
+            authors = reference.get("authors") or ""
+            year = reference.get("publication_year")
+            if year is None:
+                continue
+            first_author = re.split(r",|;| and | dan | & ", authors, maxsplit=1, flags=re.IGNORECASE)[0]
+            author_tokens = first_author.split()
+            surname = author_tokens[-1].strip(".,") if author_tokens else ""
+            if surname:
+                author_years.add((surname, int(year)))
+
+        fallback_citations = extract_pdf_citations(pdf_bytes, author_years)
+        citations = merge_citations(citations, fallback_citations)
     for reference in references:
         reference.pop("xml_id", None)
 
