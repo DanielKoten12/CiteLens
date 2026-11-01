@@ -127,7 +127,7 @@ final class AuthorMatcher
         }
 
         $names = [];
-        $chunks = preg_split('/\s*(?:&|;|\band\b|\bdkk\.?)\s*/iu', $authors) ?: [];
+        $chunks = preg_split('/\s*(?:&|;|\band\b|\bdan\b|\bdkk\.?)\s*/iu', $authors) ?: [];
 
         foreach ($chunks as $chunk) {
             $tokens = array_values(array_filter(
