@@ -1,234 +1,235 @@
+"""In-text citation extraction on top of :class:`inference.pdf_text.PdfText`.
+
+Public API kept from the previous module: ``extract_pdf_citations``,
+``merge_citations``, ``citations_overlap``, ``segment_bibliography``.
+
+Design rules (each one answers a bug seen on real PDFs):
+
+* A citation span is exactly the marker: ``(Rizal & Syaibana, 2022)`` or
+  ``Asrul et al. (2025)``. Words before it ("studi", "Menurut", "oleh",
+  "Layanan:") are never part of the span. Narrative citations are anchored on a
+  *known bibliography surname*, never on "any capitalised word".
+* Bounding boxes come from the glyphs of the span (one rectangle per visual
+  line), so a table cell never highlights the whole row.
+* ``context_before + citation_text + context_after`` is always the complete
+  sentence, first word up to the closing full stop.
+* Offsets of two different texts are never compared; overlap is geometric.
+"""
+
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
-from typing import Any
+import unicodedata
+from typing import Any, Iterable
 
-import fitz
+from inference.pdf_text import PdfText
 
+YEAR = r"(?:19|20)\d{2}[a-z]?"
+_YEAR_RE = re.compile(r"(?<![\d])(" + YEAR + r")(?![\d])")
+_PAREN_RE = re.compile(r"\(([^()\n]{1,240})\)")
+_NUMERIC_RE = re.compile(r"\[\s*(\d{1,3}(?:\s*[,;–—-]\s*\d{1,3})*)\s*\]")
 
-YEAR_PATTERN = r"(?:19|20)\d{2}[a-z]?"
-PARENTHETICAL_PATTERN = re.compile(r"\(([^()\n]{1,180}?" + YEAR_PATTERN + r"[^()\n]{0,80})\)", re.IGNORECASE)
-NARRATIVE_PATTERN = re.compile(
-    r"\b([A-Z][A-Za-zÀ-ÖØ-öø-ÿ'’-]{1,40}(?:\s+(?:et\s+al\.?|dkk\.?|dan|and)(?:\s+[A-Z][A-Za-zÀ-ÖØ-öø-ÿ'’-]{1,40})?)?)"
-    r"\s*\(\s*(" + YEAR_PATTERN + r")(?:\s*,\s*(?:p{1,2}\.?\s*)?\d+(?:\s*[-–]\s*\d+)?)?\s*\)",
-    re.IGNORECASE,
+_CAP = r"[A-ZÀ-Ý][\w'’\-]*"
+_CONNECTOR = r"(?:&|dan|and)"
+_ET_AL = r"(?:et\s*al\.?|dkk\.?|dll\.?)"
+# "Koten", "Koten & Tani", "LeCun et al.", "Badan Pusat Statistik"
+_STRICT_NAME = re.compile(
+    rf"^{_CAP}(?:\s+{_CAP}){{0,3}}(?:\s+{_ET_AL})?(?:\s*{_CONNECTOR}\s+{_CAP}(?:\s+{_CAP}){{0,2}})?$"
 )
-YEAR_IN_TEXT = re.compile(YEAR_PATTERN, re.IGNORECASE)
-SURNAME_TOKEN = re.compile(r"[A-Za-zÀ-ÖØ-öø-ÿ'’-]{2,}", re.UNICODE)
+_LEADING_NOISE = re.compile(r"^(?:see|lihat|cf\.?|misalnya|e\.g\.,?|i\.e\.,?|dalam|menurut|dikutip dari)\s+", re.IGNORECASE)
+_STOP_FIRST_WORDS = {
+    "gambar", "tabel", "gbr", "bab", "persamaan", "rumus", "vol", "no", "hal", "halaman",
+    "page", "figure", "table", "fig", "sumber", "source", "pasal", "uu", "tahun", "ayat",
+    "bagian", "lihat", "see", "formula", "grafik", "diagram", "lampiran",
+}
 
 
-@dataclass(frozen=True)
-class _Word:
-    page_number: int
-    x0: float
-    y0: float
-    x1: float
-    y1: float
-    page_width: float
-    page_height: float
-    text: str
-    start: int
-    end: int
+# ------------------------------------------------------------------ helpers
+def _norm_name(value: str) -> str:
+    """Casefolded ASCII letters only: 'Shaо' (Cyrillic о) == 'shao', 'Müller' == 'muller'."""
+    value = unicodedata.normalize("NFKD", value)
+    value = "".join(c for c in value if not unicodedata.combining(c))
+    return re.sub(r"[^a-z]", "", value.casefold())
 
 
-def _normalise_text(text: str) -> str:
-    text = text.replace("\u00ad", "").replace("\u00a0", " ")
-    text = re.sub(r"-\s+(?=[a-z])", "", text, flags=re.IGNORECASE)
-    return re.sub(r"\s+", " ", text).strip()
+def _known_surnames(author_years: Iterable[tuple[str, int]]) -> dict[str, set[int]]:
+    known: dict[str, set[int]] = {}
+    for surname, year in author_years:
+        key = _norm_name(surname)
+        if len(key) >= 2:
+            known.setdefault(key, set()).add(int(year))
+    return known
 
 
-def _words(pdf_bytes: bytes) -> tuple[str, list[_Word]]:
-    document = fitz.open(stream=pdf_bytes, filetype="pdf")
-    words: list[_Word] = []
-    chunks: list[str] = []
-    offset = 0
-
-    try:
-        for page_number, page in enumerate(document, start=1):
-            page_words = sorted(page.get_text("words"), key=lambda item: (item[1], item[0]))
-            for raw in page_words:
-                text = str(raw[4])
-                if not text:
-                    continue
-                if chunks:
-                    chunks.append(" ")
-                    offset += 1
-                start = offset
-                chunks.append(text)
-                offset += len(text)
-                words.append(
-                    _Word(
-                        page_number,
-                        float(raw[0]),
-                        float(raw[1]),
-                        float(raw[2]),
-                        float(raw[3]),
-                        float(page.rect.width),
-                        float(page.rect.height),
-                        text,
-                        start,
-                        offset,
-                    )
-                )
-    finally:
-        document.close()
-
-    return _normalise_text("".join(chunks)), words
+def _name_tokens(text: str) -> list[str]:
+    return [_norm_name(t) for t in re.findall(r"[A-Za-zÀ-ÿ][\w'’\-]*", text) if len(_norm_name(t)) >= 2]
 
 
-def _surname_matches(text: str, author_years: set[tuple[str, int]]) -> tuple[str, int] | None:
-    year_match = YEAR_IN_TEXT.search(text)
-    if year_match is None:
+def _segment_accepted(segment: str, known: dict[str, set[int]]) -> bool:
+    """A ``;``-separated part of a parenthetical group: ``Name(s), year[, p. 5]``."""
+    segment = _LEADING_NOISE.sub("", segment.strip())
+    year = _YEAR_RE.search(segment)
+    if year is None:
+        return False
+    name_part = segment[: year.start()].strip(" ,;")
+    if not name_part or any(ch.isdigit() for ch in name_part):
+        return False
+    tokens = _name_tokens(name_part)
+    if any(token in known for token in tokens):
+        return True
+    first_word = re.split(r"\s+", name_part)[0].casefold().strip(".,")
+    if first_word in _STOP_FIRST_WORDS:
+        return False
+    return bool(_STRICT_NAME.match(name_part))
+
+
+def _surname_alternation(known: dict[str, set[int]], doc_text: str) -> re.Pattern[str] | None:
+    """Regex for narrative citations anchored on bibliography surnames."""
+    surfaces: set[str] = set()
+    for word in set(re.findall(r"[A-ZÀ-Ý][\w'’\-]+", doc_text)):
+        if _norm_name(word) in known:
+            surfaces.add(word)
+    if not surfaces:
         return None
-    year = int(year_match.group(0)[:4])
-    surnames = {surname.casefold() for surname, candidate_year in author_years if candidate_year == year}
-    for token in SURNAME_TOKEN.findall(text[: year_match.start()]):
-        if token.casefold() in surnames:
-            return token, year
-    return None
+    alternation = "|".join(re.escape(w) for w in sorted(surfaces, key=len, reverse=True))
+    return re.compile(
+        rf"(?<![\w'’\-])(?P<name>(?:{alternation}))"
+        rf"(?:\s+{_ET_AL}|\s*{_CONNECTOR}\s+{_CAP})?"
+        rf"\s*\(\s*(?P<year>{YEAR})(?:\s*,\s*[^()]{{1,30}})?\s*\)"
+    )
 
 
-def _locations(words: list[_Word], start: int, end: int) -> list[dict[str, Any]]:
-    selected = [word for word in words if word.end > start and word.start < end]
-    grouped: dict[int, list[_Word]] = {}
-    for word in selected:
-        grouped.setdefault(word.page_number, []).append(word)
-
-    locations: list[dict[str, Any]] = []
-    for page_number, page_words in grouped.items():
-        locations.append(
-            {
-                "page_number": page_number,
-                "x": min(word.x0 for word in page_words),
-                "y": min(word.y0 for word in page_words),
-                "width": max(word.x1 for word in page_words) - min(word.x0 for word in page_words),
-                "height": max(word.y1 for word in page_words) - min(word.y0 for word in page_words),
-                "page_width": page_words[0].page_width,
-                "page_height": page_words[0].page_height,
-                "coordinate_system": "pdf_points_top_left",
-                "location_index": len(locations),
-            }
-        )
-    return locations
+_UNKNOWN_NARRATIVE = re.compile(
+    rf"(?<![\w'’\-])(?P<name>{_CAP})\s+{_ET_AL}\s*\(\s*(?P<year>{YEAR})\s*\)"
+)
 
 
-def _citation(start: int, end: int, text: str, words: list[_Word]) -> dict[str, Any]:
-    marker = text.strip()
+def _build(doc: PdfText, start: int, end: int, reference_index: int | None = None) -> dict[str, Any]:
+    marker = doc.text[start:end]
+    before, after = doc.sentence_context(start, end)
     return {
         "citation_text": marker,
         "citation_marker": marker,
-        "context_before": None,
-        "context_after": None,
+        "context_before": before or None,
+        "context_after": after or None,
         "text_start_offset": start,
         "text_end_offset": end,
         "occurrence_index": 0,
-        "reference_index": None,
-        "locations": _locations(words, start, end),
+        "reference_index": reference_index,
+        "locations": doc.locations(start, end),
     }
 
 
+# ----------------------------------------------------------------- extraction
 def extract_pdf_citations(
-    pdf_bytes: bytes,
-    author_years: set[tuple[str, int]],
+    pdf: bytes | PdfText,
+    author_years: Iterable[tuple[str, int]],
 ) -> list[dict[str, Any]]:
-    text, words = _words(pdf_bytes)
-    found: list[tuple[int, int, dict[str, Any]]] = []
+    doc = pdf if isinstance(pdf, PdfText) else PdfText.from_bytes(pdf)
+    text = doc.text
+    known = _known_surnames(author_years)
+    bib = doc.bibliography_range
 
-    for match in PARENTHETICAL_PATTERN.finditer(text):
-        if _surname_matches(match.group(1), author_years) is not None:
-            found.append((match.start(), match.end(), _citation(match.start(), match.end(), match.group(0), words)))
+    def in_bibliography(position: int) -> bool:
+        return bib is not None and bib[0] <= position < bib[1]
 
-    for match in NARRATIVE_PATTERN.finditer(text):
-        if _surname_matches(match.group(0), author_years) is not None:
-            found.append((match.start(), match.end(), _citation(match.start(), match.end(), match.group(0), words)))
+    spans: list[tuple[int, int]] = []
 
-    deduped: list[tuple[int, int, dict[str, Any]]] = []
-    for start, end, citation in sorted(found):
-        if any(min(end, other_end) - max(start, other_start) > 0 for other_start, other_end, _ in deduped):
+    for match in _PAREN_RE.finditer(text):
+        if in_bibliography(match.start()):
             continue
-        deduped.append((start, end, citation))
+        segments = match.group(1).split(";")
+        if any(_segment_accepted(segment, known) for segment in segments):
+            spans.append((match.start(), match.end()))
 
-    for index, (_, _, citation) in enumerate(deduped):
+    narrative = _surname_alternation(known, text)
+    if narrative is not None:
+        for match in narrative.finditer(text):
+            if not in_bibliography(match.start()):
+                spans.append((match.start(), match.end()))
+    for match in _UNKNOWN_NARRATIVE.finditer(text):
+        name = match.group("name")
+        if in_bibliography(match.start()) or name.casefold() in _STOP_FIRST_WORDS:
+            continue
+        spans.append((match.start(), match.end()))
+
+    numeric = [m for m in _NUMERIC_RE.finditer(text) if not in_bibliography(m.start())]
+    if len(numeric) >= 3 and len(numeric) > len(spans):  # IEEE-style document
+        spans = [(m.start(), m.end()) for m in numeric]
+
+    spans.sort()
+    deduped: list[tuple[int, int]] = []
+    for start, end in spans:
+        if deduped and start < deduped[-1][1]:
+            continue  # overlapping match; keep the earlier (leftmost) one
+        deduped.append((start, end))
+
+    citations = [_build(doc, start, end) for start, end in deduped]
+    for index, citation in enumerate(citations):
         citation["occurrence_index"] = index
-    return [citation for _, _, citation in deduped]
+    return citations
 
 
-def _location_overlap(left: dict[str, Any], right: dict[str, Any]) -> bool:
+# --------------------------------------------------------------------- merging
+def _boxes_overlap(left: dict[str, Any], right: dict[str, Any], threshold: float = 0.4) -> bool:
     if left.get("page_number") != right.get("page_number"):
         return False
-    left_x2 = left["x"] + left["width"]
-    left_y2 = left["y"] + left["height"]
-    right_x2 = right["x"] + right["width"]
-    right_y2 = right["y"] + right["height"]
-    intersection = max(0.0, min(left_x2, right_x2) - max(left["x"], right["x"])) * max(
-        0.0, min(left_y2, right_y2) - max(left["y"], right["y"])
-    )
+    lx2, ly2 = left["x"] + left["width"], left["y"] + left["height"]
+    rx2, ry2 = right["x"] + right["width"], right["y"] + right["height"]
+    inter = max(0.0, min(lx2, rx2) - max(left["x"], right["x"])) * max(0.0, min(ly2, ry2) - max(left["y"], right["y"]))
     smaller = min(left["width"] * left["height"], right["width"] * right["height"])
-    return smaller > 0 and intersection / smaller >= 0.5
+    return smaller > 0 and inter / smaller >= threshold
 
 
 def citations_overlap(left: dict[str, Any], right: dict[str, Any]) -> bool:
-    left_start = left.get("text_start_offset")
-    left_end = left.get("text_end_offset")
-    right_start = right.get("text_start_offset")
-    right_end = right.get("text_end_offset")
-    if (
-        left_start is not None
-        and left_end is not None
-        and right_start is not None
-        and right_end is not None
-        and min(left_end, right_end) > max(left_start, right_start)
-    ):
-        return True
-
+    """Geometric overlap only. Text offsets of different sources are NOT comparable
+    (GROBID offsets index the TEI text, ours index the PDF text)."""
     return any(
-        _location_overlap(left_location, right_location)
-        for left_location in left.get("locations", [])
-        for right_location in right.get("locations", [])
+        _boxes_overlap(a, b)
+        for a in left.get("locations", [])
+        for b in right.get("locations", [])
     )
+
+
+def _sort_key(citation: dict[str, Any]) -> tuple[int, float, float]:
+    locations = citation.get("locations") or []
+    if not locations:
+        return (10**6, 0.0, 0.0)
+    first = locations[0]
+    return (int(first["page_number"]), round(float(first["y"]) / 4.0), float(first["x"]))
 
 
 def merge_citations(
     grobid_citations: list[dict[str, Any]],
     fallback_citations: list[dict[str, Any]],
+    doc: PdfText | None = None,
 ) -> list[dict[str, Any]]:
-    merged = list(grobid_citations)
-    for fallback in fallback_citations:
-        if not any(citations_overlap(fallback, existing) for existing in merged):
-            merged.append(fallback)
-    merged.sort(key=lambda citation: citation.get("text_start_offset") is None)
-    for occurrence_index, citation in enumerate(merged):
-        citation["occurrence_index"] = occurrence_index
+    """Combine GROBID and layout citations.
+
+    A layout citation (precise span, full-sentence quote) replaces every GROBID
+    citation it overlaps, inheriting its ``reference_index``. GROBID citations
+    that nothing overlaps are kept; their quote is rebuilt from the PDF text when
+    their boxes can be located in it.
+    """
+    merged: list[dict[str, Any]] = [dict(c) for c in fallback_citations]
+    for grobid in grobid_citations:
+        overlapping = [m for m in merged if citations_overlap(grobid, m)]
+        if overlapping:
+            for mine in overlapping:
+                if mine.get("reference_index") is None and grobid.get("reference_index") is not None:
+                    mine["reference_index"] = grobid["reference_index"]
+            continue
+        kept = dict(grobid)
+        if doc is not None:
+            span = doc.span_from_locations(kept.get("locations", []))
+            if span is not None:
+                before, after = doc.sentence_context(*span)
+                kept["context_before"], kept["context_after"] = before or None, after or None
+        merged.append(kept)
+    merged.sort(key=_sort_key)
+    for index, citation in enumerate(merged):
+        citation["occurrence_index"] = index
     return merged
 
 
-def segment_bibliography(pdf_bytes: bytes) -> list[str]:
-    document = fitz.open(stream=pdf_bytes, filetype="pdf")
-    lines: list[str] = []
-    in_bibliography = False
-    try:
-        for page in document:
-            for line in page.get_text("text").splitlines():
-                value = _normalise_text(line)
-                if not value:
-                    continue
-                if re.search(r"\b(daftar pustaka|references|bibliography)\b", value, re.IGNORECASE):
-                    in_bibliography = True
-                    continue
-                if in_bibliography:
-                    lines.append(value)
-    finally:
-        document.close()
-
-    starts = re.compile(
-        r"^(?:\d+[.)]\s*)?[A-Z][A-Za-zÀ-ÖØ-öø-ÿ'’-]+(?:,\s*[A-Z](?:\.[A-Z.]*)?)?\s*\(\s*" + YEAR_PATTERN + r"\s*\)",
-        re.IGNORECASE,
-    )
-    entries: list[str] = []
-    for line in lines:
-        if starts.search(line) or re.match(r"^Sustainability \(Switzerland\)(?:,|$)", line, re.IGNORECASE):
-            entries.append(line)
-        elif entries:
-            entries[-1] = f"{entries[-1]} {line}"
-    return entries
+from inference.bibliography import segment_bibliography  # noqa: E402,F401  (backward-compatible re-export)
