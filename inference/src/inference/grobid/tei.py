@@ -3,6 +3,8 @@ import xml.etree.ElementTree as ET
 from typing import Any
 
 from inference.citations import extract_pdf_citations, merge_citations
+from inference.bibliography import align_references, segment_references
+from inference.pdf_text import PdfText
 
 TEI_NS = {"tei": "http://www.tei-c.org/ns/1.0"}
 XML_NS = "http://www.w3.org/XML/1998/namespace"
@@ -356,17 +358,15 @@ def parse_tei(tei_xml: str, pdf_bytes: bytes | None = None) -> dict[str, Any]:
     bibl_structs = root.findall(".//tei:text/tei:back//tei:listBibl/tei:biblStruct", TEI_NS)
     if not bibl_structs:
         bibl_structs = root.findall(".//tei:listBibl/tei:biblStruct", TEI_NS)
+
     references: list[dict[str, Any]] = []
-    reference_indices: dict[str, int] = {}
     cursor = 0
     index = 0
     while index < len(bibl_structs):
-        bibl = bibl_structs[index]
-        candidate, next_cursor = parse_reference(bibl, len(references), full_text, cursor, page_sizes)
+        candidate, next_cursor = parse_reference(bibl_structs[index], len(references), full_text, cursor, page_sizes)
         if not is_bibliography_entry(candidate):
             index += 1
             continue
-
         if index + 1 < len(bibl_structs):
             fragment, fragment_cursor = parse_reference(
                 bibl_structs[index + 1], len(references), full_text, next_cursor, page_sizes
@@ -375,15 +375,20 @@ def parse_tei(tei_xml: str, pdf_bytes: bytes | None = None) -> dict[str, Any]:
                 candidate = merge_reference_parts(candidate, fragment)
                 next_cursor = fragment_cursor
                 index += 1
-
         cursor = next_cursor
         references.append(candidate)
-        if candidate.get("xml_id"):
-            reference_indices[candidate["xml_id"]] = candidate["reference_index"]
         index += 1
 
+    # Layout is the source of truth for where entries start/end and for their boxes.
+    doc = PdfText.from_bytes(pdf_bytes) if pdf_bytes else None
+    if doc is not None:
+        references = align_references(references, segment_references(doc))
+    for position, reference in enumerate(references):
+        reference["reference_index"] = position
+    reference_indices = {r["xml_id"]: r["reference_index"] for r in references if r.get("xml_id")}
+
     citations = extract_citations(root, body_text, page_sizes, reference_indices)
-    if pdf_bytes:
+    if doc is not None:
         author_years: set[tuple[str, int]] = set()
         for reference in references:
             authors = reference.get("authors") or ""
@@ -391,18 +396,12 @@ def parse_tei(tei_xml: str, pdf_bytes: bytes | None = None) -> dict[str, Any]:
             if year is None:
                 continue
             first_author = re.split(r",|;| and | dan | & ", authors, maxsplit=1, flags=re.IGNORECASE)[0]
-            author_tokens = first_author.split()
-            surname = author_tokens[-1].strip(".,") if author_tokens else ""
-            if surname:
-                author_years.add((surname, int(year)))
+            tokens = [t.strip(".,") for t in first_author.split()]
+            for surname in {tokens[-1], tokens[0]} if tokens else set():
+                if surname:
+                    author_years.add((surname, int(year)))
+        citations = merge_citations(citations, extract_pdf_citations(doc, author_years), doc)
 
-        fallback_citations = extract_pdf_citations(pdf_bytes, author_years)
-        citations = merge_citations(citations, fallback_citations)
     for reference in references:
         reference.pop("xml_id", None)
-
-    return {
-        "header": header,
-        "references": references,
-        "citations": citations,
-    }
+    return {"header": header, "references": references, "citations": citations}
