@@ -1,0 +1,30 @@
+{
+  "data": {
+    "references": [
+      {
+        "raw_text": "Enggrina, D., Liwang, A. W., & Rahman, W. (2026). Beyond Borders, Beyond Classrooms: Pendampingan Literasi Finansial Digital melalui Aktivitas Edukatif bagi Anak Diaspora Indonesia di Sanggar Bimbingan Kampung Bharu, Malaysia. JESASI (Jurnal Edukasi, Sains, dan Inovasi), 3(1), 145-155.",
+        "title": "Beyond Borders, Beyond Classrooms: Pendampingan Literasi Finansial Digital melalui Aktivitas Edukatif bagi Anak Diaspora Indonesia di Sanggar Bimbingan Kampung Bharu, Malaysia",
+        "authors": "Enggrina, D., Liwang, A. W., & Rahman, W.",
+        "publication_name": "JESASI (Jurnal Edukasi, Sains, dan Inovasi)",
+        "publication_year": 2026,
+        "doi": null,
+        "text_start_offset": 100,
+        "text_end_offset": 400,
+        "locations": []
+      }
+    ],
+    "citations": [
+      {
+        "citation_text": "(Enggrina et al., 2026)",
+        "citation_marker": "Enggrina et al., 2026",
+        "context_before": "Sebagai contoh, ",
+        "context_after": " menunjukkan hal tersebut.",
+        "text_start_offset": 1200,
+        "text_end_offset": 1223,
+        "occurrence_index": 0,
+        "reference_index": 0,
+        "locations": []
+      }
+    ]
+  }
+}
