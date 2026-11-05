@@ -401,6 +401,7 @@ Every new endpoint gets at least one ownership-isolation test (two users) per
 | 05.1 | [`05-1-citation-resolution-robustness-detail.md`](05-1-citation-resolution-robustness-detail.md) | Resolution robustness: hints, initials, soft year, ambiguity/`unresolved`, candidates, provenance, evaluation harness | 05 |
 | 06 | [`06-reports.md`](06-reports.md) | Async PDF report generation + `/reports` endpoints + file lifecycle | 02 (shell), 05 (content) |
 | 07 | [`07-hardening-and-evaluation.md`](07-hardening-and-evaluation.md) | Full test matrix, evaluation harness, performance, docs sync, e2e verification | 01–06 |
+| 08 | [`08-garuda-fallback-source.md`](08-garuda-fallback-source.md) | Garuda fallback metadata source for Indonesian references; `source` provenance on candidates; `BibliographicSource` seam for OpenAlex | 04 |
 
 ```text
 01 ──▶ 02 ──▶ 03 ──▶ 04 ──▶ 05 ──▶ 06 ──▶ 07
