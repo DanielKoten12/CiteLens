@@ -66,9 +66,24 @@ final class GarudaResultMapper
     }
 
     /**
-     * Collapse `"Title: Title"` (also when the title itself contains colons).
+     * Collapse the two duplicate shapes seen in Garuda records:
+     * `"Title: Title"` (with or without further colons) and a repeated leading
+     * phrase such as `"Literasi Digital Literasi Digital Sebagai ..."`.
      */
     private function dedupeTitle(string $title): string
+    {
+        $title = trim((string) preg_replace('/\s+/u', ' ', $title));
+
+        if ($title === '') {
+            return '';
+        }
+
+        $afterColon = $this->dedupeAfterColon($title);
+
+        return $afterColon !== $title ? $afterColon : $this->dedupeRepeatedPrefix($title);
+    }
+
+    private function dedupeAfterColon(string $title): string
     {
         $offset = 0;
 
@@ -82,6 +97,34 @@ final class GarudaResultMapper
             }
 
             $offset = $position + 2;
+        }
+
+        return $title;
+    }
+
+    /**
+     * Drop the first occurrence when the title starts with a repeated phrase of
+     * at least two words. Requiring two words and a longer remainder keeps
+     * legitimate repetitions ("Very Very Large Systems") untouched.
+     */
+    private function dedupeRepeatedPrefix(string $title): string
+    {
+        $words = explode(' ', $title);
+        $count = count($words);
+
+        for ($size = 2; $size <= intdiv($count, 2); $size++) {
+            $prefix = implode(' ', array_slice($words, 0, $size));
+            $rest = array_slice($words, $size);
+
+            if (count($rest) <= $size) {
+                continue;
+            }
+
+            $restPrefix = implode(' ', array_slice($rest, 0, $size));
+
+            if (mb_strtolower($restPrefix) === mb_strtolower($prefix)) {
+                return implode(' ', $rest);
+            }
         }
 
         return $title;

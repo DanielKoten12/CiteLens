@@ -42,6 +42,24 @@ it('collapses a title that garuda duplicated after a colon', function () {
     expect($work?->title)->toBe('Literasi Digital: Kajian Kritis');
 });
 
+it('collapses a leading phrase that garuda repeated without a colon', function () {
+    $work = garudaMapper()->map(
+        garudaCard(['title' => 'Literasi Digital Literasi Digital Sebagai Upaya Menangkal Hoax']),
+        'https://garuda.test',
+    );
+
+    expect($work?->title)->toBe('Literasi Digital Sebagai Upaya Menangkal Hoax');
+});
+
+it('keeps a legitimate repeated word', function () {
+    $work = garudaMapper()->map(
+        garudaCard(['title' => 'Very Very Large Systems']),
+        'https://garuda.test',
+    );
+
+    expect($work?->title)->toBe('Very Very Large Systems');
+});
+
 it('keeps a distinct subtitle', function () {
     $work = garudaMapper()->map(
         garudaCard(['title' => 'Literasi Digital: Tinjauan Kritis di Indonesia']),
