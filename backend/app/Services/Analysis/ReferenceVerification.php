@@ -24,5 +24,6 @@ final class ReferenceVerification
         public readonly DoiLookup $doiLookup,
         public readonly array $candidates,
         public readonly bool $transientFailure = false,
+        public readonly ?string $pendingReason = null,
     ) {}
 }

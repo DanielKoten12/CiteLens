@@ -120,7 +120,7 @@ final class ReferenceScorer
             work: $candidate,
             breakdown: $breakdown,
             rank: 0,
-            matchReason: $this->reasons->forCandidate($breakdown),
+            matchReason: $this->reasons->forCandidate($breakdown, $candidate->source),
         );
     }
 

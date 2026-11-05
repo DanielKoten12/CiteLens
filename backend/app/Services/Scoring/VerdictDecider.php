@@ -29,9 +29,10 @@ final class VerdictDecider
         DoiLookup $doiLookup,
         bool $transientFailure,
         array $ranked,
+        ?string $pendingReason = null,
     ): ReferenceVerdict {
         if ($transientFailure) {
-            return $this->verdict($reference, ReferenceFindingStatus::Pending, null, MatchReasonBuilder::TRANSIENT, null, $ranked);
+            return $this->verdict($reference, ReferenceFindingStatus::Pending, null, $pendingReason ?? MatchReasonBuilder::TRANSIENT, null, $ranked);
         }
 
         if ($doiLookup === DoiLookup::Malformed) {

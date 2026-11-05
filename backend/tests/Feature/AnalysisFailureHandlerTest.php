@@ -4,6 +4,7 @@ use App\Enums\AnalysisStep;
 use App\Enums\DocumentStatus;
 use App\Exceptions\CrossrefUnavailableException;
 use App\Exceptions\ExtractionFailedException;
+use App\Exceptions\GarudaUnavailableException;
 use App\Exceptions\InferenceUnavailableException;
 use App\Models\ResearchedDocument;
 use App\Services\Analysis\AnalysisFailureHandler;
@@ -32,6 +33,16 @@ it('maps an extraction failure to the safe unprocessable-document message', func
     expect($document->refresh())
         ->status->toBe(DocumentStatus::Failed)
         ->analysis_error->toBe('Dokumen tidak dapat diproses. Pastikan PDF memuat teks yang dapat diekstrak.');
+});
+
+it('maps a garuda outage to the safe fallback message', function () {
+    $document = DocumentTree::create()->document;
+
+    $this->handler->handle($document, GarudaUnavailableException::serviceUnavailable(), AnalysisStep::CrossrefValidation);
+
+    expect($document->refresh())
+        ->status->toBe(DocumentStatus::Failed)
+        ->analysis_error->toBe('Validasi Garuda tidak tersedia. Coba lagi nanti.');
 });
 
 it('maps an unexpected exception to the generic safe message', function () {
