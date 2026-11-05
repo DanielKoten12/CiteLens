@@ -2,7 +2,11 @@
 
 namespace App\Services\Crossref;
 
+use App\Contracts\Metadata\BibliographicSource;
+use App\Enums\MetadataSource;
 use App\Exceptions\CrossrefUnavailableException;
+use App\Services\Metadata\ReferenceQuery;
+use App\Services\Metadata\WorkMetadata;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
@@ -18,8 +22,11 @@ use Throwable;
  * identification, timeouts, bounded retries on transient failures, DOI caching
  * and wire → value-object mapping. It never makes a verification verdict —
  * scoring lives in `App\Services\Scoring`.
+ *
+ * Implements {@see BibliographicSource} so the verification step can treat it
+ * like any other metadata source; DOI resolution stays Crossref-specific.
  */
-final class CrossrefClient
+final class CrossrefClient implements BibliographicSource
 {
     private const DOI_CACHE_PREFIX = 'crossref:doi:';
 
@@ -36,7 +43,7 @@ final class CrossrefClient
      *
      * @throws CrossrefUnavailableException
      */
-    public function findByDoi(string $normalizedDoi): ?CrossrefWorkData
+    public function findByDoi(string $normalizedDoi): ?WorkMetadata
     {
         $cached = Cache::remember(
             self::DOI_CACHE_PREFIX.$normalizedDoi,
@@ -61,15 +68,22 @@ final class CrossrefClient
         return is_array($message) ? $this->mapper->mapSingle($message) : null;
     }
 
+    public function source(): MetadataSource
+    {
+        return MetadataSource::Crossref;
+    }
+
     /**
-     * Bibliographic search for a reference. Not cached: responses depend on the
-     * query and are recomputed per run (keeps evaluation reproducible).
+     * Bibliographic search for a reference ({@see BibliographicSource::search()}).
      *
-     * @return list<CrossrefWorkData>
+     * Not cached: responses depend on the query and are recomputed per run
+     * (keeps evaluation reproducible).
+     *
+     * @return list<WorkMetadata>
      *
      * @throws CrossrefUnavailableException
      */
-    public function searchBibliographic(ReferenceQuery $query): array
+    public function search(ReferenceQuery $query): array
     {
         $payload = $this->request('works', $this->queryBuilder->searchParams($query));
 

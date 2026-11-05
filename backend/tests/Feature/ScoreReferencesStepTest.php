@@ -9,9 +9,9 @@ use App\Services\Analysis\EmbeddingIndex;
 use App\Services\Analysis\ReferenceVerification;
 use App\Services\Analysis\ReferenceVerificationBatch;
 use App\Services\Analysis\Steps\ScoreReferencesStep;
-use App\Services\Crossref\CrossrefWorkData;
 use App\Services\Crossref\DoiLookup;
 use App\Services\Crossref\DoiNormalizer;
+use App\Services\Metadata\WorkMetadata;
 use App\Services\Scoring\ScoringReference;
 use Tests\Support\DocumentTree;
 
@@ -51,7 +51,7 @@ it('marks a doi that resolves to a different publication as invalid', function (
 
     runScoring($tree, [
         scoreVerification($reference, DoiLookup::Resolved, [
-            new CrossrefWorkData(
+            new WorkMetadata(
                 doi: '10.1038/nature14539',
                 title: 'Attention is all you need',
                 authors: ['Ashish Vaswani'],
@@ -95,7 +95,7 @@ it('marks a valid reference without a doi as valid and suggests the candidate do
 
     runScoring($tree, [
         scoreVerification($reference, DoiLookup::NotPresent, [
-            new CrossrefWorkData(
+            new WorkMetadata(
                 doi: '10.1234/example',
                 title: 'Sistem Deteksi Plagiarisme Dokumen',
                 authors: ['Daniel Koten'],
@@ -121,8 +121,8 @@ it('keeps candidate ranks unique when scoring runs twice', function () {
     $reference = $tree->reference(['doi' => null, 'title' => 'Deep learning', 'authors' => 'LeCun, Y.']);
 
     $candidates = [
-        new CrossrefWorkData(doi: '10.1/a', title: 'Deep learning'),
-        new CrossrefWorkData(doi: '10.1/b', title: 'Deep learning methods'),
+        new WorkMetadata(doi: '10.1/a', title: 'Deep learning'),
+        new WorkMetadata(doi: '10.1/b', title: 'Deep learning methods'),
     ];
 
     runScoring($tree, [scoreVerification($reference, DoiLookup::NotPresent, $candidates)]);
@@ -153,7 +153,7 @@ it('builds deterministic per-candidate match reasons', function () {
     $tree = DocumentTree::create();
     $reference = $tree->reference(['doi' => null, 'title' => 'Deep learning', 'authors' => 'LeCun, Y.']);
 
-    $candidates = [new CrossrefWorkData(doi: '10.1/a', title: 'Deep learning', publicationYear: 2015)];
+    $candidates = [new WorkMetadata(doi: '10.1/a', title: 'Deep learning', publicationYear: 2015)];
 
     runScoring($tree, [scoreVerification($reference, DoiLookup::NotPresent, $candidates)]);
     $first = ReferenceFindingCandidate::query()->value('match_reason');

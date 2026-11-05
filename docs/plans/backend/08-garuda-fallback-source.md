@@ -1,6 +1,6 @@
 # Phase 08 — Garuda Fallback Metadata Source (Detailed Implementation Plan)
 
-> **Status:** detailed plan — ready to implement
+> **Status:** detailed plan — **T0/T1 implemented** (2026-11-05); T2+ pending
 > **Parent:** none (new phase) · **Depends on:** Phase 04 (implemented), Phase 05 (implemented)
 > **Unblocks:** OpenAlex as a second primary source (same seam, no schema change)
 > Canonical references: `docs/API_SPEC.md` §2.6/§5/§10/§11, `docs/DB_SCHEMA.md`
@@ -170,10 +170,10 @@ Follow `docs/plans/backend/README.md` §1.4. For every task: implement → `vend
 
 1. `backend/tests/TestCase.php`: add `Http::preventStrayRequests()` to `setUp()` (all existing tests
    already fake their own requests; any that don't will fail loudly here — fix them by faking, not
-   by removing the guard).
-2. Confirm `php -m` has `dom` (already true locally and in the image).
-3. `backend/phpunit.xml`: add `GARUDA_ENABLED=true` so step tests exercise the client unless they
-   explicitly disable it.
+   by removing the guard). **Done** — full suite passes with the guard active.
+2. Confirm `php -m` has `dom` (already true locally and in the image). **Done**.
+3. `backend/phpunit.xml`: add `GARUDA_ENABLED=true` — **deferred to T3**, when the config key it
+   drives actually exists (no dead env vars).
 
 ---
 
@@ -232,14 +232,16 @@ interface BibliographicSource
 }
 ```
 
-- `CrossrefClient` implements it: `search()` delegates to the existing `searchBibliographic()`.
+- `CrossrefClient` implements it: its existing `searchBibliographic()` is renamed to `search()`.
+  `findByDoi()` stays Crossref-only and is not part of the interface.
 - `GarudaClient` implements it.
-- `ReferenceQuery` gains `public readonly ?string $title = null` as the **last** constructor
+- `ReferenceQuery` moves from `Services/Crossref` to `Services/Metadata` (it is no longer
+  Crossref-specific) and gains `public readonly ?string $title = null` as the **last** constructor
   argument (built from `$reference->title`), so existing positional calls in tests keep working.
   Each source chooses its own query fields; `CrossrefQueryBuilder` keeps using `bibliographic` —
   no Crossref behavior change.
 
-### 7.4 Provider wiring
+### 7.4 Provider wiring (lands with T4 — no consumer before then)
 
 `AppServiceProvider` (or a new `MetadataServiceProvider`) exposes the ordered primary-source list:
 

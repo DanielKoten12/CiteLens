@@ -2,8 +2,11 @@
 
 namespace App\Services\Crossref;
 
+use App\Enums\MetadataSource;
+use App\Services\Metadata\WorkMetadata;
+
 /**
- * Tolerant Crossref JSON → {@see CrossrefWorkData} mapping.
+ * Tolerant Crossref JSON → {@see WorkMetadata} mapping.
  *
  * Crossref metadata shapes vary (missing titles, absent `issued`, single vs.
  * list fields), so every accessor degrades to `null`/`[]` instead of throwing.
@@ -20,7 +23,7 @@ final class CrossrefResultMapper
      *
      * @param  array<string, mixed>  $payload
      */
-    public function mapSingle(array $payload): ?CrossrefWorkData
+    public function mapSingle(array $payload): ?WorkMetadata
     {
         $message = $payload['message'] ?? null;
 
@@ -35,7 +38,7 @@ final class CrossrefResultMapper
      * Body of `GET /works` (`message.items[]`).
      *
      * @param  array<string, mixed>  $payload
-     * @return list<CrossrefWorkData>
+     * @return list<WorkMetadata>
      */
     public function mapList(array $payload): array
     {
@@ -65,7 +68,7 @@ final class CrossrefResultMapper
     /**
      * @param  array<string, mixed>  $message
      */
-    public function mapWork(array $message): ?CrossrefWorkData
+    public function mapWork(array $message): ?WorkMetadata
     {
         $doi = $this->normalizer->normalize($this->stringOrNull($message['DOI'] ?? null));
         $title = $this->firstString($message['title'] ?? null);
@@ -74,7 +77,7 @@ final class CrossrefResultMapper
             return null;
         }
 
-        return new CrossrefWorkData(
+        return new WorkMetadata(
             doi: $doi,
             title: $title,
             authors: $this->authors($message['author'] ?? null),
@@ -82,6 +85,7 @@ final class CrossrefResultMapper
             publicationYear: $this->issuedYear($message['issued'] ?? null),
             url: $this->stringOrNull($message['URL'] ?? null),
             type: $this->stringOrNull($message['type'] ?? null),
+            source: MetadataSource::Crossref,
         );
     }
 

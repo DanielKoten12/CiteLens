@@ -3,7 +3,7 @@
 use App\Enums\ReferenceFindingStatus;
 use App\Models\ReferenceFinding;
 use App\Models\ReferenceFindingCandidate;
-use App\Services\Crossref\CrossrefWorkData;
+use App\Services\Metadata\WorkMetadata;
 use App\Services\ReferenceFinding\ReferenceFindingWriter;
 use App\Services\Scoring\ReferenceVerdict;
 use App\Services\Scoring\ScoreBreakdown;
@@ -13,7 +13,7 @@ use Tests\Support\DocumentTree;
 function writerCandidate(int $rank, float $confidence, string $doi): ScoredCandidate
 {
     return new ScoredCandidate(
-        work: new CrossrefWorkData(
+        work: new WorkMetadata(
             doi: $doi,
             title: 'Title '.$rank,
             authors: ['A B'],

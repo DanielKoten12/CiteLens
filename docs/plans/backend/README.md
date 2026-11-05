@@ -121,13 +121,15 @@ same change.
   `/health`, `/v1/extract`, `/v1/embeddings`; `Data/Inference/*` DTOs; `ExtractionFailedException`,
   `InferenceClientException`; `Services/Crossref/DoiNormalizer`.
 - Crossref verification and scoring (Phase 04): `Services/Crossref/*` (`CrossrefClient`,
-  `CrossrefQueryBuilder`, `CrossrefResultMapper`, `CrossrefWorkData`, `ReferenceQuery`, `DoiLookup`,
-  `CrossrefUnavailableException`); the pure `Services/Scoring/*` engine (`StringSimilarity`,
+  `CrossrefQueryBuilder`, `CrossrefResultMapper`, `DoiLookup`, `CrossrefUnavailableException`);
+  the source-agnostic seam `Services/Metadata/*` (`WorkMetadata`, `ReferenceQuery`),
+  `Contracts/Metadata/BibliographicSource` and `Enums/MetadataSource` (Phase 08 T1); the pure
+  `Services/Scoring/*` engine (`StringSimilarity`,
   `AuthorMatcher`, `SemanticSimilarity`, `LocalVenueDetector`, `MatchReasonBuilder`,
   `ReferenceScorer`, `VerdictDecider`, `ScoringConfig` + value objects); the
   `ValidateReferencesStep` / `EmbedReferencesStep` / `ScoreReferencesStep` pipeline steps and the
-  `ReferenceFindingWriter` single writer; `config/scoring.php` `semantic.title_blend` and the
-  `services.crossref` retry/back-off/User-Agent keys.
+  `ReferenceFindingWriter` single writer; `config/scoring.php`
+  `semantic.title_blend` and the `services.crossref` retry/back-off/User-Agent keys.
 - Citation resolution and review (Phase 05): `Services/Citations/*` (`CitationMarkerParser`,
   `CitationResolver`, `CitationMatchConfig`, `CitationReference`/`CitationResolution` value
   objects) and the `ResolveCitationsStep`; `Services/Reference/ReferenceQueryService`,

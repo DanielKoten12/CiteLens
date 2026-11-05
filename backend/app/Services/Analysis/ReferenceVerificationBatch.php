@@ -3,7 +3,7 @@
 namespace App\Services\Analysis;
 
 /**
- * The Crossref retrieval results for one analysis run, in bibliography order.
+ * The metadata retrieval results for one analysis run, in bibliography order.
  */
 final class ReferenceVerificationBatch
 {

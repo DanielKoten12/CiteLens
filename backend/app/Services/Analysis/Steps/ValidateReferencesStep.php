@@ -11,10 +11,10 @@ use App\Services\Analysis\Contracts\PipelineStep;
 use App\Services\Analysis\ReferenceVerification;
 use App\Services\Analysis\ReferenceVerificationBatch;
 use App\Services\Crossref\CrossrefClient;
-use App\Services\Crossref\CrossrefWorkData;
 use App\Services\Crossref\DoiLookup;
 use App\Services\Crossref\DoiNormalizer;
-use App\Services\Crossref\ReferenceQuery;
+use App\Services\Metadata\ReferenceQuery;
+use App\Services\Metadata\WorkMetadata;
 use App\Services\Scoring\ScoringReference;
 
 /**
@@ -93,7 +93,7 @@ final class ValidateReferencesStep implements PipelineStep
 
             if ($searchQuery->bibliographic !== '') {
                 try {
-                    $search = $this->client->searchBibliographic($searchQuery);
+                    $search = $this->client->search($searchQuery);
                     $receivedAnyResponse = true;
                     $candidates = $this->merge($candidates, $search);
                 } catch (CrossrefUnavailableException $exception) {
@@ -120,9 +120,9 @@ final class ValidateReferencesStep implements PipelineStep
      * first (keeping the DOI-lookup copy, which is authoritative) and by
      * normalized title for DOI-less works.
      *
-     * @param  list<CrossrefWorkData>  $existing
-     * @param  list<CrossrefWorkData>  $incoming
-     * @return list<CrossrefWorkData>
+     * @param  list<WorkMetadata>  $existing
+     * @param  list<WorkMetadata>  $incoming
+     * @return list<WorkMetadata>
      */
     private function merge(array $existing, array $incoming): array
     {

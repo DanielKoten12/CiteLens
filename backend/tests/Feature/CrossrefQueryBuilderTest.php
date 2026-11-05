@@ -2,7 +2,7 @@
 
 use App\Models\ResearchedDocumentReference;
 use App\Services\Crossref\CrossrefQueryBuilder;
-use App\Services\Crossref\ReferenceQuery;
+use App\Services\Metadata\ReferenceQuery;
 
 beforeEach(function (): void {
     config([
