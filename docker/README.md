@@ -13,7 +13,7 @@ truth for behavior; this document only covers how to build, run and operate the 
 | `worker` | same image as `backend` | — | `php artisan queue:work` (analysis + reports) |
 | `db` | `postgres:18-alpine` | — | PostgreSQL 18 (named volume `db-data`) |
 | `inference` | `inference/Dockerfile` (`dev`/`prod` targets) | — | FastAPI + GROBID client (`docs/API_SPEC.md` §9) |
-| `grobid` | `grobid/grobid:0.9.1-full` (amd64) / `0.9.1-crf` (arm64) | — | PDF reference/citation extraction |
+| `grobid` | `grobid/grobid:0.9.1-crf` (multi-arch, default) / `0.9.1-full` (amd64 overlay) / none (remote overlay) | — | PDF reference/citation extraction |
 | `gotenberg` | `gotenberg/gotenberg:8` | — | HTML→PDF rendering for reports |
 
 Only `web` and `frontend` are reachable from the host. PostgreSQL, inference, GROBID and Gotenberg
@@ -23,15 +23,19 @@ direct access for debugging.
 ## 2. Running
 
 ```bash
-# Development, amd64 default (GROBID full image, runs via emulation on arm64/hosts)
+# Development, default stack (GROBID CRF, native on amd64 + arm64)
 docker compose up -d --build
 
-# Apple Silicon / arm64 hosts: native GROBID CRF image
-docker compose -f compose.yaml -f compose.arm64.yaml up -d --build
+# GROBID full models instead of CRF (amd64 only; emulated on arm64 hosts)
+docker compose -f compose.yaml -f compose.full.yaml up -d --build
+
+# No local GROBID at all: use a hosted one (public Hugging Face Space by default).
+# ⚠ every uploaded PDF leaves the private network — dev/demo only, see §5.
+docker compose -f compose.yaml -f compose.remote-grobid.yaml up -d --build
 
 # Production-shaped stack (baked images, SPA served by nginx, non-root inference service)
 docker compose -f compose.yaml -f compose.prod.yaml up -d --build
-docker compose -f compose.yaml -f compose.prod.yaml -f compose.arm64.yaml up -d --build
+docker compose -f compose.yaml -f compose.prod.yaml -f compose.full.yaml up -d --build
 
 # Opt-in: publish the private services on 127.0.0.1 for inspection
 docker compose -f compose.yaml -f compose.debug.yaml up -d
@@ -59,8 +63,8 @@ cp .env.example .env
 ```
 
 Notable variables: `WEB_PORT`, `FRONTEND_PORT`, `FRONTEND_PROD_PORT`, `POSTGRES_*`, `APP_KEY`,
-`APP_URL`, `CROSSREF_MAILTO`, `SCORING_SEMANTIC_ENABLED`, and the `*_DEBUG_PORT` values used by
-`compose.debug.yaml`.
+`APP_URL`, `CROSSREF_MAILTO`, `SCORING_SEMANTIC_ENABLED`, `REMOTE_GROBID_URL` (only used by
+`compose.remote-grobid.yaml`), and the `*_DEBUG_PORT` values used by `compose.debug.yaml`.
 
 ### Why the root `.env` and not per-component `.env` files
 
@@ -134,13 +138,24 @@ images do not.
   fatal to the `embedding` pipeline step, so the compose environment sets
   `SCORING_SEMANTIC_ENABLED=false` and scoring degrades to string signals
   (`EmbedReferencesStep` degradation policy). Remove the override once SBERT lands.
-- **GROBID variant**: the default amd64 image is the `-full` (deep-learning) build; the arm64
-  overlay uses `-crf` (CRF models only) because `-full` has no arm64 manifest. CRF covers
-  bibliography + in-text citation extraction; full-image accuracy is higher for reference parsing
-  and citation contexts.
+- **GROBID variant**: the default `-crf` image is multi-arch (amd64 + arm64), so the same
+  compose file runs natively everywhere with no `platform:` pin. It covers bibliography +
+  in-text citation extraction. The opt-in `compose.full.yaml` overlay swaps in `-full`
+  (deep-learning models, higher reference/citation-context accuracy), which is amd64-only and
+  therefore pins `platform: linux/amd64`: a no-op on amd64 hosts, QEMU emulation on arm64.
 - **GROBID memory**: the service is JVM-based and needs several GB of RAM. On Docker Desktop,
-  raise the VM memory limit if extraction fails or the container is OOM-killed. The full image on
-  arm64 hosts runs under emulation: expect it to be slow.
+  raise the VM memory limit if extraction fails or the container is OOM-killed. The full image
+  on arm64 hosts runs under emulation: expect it to be slow.
+- **Remote GROBID (`compose.remote-grobid.yaml`)**: skips the local container — `inference` is
+  pointed at a hosted GROBID (`REMOTE_GROBID_URL`, default the public
+  `grobidorg-grobid-full2.hf.space` Space) and the `grobid` service is moved behind the
+  `local-grobid` profile so it is neither started nor pulled. Convenient for demos and machines
+  that should not download the multi-GB image.
+  **This deliberately breaks the isolation rule of `docs/SECURITY.md` §7:** every uploaded PDF is
+  sent to a third-party host over the public internet, and the returned TEI is untrusted. Use it
+  with throwaway documents only — never with real user documents, never as a production shape.
+  The shared Space is rate-limited and can be asleep (`docker compose logs -f inference`), and it
+  can disappear at any time.
 - **Upload limits**: nginx (`client_max_body_size 25m`) and PHP (`upload_max_filesize 25M`,
   `post_max_size 26M`) are deliberately above the 20 MB API cap so Laravel answers with the
   documented `413 PAYLOAD_TOO_LARGE` envelope instead of an HTML error page.
@@ -162,7 +177,7 @@ images do not.
 | `port is already allocated` | Another local service owns 8000/5173/8080. Change `WEB_PORT`/`FRONTEND_PORT`/`FRONTEND_PROD_PORT` in `.env`. |
 | `worker` stays in `created` | `backend` is not healthy yet: `docker compose logs backend` (migrations, database wait, APP_KEY). |
 | `inference` stays in `created` | GROBID has not passed `/api/isalive` (JVM startup can take a minute). `docker compose logs grobid`. |
-| Analysis fails with `INFERENCE_UNAVAILABLE` | GROBID crashed or is emulated too slowly. Check `docker compose logs grobid` and Docker Desktop memory. |
+| Analysis fails with `INFERENCE_UNAVAILABLE` | GROBID crashed or is emulated too slowly. Check `docker compose logs grobid` and Docker Desktop memory. With `compose.remote-grobid.yaml`: the remote Space is asleep or rate-limiting (`docker compose logs -f inference`), or `REMOTE_GROBID_URL` is wrong. |
 | Analysis fails at `embedding` | `SCORING_SEMANTIC_ENABLED` must be `false` until SBERT exists. |
 | 413 from nginx/PHP instead of the API envelope | Someone lowered the nginx/PHP limits below the 20 MB cap; restore them. |
 | Stale PHP/Node/Python dependencies after a lockfile change | `docker compose build <service>` then `docker compose down -v <volume>` (or `docker compose up -d --force-recreate`). |

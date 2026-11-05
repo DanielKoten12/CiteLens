@@ -32,11 +32,14 @@ Prerequisites: Docker Engine with Compose 2.24+ (Docker Desktop / OrbStack ship 
 `!override` merge tags).
 
 ```bash
-# Development stack, amd64 default (GROBID full image)
+# Development stack, GROBID CRF by default (multi-arch: amd64 + arm64, no emulation)
 docker compose up -d --build
 
-# Apple Silicon / arm64 hosts: native GROBID CRF image
-docker compose -f compose.yaml -f compose.arm64.yaml up -d --build
+# GROBID full models instead of CRF (amd64 only; emulated on arm64 hosts)
+docker compose -f compose.yaml -f compose.full.yaml up -d --build
+
+# No local GROBID: use a hosted one (sends uploads to a third party; dev/demo only)
+docker compose -f compose.yaml -f compose.remote-grobid.yaml up -d --build
 ```
 
 - SPA: <http://localhost:5173>

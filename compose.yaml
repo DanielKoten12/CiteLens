@@ -1,8 +1,8 @@
 # Dafpus Cek — development stack (`docs/ARCHITECTURE.md` §2/§12).
 #
 # Usage (run from the repository root):
-#   docker compose up -d --build                        # default: amd64 GROBID full image
-#   docker compose -f compose.yaml -f compose.arm64.yaml up -d --build   # Apple Silicon / arm64
+#   docker compose up -d --build                        # default: GROBID CRF (multi-arch)
+#   docker compose -f compose.yaml -f compose.full.yaml up -d --build    # GROBID full (amd64)
 #   docker compose -f compose.yaml -f compose.prod.yaml up -d --build    # production-shaped
 #   docker compose -f compose.yaml -f compose.debug.yaml up -d           # + localhost debug ports
 #
@@ -180,10 +180,11 @@ services:
       start_period: 10s
 
   grobid:
-    # Default stack targets amd64 hosts (docs/API_SPEC.md §9). On arm64 use
-    # compose.arm64.yaml, which swaps in the CRF image built for linux/arm64.
-    image: grobid/grobid:0.9.1-full
-    platform: linux/amd64
+    # Multi-arch image (linux/amd64 + linux/arm64), so no `platform:` pin: Docker
+    # resolves the host architecture and nothing runs under emulation. CRF models
+    # cover bibliography + in-text citation extraction; compose.full.yaml swaps in
+    # the amd64-only `-full` image when the higher parsing accuracy is needed.
+    image: grobid/grobid:0.9.1-crf
     ulimits:
       core: 0
     healthcheck:

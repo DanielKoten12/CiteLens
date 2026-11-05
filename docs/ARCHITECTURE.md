@@ -310,9 +310,13 @@ Report and document files are stored on a private disk; access is via signed/tem
 The repository implements this topology with Compose files at the repo root (runbook:
 `docker/README.md`):
 
-- `compose.yaml` — development stack (amd64 default: GROBID `0.9.1-full`, bind-mounted sources,
+- `compose.yaml` — development stack (multi-arch GROBID `0.9.1-crf`, bind-mounted sources,
   Vite dev server, php-fpm + nginx);
-- `compose.arm64.yaml` — arm64 overlay that swaps in the native GROBID `0.9.1-crf` image;
+- `compose.full.yaml` — overlay that swaps in the amd64-only GROBID `0.9.1-full` image when the
+  higher reference-parsing accuracy is wanted (emulated on arm64 hosts);
+- `compose.remote-grobid.yaml` — dev/demo overlay that skips the local GROBID container and points
+  `inference` at a hosted GROBID (`REMOTE_GROBID_URL`), so no multi-GB image is needed. It moves
+  uploaded documents outside the private network; not a production shape (`docs/SECURITY.md` §7);
 - `compose.prod.yaml` — production-shaped overlay (built `prod` targets, no bind mounts, SPA baked
   into nginx, non-root inference service, config/view caches warmed at start);
 - `compose.debug.yaml` — opt-in overlay publishing PostgreSQL/GROBID/inference/Gotenberg on

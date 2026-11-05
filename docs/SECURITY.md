@@ -180,6 +180,12 @@ development easier.
   HTML is generated server-side from a Blade template (escaped extracted text only) and is never
   rendered in a browser or returned to the client; only the finished PDF bytes are stored.
 - Neither service may be exposed on the public internet or called from the browser.
+- **Single sanctioned exception (development only):** `compose.remote-grobid.yaml` points the
+  inference service at a hosted GROBID (`REMOTE_GROBID_URL`, default a public Hugging Face Space)
+  so contributors can skip the multi-GB image. It breaks the GROBID isolation above **by design**
+  — treated PDFs are sent to a third party over the public internet, and the returned TEI is
+  untrusted input. Demo/throwaway documents only; never production, never real user documents.
+  Everything else (Crossref egress from Laravel, private disks, error envelopes) stays unchanged.
 - No public, frontend-facing FastAPI endpoints may be added unless `docs/API_SPEC.md` is
   deliberately changed.
 - Inference endpoints accept only the documented internal shapes (`/health`, `/v1/extract`,

@@ -114,8 +114,9 @@ Hard rules:
 /
 ├── AGENTS.md                  # this file
 ├── README.md                  # project overview + docker quick start
-├── compose.yaml               # development stack (amd64 default; see docker/README.md)
-├── compose.arm64.yaml         # arm64 overlay (GROBID CRF image, native arm64)
+├── compose.yaml               # development stack (GROBID CRF default; see docker/README.md)
+├── compose.full.yaml          # GROBID `-full` overlay (amd64, higher parsing accuracy)
+├── compose.remote-grobid.yaml # overlay using a hosted GROBID (no local image; data egress)
 ├── compose.prod.yaml          # production-shaped overlay (built targets, SPA via nginx)
 ├── compose.debug.yaml         # opt-in 127.0.0.1 publish for db/grobid/inference/gotenberg
 ├── .env.example               # compose variable overrides (copy to .env, git-ignored)
@@ -176,10 +177,11 @@ Hard rules:
 
 Notes:
 
-- The stack is **containerized**: root `compose.yaml` (development, amd64 GROBID full image) plus
-  the `compose.arm64.yaml`, `compose.prod.yaml` and `compose.debug.yaml` overlays; shared config
-  lives in `docker/`, per-component images in `backend/Dockerfile`, `frontend/Dockerfile` and
-  `inference/Dockerfile`. The runbook is `docker/README.md`; keep commands there, not duplicated.
+- The stack is **containerized**: root `compose.yaml` (development, multi-arch GROBID CRF image)
+  plus the `compose.full.yaml`, `compose.remote-grobid.yaml`, `compose.prod.yaml` and
+  `compose.debug.yaml` overlays; shared config lives in `docker/`, per-component images in
+  `backend/Dockerfile`, `frontend/Dockerfile` and `inference/Dockerfile`. The runbook is
+  `docker/README.md`; keep commands there, not duplicated.
 - There is **no CI configuration, no `.github/`, and no ESLint/Prettier config** in this repo. Do
   not cite commands from tooling that does not exist; if you add such tooling, do it deliberately
   and document it here.
@@ -415,7 +417,9 @@ document**.
   reference validation and candidate lookup. **Laravel orchestrates all Crossref requests.** Never
   call Crossref from the frontend, and never expose Crossref credentials to the browser.
 - **GROBID** — internal; extracts bibliography entries, in-text citations, and coordinates. Not
-  exposed to the frontend.
+  exposed to the frontend. It runs as a private compose service; the dev-only
+  `compose.remote-grobid.yaml` overlay points `inference` at a hosted GROBID instead, which sends
+  uploaded PDFs to a third party — demo/throwaway documents only (`docker/README.md` §5).
 - **SBERT** — internal; semantic embeddings and title/semantic similarity. Not a public endpoint.
   Batch embedding requests (e.g. 32 texts) to bound latency/memory.
 - **Google Scholar** — explicitly **excluded** by the proposal (no official API; scraping
@@ -620,8 +624,9 @@ uv run pytest -m integration                                  # opt-in; needs a 
 ### Docker (`compose.yaml`, `docker/`)
 
 ```bash
-docker compose up -d --build                                            # dev, amd64 default
-docker compose -f compose.yaml -f compose.arm64.yaml up -d --build      # arm64 hosts
+docker compose up -d --build                                            # dev, GROBID CRF (multi-arch)
+docker compose -f compose.yaml -f compose.full.yaml up -d --build       # GROBID full (amd64)
+docker compose -f compose.yaml -f compose.remote-grobid.yaml up -d --build  # hosted GROBID (egress)
 docker compose -f compose.yaml -f compose.prod.yaml up -d --build       # production-shaped
 docker compose -f compose.yaml -f compose.debug.yaml up -d              # + 127.0.0.1 debug ports
 
