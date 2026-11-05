@@ -1,0 +1,745 @@
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <meta name="description" content="garuda garba rujukan digital">
+        <meta name="author" content="kementrian riset, teknologi dan pendidikan tinggi">
+        <link rel="icon" href="/assets/img/garuda-icon.png">
+
+        <title>Garuda - Garba Rujukan Digital</title>
+
+        <!-- SEMANTIC UI -->
+        <link href="/assets/semantic/semantic.min.css" rel="stylesheet">
+        <link href="/assets/semantic/components/reset.css" rel="stylesheet"> 
+
+        <link href="/assets/css/main.css" rel="stylesheet">
+        <link href="/assets/css/app.css" rel="stylesheet">
+        <link href="/assets/css/flash-message.css" rel="stylesheet">
+        
+        <!-- JQUERY UI - AUTOCOMPLETE -->
+        <link href="/assets/css/jquery-ui/jquery-ui.css" rel="stylesheet" />
+
+        <script src="/assets/js/jquery.js"></script>
+        <script src="/assets/semantic/semantic.min.js"></script>
+        <script src="/assets/js/jquery.tagcloud.js" type="text/javascript"></script>
+        <script src="/assets/js/Chart.js"></script>
+        <script src="/assets/custom/main.js"></script>
+        <script src="/assets/js/app.js"></script>
+        <!-- JQUERY UI - AUTOCOMPLETE -->
+        <script src="/assets/js/jquery-ui/jquery-ui.min.js"></script>
+    </head>
+
+
+
+    <body>
+                <div class="ui stackable menu top-menu">
+            <a class="header item brand" href="/">
+                 <img src="/assets/img/garuda1.png" alt=""> 
+            </a>
+            <div class="right menu">
+                <a class="nav item " href="/">Home</a>
+                <a class="nav item " href="/publisher">Publisher</a>
+                <a class="nav item " href="/journal">Journal / Conference</a>
+                <a class="nav item " href="/area">Subject</a>
+                <a class="nav item " href="/suggest">Suggest</a>
+                <a class="nav item" target="_blank" href="https://drive.google.com/drive/folders/19TuyOLkABcMgh99AgLweV-B8BE1wcUl8?usp=sharing">Guidebook</a>
+                <a class="nav item disabled">&nbsp;</a>
+            </div>
+        </div>
+
+        <main role="main" class="container">
+
+<div class="row" style="margin: 0 15px;">
+    <form class="ui form" action="" method="GET">
+        <div class="ui stackable padded grid">
+            <div class="three wide field column">
+                <label>Search By</label>
+                <select class="ui selection dropdown" name="select">
+                    <option value="title" >Title</option>
+                    <option value="abstract" >Abstract</option>
+                    <option value="author" >Author</option>
+                    <option value="doi" >DOI</option>
+                </select>
+                <div class="ui checkbox" style="margin-top: 10px;">
+                    <input type="checkbox" tabindex="0" name="pdf" value="1" >
+                    <label>Downloadable PDF Only</label>
+                </div>
+            </div>
+            <div class="seven wide field column">
+                <label>Keywords</label>
+                <input type="text" name="q" placeholder="Source Title" value="literasi digital indonesia" minlength="3" required> 
+            </div>
+            <div class="four wide field column">
+                <label>Publisher</label>
+                <input type="text" name="pub" placeholder="Publisher Name" value="" minlength="3">
+            </div>
+            <div class="two wide field column">
+                <label>&nbsp;</label>
+                <button class="ui fluid button" type="submit"><i class="search icon"></i> Search</button>
+            </div>
+        </div>
+    </form>
+    
+    <div class="ui stackable grid">
+        <div class="four wide column">
+            <div class="ui basic segment">
+                <h4 class="ui header">Filter By Year</h4>
+                <p>
+                    1945                    <span style="float: right"> 2024</span>
+                </p> 
+                <div id="slider-range"></div>
+                <br>
+
+                <form id="filter_year" class="ui mini form" action="" method="get">
+                                            <input type="hidden" name="q" value="literasi digital indonesia">
+                                                        
+                                        
+                    <div class="equal width fields">
+                        <div class="field">
+                            <label>From</label>
+                            <input type="text" id="from" name="from">
+                        </div>
+                        <div class="field">
+                            <label>To</label>
+                            <input type="text" id="to" name="to">
+                        </div>
+                    </div>
+                    <div class="equal width fields">
+                        <div class="field">
+                            <button class="ui mini fluid button" type="submit">Filter</button>
+                        </div>
+                        <div class="field">
+                            <a class="ui mini fluid button basic red" href="/documents/?q=literasi digital indonesia&select=&pub=&pdf=">Reset</a>
+                        </div>
+                    </div>
+                    
+                </form>
+            </div>
+        </div>
+        <div class="twelve wide column">
+            <div class="ui equal width grid">
+                <div class="column">
+                    <h2 class="ui header">
+                        <i class="search icon"></i>
+                        <div class="content">
+                            Found 425 documents
+                            <div class="sub header">Search  
+                                <i><xmp>literasi digital indonesia</xmp></i> 
+                                <i><xmp></xmp></i> 
+                                <i><xmp></xmp></i>  
+                                <i><xmp></xmp></i>
+                                <i><xmp></xmp></i>
+                            </div>
+                        </div>
+                    </h2>
+                </div>
+                <div class="column right aligned">
+                                            <div class="page-column" style="float: right !important;">
+                            <a href="?page=1&q=literasi digital indonesia" class="ui mini icon button">
+                                <i class="angle double left icon"></i>
+                            </a>                                
+                                                            <a href="?page=1&q=literasi digital indonesia" class="ui mini icon button orange">
+                                    &nbsp;1&nbsp;
+                                </a>
+                                                            <a href="?page=2&q=literasi digital indonesia" class="ui mini icon button ">
+                                    &nbsp;2&nbsp;
+                                </a>
+                                                            <a href="?page=3&q=literasi digital indonesia" class="ui mini icon button ">
+                                    &nbsp;3&nbsp;
+                                </a>
+                                                            <a href="?page=4&q=literasi digital indonesia" class="ui mini icon button ">
+                                    &nbsp;4&nbsp;
+                                </a>
+                                                            <a href="?page=5&q=literasi digital indonesia" class="ui mini icon button ">
+                                    &nbsp;5&nbsp;
+                                </a>
+                                                        
+                            <a href="?page=43&q=literasi digital indonesia" class="ui mini icon button page-button">
+                                <i class="angle double right icon"></i>
+                            </a>
+                        </div>
+					                </div>
+            </div>
+
+            <div class="ui">
+                <div class="ui divider"></div>
+                                                            <div class="article-item">        
+                            <a class="title-article" href="/documents/detail/6584846">
+                                <xmp>Beyond Borders, Beyond Classrooms: Pendampingan Literasi Finansial Digital melalui Aktivitas Edukatif bagi Anak Diaspora Indonesia di Sanggar Bimbingan Kampung Bharu, Malaysia: Beyond Borders, Beyond Classrooms: Pendampingan Literasi Finansial Digital melalui Aktivitas Edukatif bagi Anak Diaspora Indonesia di Sanggar Bimbingan Kampung Bharu, Malaysia </xmp>
+                            </a>
+                            <a class="author-article" href="/author/view/11050593"><xmp>Defa Enggrina</xmp></a>; <a class="author-article" href="/author/view/6486191"><xmp>Asmita Wulansari Dg. Liwang</xmp></a>; <a class="author-article" href="/author/view/2681976"><xmp>Wahyudin Rahman</xmp></a>; <a class="author-article" href="/author/view/6244157"><xmp>Sutrisno K. Djawa</xmp></a>; <a class="author-article" href="/author/view/11050594"><xmp>Eef Saifullah Doloan</xmp></a>; <a class="author-article" href="/author/view/2518350"><xmp>Risno Mina</xmp></a>; <a class="author-article" href="/author/view/11050595"><xmp>Mientarsih Warijan</xmp></a>                            <br>
+                            <xmp class="subtitle-article"> JESASI (JURNAL EDUKASI, SAINS, DAN INOVASI) Vol. 3 No. 1 (2026): JESASI (Jurnal Edukasi, Sains, dan Inovasi) February - July 2026 </xmp>
+                            <br>
+                            <i class="subtitle-article">Publisher : </i><xmp class="subtitle-article">PT. CASA CENDEKIA MEDIA </xmp>
+                            <p class="action-article">
+                                <a class="btn_show_abstract title-citation" target="6584846" onclick="show_abstract(6584846)"> Show Abstract</a>
+                                | <a class="title-citation" href="https://jesasi.com/jpm/article/download/51/51" target="_blank">
+                                    <i class="download icon"></i> Download Original
+                                </a>
+                                | <i>
+                                    <a class="title-citation" href="https://jesasi.com/jpm/article/view/51/51" target="_blank">
+                                        Original Source
+                                    </a>
+                                </i>
+                                | <i>
+                                    <a class="title-citation" href="http://scholar.google.com/scholar?q=%2Bintitle%3A&quot;Beyond+Borders+Beyond+Classrooms+Pendampingan+Literasi+Finansial+Digital+melalui+Aktivitas+Edukatif+bagi+Anak+Diaspora+Indonesia+di+Sanggar+Bimbingan+Kampung+Bharu+Malaysia+Beyond+Borders+Beyond+Classrooms+Pendampingan+Literasi+Finansial+Digital+melalui+Aktivitas+Edukatif+bagi+Anak+Diaspora+Indonesia+di+Sanggar+Bimbingan+Kampung+Bharu+Malaysia&quot;" target="_blank">
+                                        Check in Google Scholar
+                                    </a>
+                                </i>
+                                                                                                    
+                                    | <a class="title-citation" target="_blank" href="https://doi.org/10.66225/jesasi.v3i1.51">
+                                        DOI: 10.66225/jesasi.v3i1.51                                    </a>
+                                                            </p>
+                            <div id="show_abstract6584846" class="article-abstract">
+                                <div class="ui message tiny basic">
+                                    <h4 class="ui header">
+                                        <b>Abstract</b>
+                                    </h4>
+                                    <div class="abstract-article">
+                                        <xmp class="abstract-article">Perkembangan teknologi digital menjadikan literasi finansial digital penting dikenalkan sejak usia dini, khususnya bagi anak diaspora Indonesia dalam pendidikan nonformal. Kegiatan pengabdian ini bertujuan mendeskripsikan pendampingan literasi finansial digital di Sanggar Bimbingan Kampung Bharu, Kuala Lumpur, Malaysia, melalui pendekatan experiential learning. Program mengintegrasikan literasi digital, literasi finansial, dan kewirausahaan sederhana melalui video edukasi, presentasi multimedia, permainan interaktif, simulasi, aktivitas kelompok, dan Market Day. Tahapan kegiatan meliputi edukasi penggunaan gadget dan internet secara bijak, Smart Financial Literacy, Kenali Rupiah, My Wishlist Challenge, Young Entrepreneurship, serta praktik transaksi. Hasil kegiatan menunjukkan peserta memahami teknologi sebagai media belajar, mengenali fungsi uang, membedakan kebutuhan dan keinginan, membangun kesadaran menabung, serta menerapkan konsep finansial melalui praktik kewirausahaan. Program ini menunjukkan bahwa pendampingan kontekstual, partisipatif, dan berbasis pengalaman dapat memperkuat kebiasaan finansial anak sekaligus mendukung pembelajaran digital pada komunitas diaspora Indonesia.</xmp>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ui divider"></div>
+                                            <div class="article-item">        
+                            <a class="title-article" href="/documents/detail/3837540">
+                                <xmp>Literasi Digital Literasi Digital Sebagai Upaya Menangkal Hoax di Lingkungan Masyarakat Indonesia </xmp>
+                            </a>
+                            <a class="author-article" href="/author/view/6640124"><xmp>Aveny Kurnia Mursyida Aveny</xmp></a>; <a class="author-article" href="/author/view/6585596"><xmp>Yozan Trio Mahendra</xmp></a>; <a class="author-article" href="/author/view/6278820"><xmp>Dandy Saputra</xmp></a>                            <br>
+                            <xmp class="subtitle-article"> Jurnal Tonggak Pendidikan Dasar : Jurnal Kajian Teori dan Hasil Pendidikan Dasar Vol. 2 No. 1 (2023): JTPD </xmp>
+                            <br>
+                            <i class="subtitle-article">Publisher : </i><xmp class="subtitle-article">Universitas Jambi </xmp>
+                            <p class="action-article">
+                                <a class="btn_show_abstract title-citation" target="3837540" onclick="show_abstract(3837540)"> Show Abstract</a>
+                                | <a class="title-citation" href="https://online-journal.unja.ac.id/jtpd/article/download/22866/16214" target="_blank">
+                                    <i class="download icon"></i> Download Original
+                                </a>
+                                | <i>
+                                    <a class="title-citation" href="https://online-journal.unja.ac.id/jtpd/article/view/22866/16214" target="_blank">
+                                        Original Source
+                                    </a>
+                                </i>
+                                | <i>
+                                    <a class="title-citation" href="http://scholar.google.com/scholar?q=%2Bintitle%3A&quot;Literasi+Digital+Literasi+Digital+Sebagai+Upaya+Menangkal+Hoax+di+Lingkungan+Masyarakat+Indonesia&quot;" target="_blank">
+                                        Check in Google Scholar
+                                    </a>
+                                </i>
+                                                                                                    
+                                    | <a class="title-citation" target="_blank" href="https://doi.org/10.22437/jtpd.v2i1.22866">
+                                        DOI: 10.22437/jtpd.v2i1.22866                                    </a>
+                                                            </p>
+                            <div id="show_abstract3837540" class="article-abstract">
+                                <div class="ui message tiny basic">
+                                    <h4 class="ui header">
+                                        <b>Abstract</b>
+                                    </h4>
+                                    <div class="abstract-article">
+                                        <xmp class="abstract-article">Masyarakat Indonesia secara keseluruhan perlu mewaspadai hoax di era digital ini. Berbagai dukungan juga diperlukan untuk menghentikan masalah ini, karena hoax dan berita palsu mengenai berbagai jenis informasi yang tersebar di media sosial dapat merugikan masyarakat. Edukasi masyarakat tentang literasi digital bisa menjadi salah satu metode terbaik dalam menyelesaikan masalah ini. Sekalipun masyarakat sudah mahir menggunakan teknologi digital, agar masyarakat berkembang menjadi masyarakat yang kritis dan cerdas, mereka juga perlu di didik tentang bagaimana memanfaatkan informasi yang disebarluaskan di era digital ini. Tujuan dari gerakan literasi digital masyarakat adalah agar dapat meningkatkan kinerja masyarakat untuk bersikap kritis, kreatif, dan positif saat menggunakan media digital. Literasi digital harus selalu diterapkan jika masyarakat ingin menghadapi pesatnya perubahan di masa depan.</xmp>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ui divider"></div>
+                                            <div class="article-item">        
+                            <a class="title-article" href="/documents/detail/5295912">
+                                <xmp>Pengaruh Literasi Digital terhadap Literasi Kesehatan Digital Tenaga Kesehatan di Indonesia </xmp>
+                            </a>
+                            <a class="author-article" href="/author/view/1407848"><xmp>Destrity, Nia Ashton</xmp></a>; <a class="author-article" href="/author/view/356821"><xmp>Rakhmawati, Fariza Yuniar</xmp></a>; <a class="author-article" href="/author/view/1226644"><xmp>Alfira, Nisa</xmp></a>                            <br>
+                            <xmp class="subtitle-article"> KOMUNIKATIF : Jurnal Ilmiah Komunikasi Vol. 14 No. 1 (2025): Komunikatif : Jurnal Ilmiah Komunikasi </xmp>
+                            <br>
+                            <i class="subtitle-article">Publisher : </i><xmp class="subtitle-article">Fakultas Ilmu Komunikasi UKWMS </xmp>
+                            <p class="action-article">
+                                <a class="btn_show_abstract title-citation" target="5295912" onclick="show_abstract(5295912)"> Show Abstract</a>
+                                | <a class="title-citation" href="https://journal.ukwms.ac.id/index.php/KOMUNIKATIF/article/download/6040/5426" target="_blank">
+                                    <i class="download icon"></i> Download Original
+                                </a>
+                                | <i>
+                                    <a class="title-citation" href="https://journal.ukwms.ac.id/index.php/KOMUNIKATIF/article/view/6040/5426" target="_blank">
+                                        Original Source
+                                    </a>
+                                </i>
+                                | <i>
+                                    <a class="title-citation" href="http://scholar.google.com/scholar?q=%2Bintitle%3A&quot;Pengaruh+Literasi+Digital+terhadap+Literasi+Kesehatan+Digital+Tenaga+Kesehatan+di+Indonesia&quot;" target="_blank">
+                                        Check in Google Scholar
+                                    </a>
+                                </i>
+                                                                                                    
+                                    | <a class="title-citation" target="_blank" href="https://doi.org/10.33508/jk.v14i1.6040">
+                                        DOI: 10.33508/jk.v14i1.6040                                    </a>
+                                                            </p>
+                            <div id="show_abstract5295912" class="article-abstract">
+                                <div class="ui message tiny basic">
+                                    <h4 class="ui header">
+                                        <b>Abstract</b>
+                                    </h4>
+                                    <div class="abstract-article">
+                                        <xmp class="abstract-article">The advancement of information and communication technology requires healthcare professionals to have strong digital competencies in consuming, acting upon, and producing digital health information. In Indonesia, some social media content created by healthcare professionals has been deemed unethical or unwise, highlighting the importance of digital literacy in this sector. Although studies on digital literacy and digital health literacy exist, research specifically focusing on Indonesian healthcare professionals is still limited. This study aims to analyze the influence of digital literacy on digital health literacy among healthcare professionals. Using a survey method, an online questionnaire was distributed to 387 respondents. The findings indicate that respondents’ levels of digital literacy and digital health literacy are moderate. While respondents generally perceive themselves as proficient in technical digital skills, they report lower confidence in broader digital competencies such as sharing opinions, participating in online activities, and protecting themselves from internet-related risks. Although they demonstrate stronger operational skills, they encounter challenges in navigating digital health information, evaluating the reliability of information, safeguarding personal privacy, and adding self-generated content. These results confirm that digital literacy significantly influences digital health literacy, emphasizing the need for healthcare professionals to develop comprehensive digital skills. Strong digital capabilities are essential for engaging effectively with digital health information and establishing credibility as sources on social media. The study underscores the urgent need to enhance digital capacity, particularly in device security, information navigation, content creation, digital participation, and protection from privacy breaches and other online risks. ABSTRAK Perkembangan teknologi informasi dan komunikasi menuntut tenaga kesehatan untuk memiliki kompetensi digital dan keterampilan dalam mengonsumsi, mengambil tindakan atas, serta memproduksi informasi kesehatan digital. Beberapa tahun terakhir, terdapat sejumlah konten media sosial oleh tenaga kesehatan di Indonesia yang dinilai kurang etis dan bijak. Sejumlah studi mengenai literasi digital dan literasi kesehatan digital telah dilakukan. Namun, di Indonesia masih terbatas studi mengenai literasi digital dan literasi kesehatan digital tenaga kesehatan. Riset ini ditujukan untuk menguji dan menganalisis pengaruh literasi digital terhadap literasi kesehatan digital pada tenaga kesehatan. Metode survei dilakukan melalui kuesioner daring kepada 387 tenaga kesehatan. Hasil riset menunjukkan bahwa secara umum, literasi digital dan literasi kesehatan digital responden berada pada tingkat moderat. Responden cenderung menilai diri mereka lebih memiliki keterampilan teknis digital dibandingkan kompetensi digital yang mencakup berbagi opini, berpartisipasi, dan perlindungan dari risiko penggunaan internet. Responden lebih unggul dalam keterampilan operasional, namun menghadapi tantangan dalam menavigasi, mengevaluasi reliabilitas, melindungi privasi, dan menambahkan konten yang telah diproduksi sendiri. Temuan ini menegaskan bahwa literasi digital memiliki pengaruh signifikan terhadap literasi kesehatan digital, menunjukkan bahwa kemampuan digital yang baik menjadi elemen penting bagi tenaga kesehatan untuk mendukung keterlibatan mereka memanfaatkan internet dalam konteks kesehatan serta partisipasi aktif sebagai sumber informasi di media sosial. Studi ini memperkuat urgensi peningkatan kapasitas digital terutama terkait keamanan perangkat digital, navigasi dan produksi pesan, partisipasi dalam aktivitas digital, dan perlindungan privasi serta risiko lain dari penggunaan internet.</xmp>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ui divider"></div>
+                                            <div class="article-item">        
+                            <a class="title-article" href="/documents/detail/6522526">
+                                <xmp>Literasi Digital sebagai Agenda Komunikasi Publik: Tinjauan Kritis Diskursus Literasi Digital di Indonesia </xmp>
+                            </a>
+                            <a class="author-article" href="/author/view/10815308"><xmp>Gema Bastari</xmp></a>; <a class="author-article" href="/author/view/10815309"><xmp>Lathiefah Widuri Retyaningyas</xmp></a>; <a class="author-article" href="/author/view/10815310"><xmp>Acih Sari</xmp></a>; <a class="author-article" href="/author/view/10815311"><xmp>Bimo Aji</xmp></a>; <a class="author-article" href="/author/view/10815312"><xmp>Muhamad Lukman Arifianto</xmp></a>                            <br>
+                            <xmp class="subtitle-article"> Jurnal Public Relations (J-PR) Vol. 7 No. 1 (2026): April 2026 </xmp>
+                            <br>
+                            <i class="subtitle-article">Publisher : </i><xmp class="subtitle-article">LPPM Universitas Bina Sarana Informatika </xmp>
+                            <p class="action-article">
+                                <a class="btn_show_abstract title-citation" target="6522526" onclick="show_abstract(6522526)"> Show Abstract</a>
+                                | <a class="title-citation" href="https://jurnal.bsi.ac.id/index.php/jpr/article/download/13159/3341" target="_blank">
+                                    <i class="download icon"></i> Download Original
+                                </a>
+                                | <i>
+                                    <a class="title-citation" href="https://jurnal.bsi.ac.id/index.php/jpr/article/view/13159/3341" target="_blank">
+                                        Original Source
+                                    </a>
+                                </i>
+                                | <i>
+                                    <a class="title-citation" href="http://scholar.google.com/scholar?q=%2Bintitle%3A&quot;Literasi+Digital+sebagai+Agenda+Komunikasi+PublikTinjauan+Kritis+Diskursus+Literasi+Digital+di+Indonesia&quot;" target="_blank">
+                                        Check in Google Scholar
+                                    </a>
+                                </i>
+                                                                                                    
+                                    | <a class="title-citation" target="_blank" href="https://doi.org/10.31294/jpr.v7i1.13159">
+                                        DOI: 10.31294/jpr.v7i1.13159                                    </a>
+                                                            </p>
+                            <div id="show_abstract6522526" class="article-abstract">
+                                <div class="ui message tiny basic">
+                                    <h4 class="ui header">
+                                        <b>Abstract</b>
+                                    </h4>
+                                    <div class="abstract-article">
+                                        <xmp class="abstract-article">This article provides a critical overview of how digital literacy is understood and applied as a public communication agenda by the Government of Indonesia. It highlights the fundamental problem of the government’s approach in developing digital literacy that tends to view digital technology as mostly a source of threat for the nation’s unity. As a result, digital literacy is often viewed as a tool by which the government can control how their citizens interact with digital technology solely according to its own vision of a ‘positive internet’. This article argues that such an approach is problematic as it fails to take into account the existing problem of digital divide as well as the various dimensions of digital literacy that can provide a solution to this problem. In the interest of promoting a more open digital society, this paper will offer an alternative approach at understanding digital literacy which goes beyond how people can better use new digital technology into how people can incorporate digital knowledge into their social life to participate in the new mode of meaning making.</xmp>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ui divider"></div>
+                                            <div class="article-item">        
+                            <a class="title-article" href="/documents/detail/2599065">
+                                <xmp>ADOPSI DAN IMPLEMENTASI KECAKAPAN LITERASI INFORMASI DAN LITERASI DIGITAL UNTUK AKSELERASI UMKM DI INDONESIA PASCA PANDEMI COVID-19 </xmp>
+                            </a>
+                            <a class="author-article" href="/author/view/2506199"><xmp>Purwanto Putra</xmp></a>; <a class="author-article" href="/author/view/418464"><xmp>Andi Windah</xmp></a>; <a class="author-article" href="/author/view/2506201"><xmp>Ana Tarisa</xmp></a>                            <br>
+                            <xmp class="subtitle-article"> Fihris: Jurnal Ilmu Perpustakaan dan Informasi Vol 16, No 2 (2021): DECEMBER </xmp>
+                            <br>
+                            <i class="subtitle-article">Publisher : </i><xmp class="subtitle-article">Program Studi Ilmu Perpustakaan, Fakultas Adab dan Ilmu Budaya, UIN Sunan Kalijaga Yogyaka </xmp>
+                            <p class="action-article">
+                                <a class="btn_show_abstract title-citation" target="2599065" onclick="show_abstract(2599065)"> Show Abstract</a>
+                                | <a class="title-citation" href="https://ejournal.uin-suka.ac.id/adab/FIHRIS/article/download/2095/956" target="_blank">
+                                    <i class="download icon"></i> Download Original
+                                </a>
+                                | <i>
+                                    <a class="title-citation" href="https://ejournal.uin-suka.ac.id/adab/FIHRIS/article/view/2095/956" target="_blank">
+                                        Original Source
+                                    </a>
+                                </i>
+                                | <i>
+                                    <a class="title-citation" href="http://scholar.google.com/scholar?q=%2Bintitle%3A&quot;ADOPSI+DAN+IMPLEMENTASI+KECAKAPAN+LITERASI+INFORMASI+DAN+LITERASI+DIGITAL+UNTUK+AKSELERASI+UMKM+DI+INDONESIA+PASCA+PANDEMI+COVID-19&quot;" target="_blank">
+                                        Check in Google Scholar
+                                    </a>
+                                </i>
+                                                                                                    
+                                    | <a class="title-citation" target="_blank" href="https://doi.org/10.14421/fhrs.2021.162.177-199">
+                                        DOI: 10.14421/fhrs.2021.162.177-199                                    </a>
+                                                            </p>
+                            <div id="show_abstract2599065" class="article-abstract">
+                                <div class="ui message tiny basic">
+                                    <h4 class="ui header">
+                                        <b>Abstract</b>
+                                    </h4>
+                                    <div class="abstract-article">
+                                        <xmp class="abstract-article">Almost all countries in the world are facing the Covid-19 pandemic, which is spreading so massively. Affecting various aspects of life and causing a domino effect in many sectors including the economy. Indonesia's economy worsened in the second quarter (Q2) 2020, negative 5.32 percent and only started to recover in the second quarter of 2021, positive 7.07% thanks to investment and increased household consumption. The MSME sector plays a significant and strategic role in supporting and is predicted to be the engine of economic recovery after the Covid-19 pandemic. The positive contribution of MSMEs to GDP before the pandemic could reach almost 60%. However, now in a condition full of uncertainty, it is necessary to strengthen various ideas, innovations and collaboration of various parties so that MSMEs can get out of pressure and support economic growth. This study will look at the potential for the adoption and implementation of digital literacy skills and information literacy by involving librarians (library institutions), academics, and literacy activists supporting MSMEs in contributing to economic recovery after Covid-19. This study uses a qualitative-descriptive approach in order to present a detailed description of the setting and literacy skills for MSME actors. This research is general in nature (generalization) with the scope of its location in Indonesia, without mentioning specific areas. Primary sources of research are obtained from literature studies, studies of various media and journal articles which are assumed to be able to capture the general condition of society. The results show that the idea of adopting and implementing digital literacy skills and information literacy for MSME actors has an urgency to be implemented immediately as a solution to the challenges of possible innovation (behavior) changes in the habits and operations of the MSME sector after Covid-19. Accelerate the transformation of MSMEs through strengthening the digital literacy and information literacy sectors to support MSME business functions (production, promotion, and marketing) after Covid-19.</xmp>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ui divider"></div>
+                                            <div class="article-item">        
+                            <a class="title-article" href="/documents/detail/4774724">
+                                <xmp>TINGKAT EFIKASI DIRI LITERASI DIGITAL MAHASISWA MKU BAHASA INDONESIA DAN KORELASINYA DENGAN LITERASI BACA-TULIS </xmp>
+                            </a>
+                            <a class="author-article" href="/author/view/2114223"><xmp>Ardiasri, Aptia</xmp></a>; <a class="author-article" href="/author/view/8104364"><xmp>Nindyaningrum, Fitria Wiyarti</xmp></a>; <a class="author-article" href="/author/view/8104365"><xmp>Purwantini, Mei</xmp></a>; <a class="author-article" href="/author/view/1246864"><xmp>Dianastiti, Firstya Evi</xmp></a>                            <br>
+                            <xmp class="subtitle-article"> Widyabastra : Jurnal Ilmiah Pembelajaran Bahasa dan Sastra Indonesia Vol. 12 No. 2 (2024) </xmp>
+                            <br>
+                            <i class="subtitle-article">Publisher : </i><xmp class="subtitle-article">Universitas PGRI Madiun </xmp>
+                            <p class="action-article">
+                                <a class="btn_show_abstract title-citation" target="4774724" onclick="show_abstract(4774724)"> Show Abstract</a>
+                                | <a class="title-citation" href="https://e-journal.unipma.ac.id/index.php/widyabastra/article/download/21459/6901" target="_blank">
+                                    <i class="download icon"></i> Download Original
+                                </a>
+                                | <i>
+                                    <a class="title-citation" href="https://e-journal.unipma.ac.id/index.php/widyabastra/article/view/21459/6901" target="_blank">
+                                        Original Source
+                                    </a>
+                                </i>
+                                | <i>
+                                    <a class="title-citation" href="http://scholar.google.com/scholar?q=%2Bintitle%3A&quot;TINGKAT+EFIKASI+DIRI+LITERASI+DIGITAL+MAHASISWA+MKU+BAHASA+INDONESIA+DAN+KORELASINYA+DENGAN+LITERASI+BACA-TULIS&quot;" target="_blank">
+                                        Check in Google Scholar
+                                    </a>
+                                </i>
+                                                                                                    
+                                    | <a class="title-citation" target="_blank" href="https://doi.org/10.25273/widyabastra.v12i2.21459">
+                                        DOI: 10.25273/widyabastra.v12i2.21459                                    </a>
+                                                            </p>
+                            <div id="show_abstract4774724" class="article-abstract">
+                                <div class="ui message tiny basic">
+                                    <h4 class="ui header">
+                                        <b>Abstract</b>
+                                    </h4>
+                                    <div class="abstract-article">
+                                        <xmp class="abstract-article">Tujuan penelitian ini adalah untuk mendeskripsikan tingkat efikasi diri mahasiswa terhadap literasi digital dan memaparkan hasil kajian pustaka tentang korelasi literasi digital dengan literasi baca-tulis. Penelitian ini menggunakan desain penelitian kualitatif deskriptif. Hasil penelitian yang diperoleh dari jawaban responden, yaitu (1) secara umum menunjukkan tren positif tingkat efikasi diri mahasiswa terhadap inklusi digital, (2) mahasiswa dengan efikasi diri yang tinggi memiliki akses yang lebih baik terhadap teknologi digital dan keterampilan yang lebih baik dalam penggunaannya, dan (3) faktor-faktor seperti dukungan sosial dan pengalaman sebelumnya dengan teknologi juga memengaruhi inklusi digital. Tren ini menunjukkan bahwa peningkatan efikasi diri mahasiswa dapat berdampak positif terhadap inklusi digital. Dengan rasa percaya diri yang lebih tinggi, mahasiswa lebih mungkin untuk mengeksplorasi dan memanfaatkan teknologi dalam studi dan kehidupan sehari-hari, yang pada akhirnya berkontribusi pada kesuksesan akademis dan profesional mereka di era digital.</xmp>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ui divider"></div>
+                                            <div class="article-item">        
+                            <a class="title-article" href="/documents/detail/5828593">
+                                <xmp>PENGARUH LITERASI DIGITAL DAN LITERASI MEDIA TERHADAP POLA PENCARIAN INFORMASI MODEL ELLIS PADA DOSEN SARI MUTIARA INDONESIA </xmp>
+                            </a>
+                            <a class="author-article" href="/author/view/9431654"><xmp>Monagesty Siburian</xmp></a>; <a class="author-article" href="/author/view/2692999"><xmp>Hilda Syaf’aini Harefa</xmp></a>                            <br>
+                            <xmp class="subtitle-article"> Journal Net. Library and Information Vol. 1 No. 2 (2024): Journal Net. Library and Information (JNLI) </xmp>
+                            <br>
+                            <i class="subtitle-article">Publisher : </i><xmp class="subtitle-article">Prodi Perpustakaan dan Sains Informasi Universitas Sari Mutiara Indoneia </xmp>
+                            <p class="action-article">
+                                <a class="btn_show_abstract title-citation" target="5828593" onclick="show_abstract(5828593)"> Show Abstract</a>
+                                | <a class="title-citation" href="https://e-journal.sari-mutiara.ac.id/index.php/jnli/article/download/5344/3600" target="_blank">
+                                    <i class="download icon"></i> Download Original
+                                </a>
+                                | <i>
+                                    <a class="title-citation" href="https://e-journal.sari-mutiara.ac.id/index.php/jnli/article/view/5344/3600" target="_blank">
+                                        Original Source
+                                    </a>
+                                </i>
+                                | <i>
+                                    <a class="title-citation" href="http://scholar.google.com/scholar?q=%2Bintitle%3A&quot;PENGARUH+LITERASI+DIGITAL+DAN+LITERASI+MEDIA+TERHADAP+POLA+PENCARIAN+INFORMASI+MODEL+ELLIS+PADA+DOSEN+SARI+MUTIARA+INDONESIA&quot;" target="_blank">
+                                        Check in Google Scholar
+                                    </a>
+                                </i>
+                                                                                                    
+                                    | <a class="title-citation" target="_blank" href="https://doi.org/10.51544/jnli.v1i1.5344">
+                                        DOI: 10.51544/jnli.v1i1.5344                                    </a>
+                                                            </p>
+                            <div id="show_abstract5828593" class="article-abstract">
+                                <div class="ui message tiny basic">
+                                    <h4 class="ui header">
+                                        <b>Abstract</b>
+                                    </h4>
+                                    <div class="abstract-article">
+                                        <xmp class="abstract-article">Penelitian ini bertujuan untuk mengetahui (1) Literasi digital terhadap pola pencarian informasi model Ellis pada Dosen Sari Mutiara Indonesia (2) Literasi media terhadap pola pencarian informasi model Ellis pada Dosen Sari Mutiara Indonesia (3) Terdapat pengaruh positif Literasi digital dan Literasi media secara simultan terhadap pola pencarian informasi model Ellis pada Dosen Universitas Sari Mutiara Indonesia. Jenis penelitian ini adalah kuantitatif deskriptif. Populasi dari penelitian ini adalah 177 orang Dosen Universitas Sari Mutiara Indonesia. Sampel pada penelitian ini 64 responden dengan teknik Simple Random Sampling. Metode analisis data yang digunakan adalah Uji Instrument, Uji Asumsi Klasik, Uji Regreasi Liniear Berganda, Uji Hipotesis, Uji Simultan (Uji F), Uji Koefisien Determinasi (R2). SPSS Version 24 for Windows. Hasil penelitian menunjukkan (1) Literasi digital berpengaruh positif dan signifikan terhadap Pola Pencarian Informasi Model Ellis Pada Dosen Universitas Sari Mutiara (2) Literasi Media berpengaruh positif dan signifikan terhadap Pola Pencarian Informasi Model Ellis pada Dosen Universitas Sari Mutiara Indonesia (3) Literasi Digital dan Literasi Media berpengaruh positif dan signifikan terhadap Pola Pencarian Informasi Model Ellis pada Dosen Universitas Sari Mutiara Indonesia sehingga hipotesis diterima.</xmp>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ui divider"></div>
+                                            <div class="article-item">        
+                            <a class="title-article" href="/documents/detail/6065773">
+                                <xmp>Pengaruh Literasi Keuangan dan Literasi Digital terhadap Peningkatan Penjualan UMKM di Indonesia: Systematic Literature Review : Penelitian </xmp>
+                            </a>
+                            <a class="author-article" href="/author/view/5410006"><xmp>Tri Nurindahyanti Yulian</xmp></a>; <a class="author-article" href="/author/view/10749255"><xmp>Wignyo Mudiharso</xmp></a>; <a class="author-article" href="/author/view/10749256"><xmp>Susilawati Susilawati</xmp></a>                            <br>
+                            <xmp class="subtitle-article"> Jurnal Pengabdian Masyarakat dan Riset Pendidikan Vol. 4 No. 3 (2026): Jurnal Pengabdian Masyarakat dan Riset Pendidikan Volume 4 Nomor 3 (Januari 202 </xmp>
+                            <br>
+                            <i class="subtitle-article">Publisher : </i><xmp class="subtitle-article">Lembaga Penelitian dan Pengabdian Masyarakat </xmp>
+                            <p class="action-article">
+                                <a class="btn_show_abstract title-citation" target="6065773" onclick="show_abstract(6065773)"> Show Abstract</a>
+                                | <a class="title-citation" href="https://jerkin.org/index.php/jerkin/article/download/5735/4212" target="_blank">
+                                    <i class="download icon"></i> Download Original
+                                </a>
+                                | <i>
+                                    <a class="title-citation" href="https://jerkin.org/index.php/jerkin/article/view/5735/4212" target="_blank">
+                                        Original Source
+                                    </a>
+                                </i>
+                                | <i>
+                                    <a class="title-citation" href="http://scholar.google.com/scholar?q=%2Bintitle%3A&quot;Pengaruh+Literasi+Keuangan+dan+Literasi+Digital+terhadap+Peningkatan+Penjualan+UMKM+di+Indonesia+Systematic+Literature+Review++Penelitian&quot;" target="_blank">
+                                        Check in Google Scholar
+                                    </a>
+                                </i>
+                                                                                                    
+                                    | <a class="title-citation" target="_blank" href="https://doi.org/10.31004/jerkin.v4i3.5735">
+                                        DOI: 10.31004/jerkin.v4i3.5735                                    </a>
+                                                            </p>
+                            <div id="show_abstract6065773" class="article-abstract">
+                                <div class="ui message tiny basic">
+                                    <h4 class="ui header">
+                                        <b>Abstract</b>
+                                    </h4>
+                                    <div class="abstract-article">
+                                        <xmp class="abstract-article">Usaha Mikro, Kecil, dan Menengah (UMKM) memiliki peran strategis dalam perekonomian Indonesia, namun menghadapi berbagai tantangan dalam meningkatkan penjualan di era digital. Penelitian ini bertujuan untuk mengidentifikasi, menganalisis, dan mensintesis literatur yang berkaitan dengan pengaruh literasi keuangan dan literasi digital terhadap peningkatan penjualan UMKM di Indonesia melalui metode Systematic Literature Review (SLR). Pencarian literatur dilakukan pada basis data Google Scholar, SINTA, dan Garuda dengan rentang waktu publikasi 2018–2024, menggunakan kata kunci yang relevan. Sebanyak 42 artikel dipilih berdasarkan kriteria inklusi dan eksklusi yang telah ditetapkan. Hasil kajian menunjukkan bahwa literasi keuangan berpengaruh signifikan terhadap kemampuan pengelolaan keuangan UMKM yang pada gilirannya mendorong pertumbuhan penjualan. Literasi digital terbukti memfasilitasi akses pasar yang lebih luas melalui platform digital, media sosial, dan e-commerce. Integrasi antara kedua jenis literasi tersebut menciptakan sinergi yang memperkuat daya saing dan performa penjualan UMKM. Temuan ini memberikan implikasi penting bagi pembuat kebijakan, lembaga keuangan, dan pengelola UMKM untuk merancang program peningkatan kapasitas yang komprehensif.</xmp>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ui divider"></div>
+                                            <div class="article-item">        
+                            <a class="title-article" href="/documents/detail/6075336">
+                                <xmp>IMPLEMENTASI LITERASI DASAR MELALUI LITERASI DIGITAL PADA MATA PELAJARAN BAHASA INDONESIA MATERI IKLAN KELAS V SDN KARANGROTO 02 SEMARANG </xmp>
+                            </a>
+                            <a class="author-article" href="/author/view/9759477"><xmp>Fadhilah Cahyaningrum</xmp></a>; <a class="author-article" href="/author/view/2786588"><xmp>Rida Fironika Kusumadewi</xmp></a>; <a class="author-article" href="/author/view/2653062"><xmp>Yunita Sari</xmp></a>                            <br>
+                            <xmp class="subtitle-article"> Didaktik : Jurnal Ilmiah PGSD STKIP Subang Vol. 11 No. 02 (2025): Volume 11 No. 02 Juni 2025 In Press </xmp>
+                            <br>
+                            <i class="subtitle-article">Publisher : </i><xmp class="subtitle-article">STKIP Subang </xmp>
+                            <p class="action-article">
+                                <a class="btn_show_abstract title-citation" target="6075336" onclick="show_abstract(6075336)"> Show Abstract</a>
+                                | <a class="title-citation" href="https://journal.stkipsubang.ac.id/index.php/didaktik/article/download/5883/3954" target="_blank">
+                                    <i class="download icon"></i> Download Original
+                                </a>
+                                | <i>
+                                    <a class="title-citation" href="https://journal.stkipsubang.ac.id/index.php/didaktik/article/view/5883/3954" target="_blank">
+                                        Original Source
+                                    </a>
+                                </i>
+                                | <i>
+                                    <a class="title-citation" href="http://scholar.google.com/scholar?q=%2Bintitle%3A&quot;IMPLEMENTASI+LITERASI+DASAR+MELALUI+LITERASI+DIGITAL+PADA+MATA+PELAJARAN+BAHASA+INDONESIA+MATERI+IKLAN+KELAS+V+SDN+KARANGROTO+02+SEMARANG&quot;" target="_blank">
+                                        Check in Google Scholar
+                                    </a>
+                                </i>
+                                                                                                    
+                                    | <a class="title-citation" target="_blank" href="https://doi.org/10.36989/didaktik.v11i02.5883">
+                                        DOI: 10.36989/didaktik.v11i02.5883                                    </a>
+                                                            </p>
+                            <div id="show_abstract6075336" class="article-abstract">
+                                <div class="ui message tiny basic">
+                                    <h4 class="ui header">
+                                        <b>Abstract</b>
+                                    </h4>
+                                    <div class="abstract-article">
+                                        <xmp class="abstract-article">This research aims to find out Improving students' digital literacy skills Through making advertisements in the Canva application, participants can express their creative and innovative ideas in designing products, one of which is advertising which can later be used as a forum for information for a wide audience such as school residents of SDN Karangroto 02 Semarang which will later be published through social media and students from participating in activities This can increase digital literacy and with coordination with schools through this can improve the ability to design not only in the form of posters but also design attractive images that will later have marketability in the community. So that students not only improve digital literacy skills but also improve financial literacy skillsDigital literacy in this era is no longer limited to the ability to operate software or understand technical terminology, but includes the ability to recognize, evaluate, and apply information wisely in various contexts.</xmp>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ui divider"></div>
+                                            <div class="article-item">        
+                            <a class="title-article" href="/documents/detail/6109539">
+                                <xmp>Peran Literasi Keuangan, Literasi Digital, Dan Finansial Self-Efficacy Terhadap Adopsi Aplikasi Buy Now Paylater (BNPL) (Studi Kasus Pengguns Paylater Pada Gen Z Di Indonesia) </xmp>
+                            </a>
+                            <a class="author-article" href="/author/view/9803985"><xmp>Sutrisno, Dinda Ayu Pratiwi</xmp></a>; <a class="author-article" href="/author/view/7639839"><xmp>Putriani, Santi</xmp></a>                            <br>
+                            <xmp class="subtitle-article"> Management Studies and Entrepreneurship Journal (MSEJ) Vol. 7 No. 4 (2026): Management Studies and Entrepreneurship Journal (MSEJ) </xmp>
+                            <br>
+                            <i class="subtitle-article">Publisher : </i><xmp class="subtitle-article">Yayasan Pendidikan Riset dan Pengembangan Intelektual (YRPI) </xmp>
+                            <p class="action-article">
+                                <a class="btn_show_abstract title-citation" target="6109539" onclick="show_abstract(6109539)"> Show Abstract</a>
+                                | <a class="title-citation" href="https://journal.yrpipku.com/index.php/msej/article/download/10766/5971" target="_blank">
+                                    <i class="download icon"></i> Download Original
+                                </a>
+                                | <i>
+                                    <a class="title-citation" href="https://journal.yrpipku.com/index.php/msej/article/view/10766/5971" target="_blank">
+                                        Original Source
+                                    </a>
+                                </i>
+                                | <i>
+                                    <a class="title-citation" href="http://scholar.google.com/scholar?q=%2Bintitle%3A&quot;Peran+Literasi+Keuangan+Literasi+Digital+Dan+Finansial+Self-Efficacy+Terhadap+Adopsi+Aplikasi+Buy+Now+Paylater+BNPL+Studi+Kasus+Pengguns+Paylater+Pada+Gen+Z+Di+Indonesia&quot;" target="_blank">
+                                        Check in Google Scholar
+                                    </a>
+                                </i>
+                                                                                                    
+                                    | <a class="title-citation" target="_blank" href="https://doi.org/10.37385/msej.v7i4.10766">
+                                        DOI: 10.37385/msej.v7i4.10766                                    </a>
+                                                            </p>
+                            <div id="show_abstract6109539" class="article-abstract">
+                                <div class="ui message tiny basic">
+                                    <h4 class="ui header">
+                                        <b>Abstract</b>
+                                    </h4>
+                                    <div class="abstract-article">
+                                        <xmp class="abstract-article">Pesatnya perkembangan teknologi keuangan digital telah mempopulerkan layanan Buy Now PayLater (BNPL) di kalangan Generasi Z di Indonesia. Penelitian ini bertujuan untuk menganalisis pengaruh literasi keuangan, literasi digital, dan financial self-efficacy terhadap adopsi aplikasi BNPL. Menggunakan pendekatan kuantitatif dengan sampel sebanyak 136 responden yang didominasi oleh kelompok usia 21–25 tahun berpendidikan S1, data dianalisis untuk menguji hipotesis yang diajukan dalam kerangka Technology Acceptance Model (TAM). Hasil penelitian menunjukkan bahwa literasi keuangan secara signifikan membatasi adopsi BNPL, menunjukkan bahwa pemahaman keuangan yang baik membuat individu lebih berhati-hati. Sebaliknya, literasi digital ditemukan mempercepat adopsi layanan ini karena kemudahan akses teknologi. Di sisi lain, financial self-efficacy terbukti mengurangi kecenderungan penggunaan BNPL, mempertegas peran efikasi diri dalam kontrol keuangan. Temuan ini mengonfirmasi relevansi TAM dalam dinamika keuangan digital saat ini. Penelitian ini menyarankan penyedia layanan BNPL untuk mengintegrasikan fitur edukasi keuangan dan bagi regulator (OJK) untuk memperkuat literasi keuangan nasional. Keterbatasan penelitian pada metode purposive sampling membuka peluang bagi penelitian selanjutnya untuk menggunakan mixed-methods dan mengeksplorasi variabel tambahan seperti impulsive buying guna mendapatkan gambaran yang lebih representatif.</xmp>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ui divider"></div>
+                                                
+                                    <div class="ui two column stackable grid">
+                        <div class="column">
+                            <p class="pagination-info">
+                                Page 1 of 43                                | Total Record : 425 
+                            </p>
+                        </div>
+                        <div class="column">
+                                                            <div class="page-column"  style="float: right !important;">
+                                    <a href="?page=1&q=literasi digital indonesia" class="ui mini icon button">
+                                        <i class="angle double left icon"></i>
+                                    </a>                                
+                                                                            <a href="?page=1&q=literasi digital indonesia" class="ui mini icon button orange">
+                                            &nbsp;1&nbsp;
+                                        </a>
+                                                                            <a href="?page=2&q=literasi digital indonesia" class="ui mini icon button ">
+                                            &nbsp;2&nbsp;
+                                        </a>
+                                                                            <a href="?page=3&q=literasi digital indonesia" class="ui mini icon button ">
+                                            &nbsp;3&nbsp;
+                                        </a>
+                                                                            <a href="?page=4&q=literasi digital indonesia" class="ui mini icon button ">
+                                            &nbsp;4&nbsp;
+                                        </a>
+                                                                            <a href="?page=5&q=literasi digital indonesia" class="ui mini icon button ">
+                                            &nbsp;5&nbsp;
+                                        </a>
+                                                                
+                                    <a href="?page=43&q=literasi digital indonesia" class="ui mini icon button">
+                                        <i class="angle double right icon"></i>
+                                    </a>
+                                </div>                        
+                                                    </div>
+                    </div>
+                    <br><br>
+                            </div>
+            <!-- </div> -->
+        </div>
+    </div>
+</div>
+
+<script>
+    $( function() {
+        $("#slider-range" ).slider({
+            range: true,
+            min: 1945,
+            max: 2024,
+            values: [ 1945, 2024 ],
+            slide: function( event, ui ) {
+                $("#from").val(ui.values[ 0 ]);
+                $("#to").val(ui.values[ 1 ]);
+            }
+        });
+        $("#from").val( $( "#slider-range" ).slider( "values", 0 ));
+        $("#to").val($( "#slider-range" ).slider( "values", 1 ));
+    });
+</script><!-- </div> -->
+</main>
+
+<div class="links-box">
+    <ul>
+        <li><a href="https://sinta.kemdiktisaintek.go.id" target="_blank">Sinta</a></li>
+        <li><a title="Basis Informasi Penelitian dan Pengabdian kepada Masyarakat" href="https://bima.kemdiktisaintek.go.id" target="_blank">Bima</a></li>
+        <li><a title="Akreditasi Jurnal Nasional" href="https://arjuna.kemdiktisaintek.go.id" target="_blank">Arjuna</a></li>
+        <li><a title="Pangkalan Data Pendidikan Tinggi Ristekdikti" href="https://pddikti.kemdiktisaintek.go.id" target="_blank">PDDIKTI</a></li>
+        <li><a title="Data Riset dan Pengembangan Ristekdikti" href="https://dikti.kemdiktisaintek.go.id/" target="_blank">Risbang</a></li>
+        <li><a title="The Largest Abstract and Citation Database of Peer-Reviewed Literature" href="https://www.scopus.com" target="_blank">Scopus</a></li>
+        <li><a title="Repositori Tugas Akhir Mahasiswa" href="https://rama.kemdiktisaintek.go.id/" target="_blank">Rama</a></li>
+    </ul>
+</div>
+<footer class="ui grid equal width footer">
+    <div class="clearfix"></div>
+    <div class="column">
+        <img src="/assets/img/logo_dikbud.png" />
+        <div class="footer-company">Kementerian Pendidikan, Kebudayaan, Riset, dan Teknologi </div>
+        <div class="footer-subcompany">(The Ministry of Education, Culture, Research, and Technology)</div>
+        <div class="footer-copyright">&copy; 2018</div>
+    </div>
+    <div class="column"></div>
+</footer>
+<!-- UI KIT -->
+
+
+
+
+<script>
+    setTimeout(function() {
+        // $('#flash_message').slideUp( 300, "linear" );
+        $('#flash_message').fadeOut( "slow");
+    }, 2000);
+</script>
+<!-- AUTOSEARCH BUKU-->
+<script>
+    $(function() {
+        $("#suggest_pub").autocomplete({
+            source: "/suggest/findPublisher",
+            select: function( event, ui ) {
+                event.preventDefault();
+                $("#suggest_pub").val(ui.item.value);
+            }
+        });
+    });
+</script>
+<!-- END AUTOSEARCH BUKU-->
+
+
+<script type="text/javascript">
+    $('.ui.checkbox').checkbox();
+    $('select.dropdown').dropdown();
+    $('.ui.dropdown').dropdown();
+    $('.top.menu .item').tab();
+
+    $(document).ready(function () {
+
+        $("#sort").change(function () {
+            var page = 1;
+            // $("#sort").val(page);
+            $("#form_sort").submit();
+        });
+
+        $("#select_item").change(function () {
+            var page = 1;
+            $("#page").val(page);
+            $("#form_journal").submit();
+        });        
+
+        $("#select_item").change(function () {
+            var page = 1;
+            $("#page").val(page);
+            $("#form_alphabeth").submit();
+        });
+
+        $("#select_item").change(function () {
+            var page = 1;
+            $("#page").val(page);
+            $("#form_search").submit();
+        });
+
+        $('#page').keydown(function () {
+            var key = e.which;
+            if (key == 13) {
+                $('#form_journal').submit();
+            }
+        });
+
+        $('#form_journal').keydown(function () {
+            var key = e.which;
+            if (key == 13) {
+                // As ASCII code for ENTER key is "13"
+                $('#form_journal').submit(); // Submit form code
+            }
+        });
+
+        $('.demo.menu .item').tab({history: false});
+
+        $('.area-cloud a').tagcloud();
+
+    });
+
+    $('.ui.top.attached.tabular.menu .item').tab({history: false});
+
+    $.fn.tagcloud.defaults = {
+        size: {start: 9, end: 30, unit: 'pt'},
+        color: {start: '#444', end: '#ed462f'}
+    };
+
+    function show_abstract(id){
+        $('#show_abstract'+id).slideToggle();
+    }
+
+    $(document).ready(function () {
+        $('#adv-btn').on('click', function () {
+            $('#adv-box').slideToggle('slow');
+            $('#form-journal').slideToggle('slow');
+        });
+
+        $('#adv-less').on('click', function () {
+            $('#adv-box').slideToggle('slow');
+            $('#form-journal').slideToggle('slow');
+        });
+    });
+
+
+
+</script>
+
+</body>
+</html>
