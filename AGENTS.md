@@ -416,6 +416,12 @@ document**.
 - **Crossref** — external, independent source of truth for publication metadata; used for
   reference validation and candidate lookup. **Laravel orchestrates all Crossref requests.** Never
   call Crossref from the frontend, and never expose Crossref credentials to the browser.
+- **Garuda** (`garuda.kemdiktisaintek.go.id`) — Indonesian catalogue with **no public API**, used
+  only as a **fallback** when no primary candidate is a plausible title match. Laravel queue
+  workers fetch one search page per gated reference (throttled, cached, metadata only — never the
+  PDFs). Not exposed to the frontend. `GARUDA_ENABLED=false` disables it; a valid
+  `Found 0 documents` page is a miss, while a transport/format failure surfaces (document `failed`
+  on the first failure of a run).
 - **GROBID** — internal; extracts bibliography entries, in-text citations, and coordinates. Not
   exposed to the frontend. It runs as a private compose service; the dev-only
   `compose.remote-grobid.yaml` overlay points `inference` at a hosted GROBID instead, which sends
@@ -525,9 +531,13 @@ Be aware of what is scaffold vs. contract before promising behavior:
   `ReportPayload`, `ReportTemplateRenderer`, `resources/views/reports/document-report.blade.php`),
   `GenerateDocumentReportJob` with `ReportStateService`/`ReportFailureHandler`/
   `ReportDeletionService`, and the `/reports` endpoints (`ReportController`,
-  `ReportGenerationService`, `ReportQueryService`, `Data/Report/*` DTOs). The FastAPI inference
-  service implements the GROBID extraction slice (see the `inference/` bullet); SBERT embeddings
-  are still pending. See `docs/ARCHITECTURE.md` §13 for the full status.
+  `ReportGenerationService`, `ReportQueryService`, `Data/Report/*` DTOs). Phase 08 adds the
+  source-agnostic metadata seam (`Services/Metadata/*`, `Contracts/Metadata/BibliographicSource`,
+  `Enums/MetadataSource`), candidate provenance (`reference_finding_candidates.source`) and the
+  gated Garuda fallback (`Services/Garuda/*`, `GarudaUnavailableException`, fallback wiring in
+  `ValidateReferencesStep`). The FastAPI inference service implements the GROBID extraction slice
+  (see the `inference/` bullet); SBERT embeddings are still pending. See
+  `docs/ARCHITECTURE.md` §13 for the full status.
 - **`frontend/`** is a working Vue 3 + Vite 6 + TypeScript + Tailwind 4 + Pinia + vue-router SPA
   with shadcn-vue (`reka-ui`) components. **`src/stores/auth.ts` is mocked** (setTimeout, no API
   calls) and `src/types/index.ts` uses prototype types (`valid | warning | halu`, numeric ids,

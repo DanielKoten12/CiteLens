@@ -1,6 +1,6 @@
 # Phase 08 — Garuda Fallback Metadata Source (Detailed Implementation Plan)
 
-> **Status:** detailed plan — **T0–T5 implemented** (2026-11-05); T6 pending
+> **Status:** detailed plan — **T0–T6 implemented** (2026-11-05)
 > **Parent:** none (new phase) · **Depends on:** Phase 04 (implemented), Phase 05 (implemented)
 > **Unblocks:** OpenAlex as a second primary source (same seam, no schema change)
 > Canonical references: `docs/API_SPEC.md` §2.6/§5/§10/§11, `docs/DB_SCHEMA.md`
@@ -172,8 +172,8 @@ Follow `docs/plans/backend/README.md` §1.4. For every task: implement → `vend
    already fake their own requests; any that don't will fail loudly here — fix them by faking, not
    by removing the guard). **Done** — full suite passes with the guard active.
 2. Confirm `php -m` has `dom` (already true locally and in the image). **Done**.
-3. `backend/phpunit.xml`: add `GARUDA_ENABLED=true` — **deferred to T3**, when the config key it
-   drives actually exists (no dead env vars).
+3. `backend/phpunit.xml`: `GARUDA_ENABLED` — added in T3 (config key exists) and set to **false**
+   in T4: the fallback tests opt in explicitly, so no unrelated test can reach Garuda.
 
 ---
 

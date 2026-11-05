@@ -158,6 +158,12 @@ same change.
   `ReportStateService`, `ReportFailureHandler` and `ReportDeletionService`; the `/reports` endpoints
   (`ReportController`, `ReportGenerationService`, `ReportQueryService`, `Data/Report/*` DTOs,
   `ListReportsRequest`); report DTO/schema/config tests plus the sync-queue end-to-end suite.
+- Garuda fallback source (Phase 08): the source-agnostic seam (`Services/Metadata/*`,
+  `Contracts/Metadata/BibliographicSource`, `Enums/MetadataSource`), candidate provenance
+  (`reference_finding_candidates.source`), `Services/Garuda/{GarudaClient,GarudaSearchParser,
+  GarudaResultMapper}` with `GarudaUnavailableException`, the gated/budgeted fallback in
+  `ValidateReferencesStep` (fatal on the first failure, `pending` afterwards), `VerificationRunState`,
+  `GARUDA_*` config/env, and the `GarudaFake` fixtures/end-to-end suite.
 - Canonical error envelope renderers for `401`/`422`/`429` (now centralized in
   `ApiExceptionRenderer`) and `ErrorResponseData`; custom exceptions render their own envelope
   (`DocumentUploadFailedException`, `InvalidCredentialsException`).

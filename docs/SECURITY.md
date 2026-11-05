@@ -27,13 +27,16 @@ invariant below as mandatory.
 ```text
 Browser (untrusted)  ──HTTPS──▶  Laravel API (trusted)  ──private net──▶  FastAPI inference
                                         │
-                                        └──outbound──▶ Crossref
+                                        └──outbound──▶ Crossref, Garuda
 ```
 
 - The browser is untrusted. Never trust client-supplied ids, ownership claims or verdicts.
 - The inference service is internal and has no authentication in v1; it must **not** be reachable
   from the internet.
 - Crossref is external and independent; Laravel is the only component that talks to it.
+- Garuda is an external catalogue page with no API. Laravel queue workers parse it as a fallback;
+  only bibliographic metadata is read (no PDFs), responses are size-capped, and it is never called
+  from the browser.
 
 ### 1.3 Primary threats
 
@@ -185,7 +188,8 @@ development easier.
   so contributors can skip the multi-GB image. It breaks the GROBID isolation above **by design**
   — treated PDFs are sent to a third party over the public internet, and the returned TEI is
   untrusted input. Demo/throwaway documents only; never production, never real user documents.
-  Everything else (Crossref egress from Laravel, private disks, error envelopes) stays unchanged.
+  Everything else (Crossref/Garuda egress from Laravel, private disks, error envelopes) stays
+  unchanged.
 - No public, frontend-facing FastAPI endpoints may be added unless `docs/API_SPEC.md` is
   deliberately changed.
 - Inference endpoints accept only the documented internal shapes (`/health`, `/v1/extract`,

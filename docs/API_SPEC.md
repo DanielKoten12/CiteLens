@@ -1189,8 +1189,10 @@ Triggered by `POST /documents`.
       → insert researched_document_citations
       → insert researched_document_citation_locations
 3. For each reference:
-      → Crossref lookup (DOI or bibliographic search)
-      → insert reference_finding_candidates (ranked)
+      → primary metadata lookup: Crossref (DOI or bibliographic search)
+      → Garuda fallback (bibliographic search only) when no primary candidate is a
+        plausible title match; gated, budgeted, and enabled by config
+      → insert reference_finding_candidates (ranked, with `source`)
 4. Similarity scoring (Laravel): Jaro-Winkler + Levenshtein + SBERT embeddings
       → compute confidence, pick selected_candidate_id
       → upsert reference_findings (status, reason)
