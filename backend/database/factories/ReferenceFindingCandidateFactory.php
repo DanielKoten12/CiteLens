@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\MetadataSource;
 use App\Models\ReferenceFinding;
 use App\Models\ReferenceFindingCandidate;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -23,6 +24,7 @@ class ReferenceFindingCandidateFactory extends Factory
             'reference_finding_id' => ReferenceFinding::factory(),
             'rank' => 1,
             'confidence' => 0.5,
+            'source' => MetadataSource::Crossref->value,
             'doi' => fake()->numerify('10.1000/####.####'),
             'title' => fake()->sentence(4),
             'authors' => fake()->name(),

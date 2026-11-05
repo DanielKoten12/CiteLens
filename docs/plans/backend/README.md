@@ -128,7 +128,8 @@ same change.
   `AuthorMatcher`, `SemanticSimilarity`, `LocalVenueDetector`, `MatchReasonBuilder`,
   `ReferenceScorer`, `VerdictDecider`, `ScoringConfig` + value objects); the
   `ValidateReferencesStep` / `EmbedReferencesStep` / `ScoreReferencesStep` pipeline steps and the
-  `ReferenceFindingWriter` single writer; `config/scoring.php`
+  `ReferenceFindingWriter` single writer; candidate provenance
+  (`reference_finding_candidates.source`, `MetadataSource`); `config/scoring.php`
   `semantic.title_blend` and the `services.crossref` retry/back-off/User-Agent keys.
 - Citation resolution and review (Phase 05): `Services/Citations/*` (`CitationMarkerParser`,
   `CitationResolver`, `CitationMatchConfig`, `CitationReference`/`CitationResolution` value

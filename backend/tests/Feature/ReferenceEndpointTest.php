@@ -88,6 +88,7 @@ it('returns full reference detail with finding, candidates, locations and citati
         ->assertJsonPath('data.finding.is_manual', false)
         ->assertJsonPath('data.finding.reviewed_by', null)
         ->assertJsonPath('data.finding.candidates.0.id', $finding->selected_candidate_id)
+        ->assertJsonPath('data.finding.candidates.0.source', 'crossref')
         ->assertJsonPath('data.locations.0.page_number', $reference->locations->first()->page_number)
         ->assertJsonPath('data.locations.0.coordinate_system', 'pdf_points_top_left')
         ->assertJsonPath('data.citations.0.id', $citation->getKey())

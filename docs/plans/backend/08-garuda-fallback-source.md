@@ -1,6 +1,6 @@
 # Phase 08 — Garuda Fallback Metadata Source (Detailed Implementation Plan)
 
-> **Status:** detailed plan — **T0/T1 implemented** (2026-11-05); T2+ pending
+> **Status:** detailed plan — **T0–T2 implemented** (2026-11-05); T3+ pending
 > **Parent:** none (new phase) · **Depends on:** Phase 04 (implemented), Phase 05 (implemented)
 > **Unblocks:** OpenAlex as a second primary source (same seam, no schema change)
 > Canonical references: `docs/API_SPEC.md` §2.6/§5/§10/§11, `docs/DB_SCHEMA.md`

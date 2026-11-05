@@ -636,6 +636,7 @@ referensi ini.
           "id": "c-102-uuid",
           "rank": 1,
           "confidence": 0.6300,
+          "source": "crossref",
           "doi": "10.1234/example",
           "title": "Sistem Pendeteksi Plagiarisme Dokumen",
           "authors": "Koten, D. B.",
@@ -652,6 +653,11 @@ referensi ini.
   }
 }
 ```
+
+> `finding.candidates[].source` adalah katalog asal data: `crossref`, `openalex`, atau `garuda`
+> (fallback Indonesia). Finding `valid` dapat memilih kandidat dengan `doi: null` bila kecocokan
+> berasal dari Garuda — `valid` berarti publikasi terverifikasi di sebuah katalog, bukan berarti
+> DOI-nya ditemukan.
 
 **Gagal — `404`**
 

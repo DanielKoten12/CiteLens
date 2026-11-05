@@ -68,6 +68,7 @@ final class ReferenceFindingWriter
                 'reference_finding_id' => $finding->getKey(),
                 'rank' => $candidate->rank,
                 'confidence' => round(max(0.0, min(1.0, $candidate->confidence())), 4),
+                'source' => $candidate->work->source->value,
                 'doi' => $candidate->work->doi,
                 'title' => $candidate->work->title,
                 'authors' => $candidate->work->authorString(),

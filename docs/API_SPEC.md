@@ -639,6 +639,7 @@ pointing to this reference.
           "id": "c-102-uuid",
           "rank": 1,
           "confidence": 0.6300,
+          "source": "crossref",
           "doi": "10.1234/example",
           "title": "Sistem Pendeteksi Plagiarisme Dokumen",
           "authors": "Koten, D. B.",
@@ -655,6 +656,11 @@ pointing to this reference.
   }
 }
 ```
+
+> `finding.candidates[].source` is the catalogue the record came from: `crossref`, `openalex`,
+> or `garuda` (Indonesian fallback). A `valid` finding may select a candidate with `doi: null`
+> when the match came from Garuda — `valid` means the publication exists in a verified catalogue,
+> not that a DOI was found.
 
 **Failure — `404`**
 
@@ -1209,7 +1215,7 @@ Progress is reported via `analysis_progress` / `analysis_step` / `analysis_error
 | Reference | `researched_document_references` (`raw_text`, `doi`, `title`, `authors`, `publication_name`, `publication_year`, `text_start_offset`, `text_end_offset`) |
 | Reference highlight | `researched_document_reference_locations` |
 | Reference verdict | `reference_findings` (`status`, `confidence`, `reason`, `selected_candidate_id`, `is_manual`, `reviewed_by`, `reviewed_at`) |
-| Reference candidates | `reference_finding_candidates` (`rank`, `confidence`, `doi`, `title`, `authors`, `publication_name`, `publication_year`, `url`, `match_reason`) |
+| Reference candidates | `reference_finding_candidates` (`rank`, `confidence`, `source`, `doi`, `title`, `authors`, `publication_name`, `publication_year`, `url`, `match_reason`) |
 | Citation | `researched_document_citations` (`citation_text`, `citation_marker`, `context_*`, `text_*_offset`, `occurrence_index`, `researched_document_reference_id`) |
 | Citation status | **derived**: `hallucination` if unpaired; otherwise `valid` / `unreliable` / `pending` from the paired reference finding status |
 | Citation highlight | `researched_document_citation_locations` (`page_number`, `x`, `y`, `width`, `height`, `page_*`, `coordinate_system`, `location_index`) |
