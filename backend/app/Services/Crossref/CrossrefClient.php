@@ -3,6 +3,7 @@
 namespace App\Services\Crossref;
 
 use App\Contracts\Metadata\BibliographicSource;
+use App\Contracts\Metadata\DoiResolver;
 use App\Enums\MetadataSource;
 use App\Exceptions\CrossrefUnavailableException;
 use App\Services\Metadata\ReferenceQuery;
@@ -23,10 +24,11 @@ use Throwable;
  * and wire → value-object mapping. It never makes a verification verdict —
  * scoring lives in `App\Services\Scoring`.
  *
- * Implements {@see BibliographicSource} so the verification step can treat it
- * like any other metadata source; DOI resolution stays Crossref-specific.
+ * Implements both metadata capabilities: {@see BibliographicSource} for the
+ * bibliographic search chain and {@see DoiResolver} for the DOI resolution
+ * chain, where Crossref is authoritative and always tried first.
  */
-final class CrossrefClient implements BibliographicSource
+final class CrossrefClient implements BibliographicSource, DoiResolver
 {
     private const DOI_CACHE_PREFIX = 'crossref:doi:';
 
@@ -43,7 +45,7 @@ final class CrossrefClient implements BibliographicSource
      *
      * @throws CrossrefUnavailableException
      */
-    public function findByDoi(string $normalizedDoi): ?WorkMetadata
+    public function resolve(string $normalizedDoi): ?WorkMetadata
     {
         $cached = Cache::remember(
             self::DOI_CACHE_PREFIX.$normalizedDoi,
@@ -71,6 +73,11 @@ final class CrossrefClient implements BibliographicSource
     public function source(): MetadataSource
     {
         return MetadataSource::Crossref;
+    }
+
+    public function enabled(): bool
+    {
+        return true;
     }
 
     /**

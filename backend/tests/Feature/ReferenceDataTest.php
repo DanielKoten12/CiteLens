@@ -2,7 +2,10 @@
 
 use App\Data\Reference\ReferenceDetailData;
 use App\Data\Reference\ReferenceSummaryData;
+use App\Data\ReferenceFinding\ReferenceFindingCandidatePreviewData;
+use App\Enums\MetadataSource;
 use App\Enums\ReferenceFindingStatus;
+use App\Models\ReferenceFindingCandidate;
 use Tests\Support\DocumentTree;
 
 it('serializes a reference summary with its finding preview', function () {
@@ -88,4 +91,18 @@ it('serializes the full reference detail with finding, candidates, locations and
             'citation_text' => '(Koten, 2023)',
             'occurrence_index' => 4,
         ]);
+});
+
+it('serializes the semantic scholar candidate source', function () {
+    $tree = DocumentTree::create();
+    $reference = $tree->reference();
+    $finding = $tree->finding($reference);
+
+    $candidate = ReferenceFindingCandidate::factory()->for($finding)->create([
+        'source' => MetadataSource::SemanticScholar,
+    ]);
+
+    $data = ReferenceFindingCandidatePreviewData::fromModel($candidate)->toArray();
+
+    expect($data['source'])->toBe('semantic_scholar');
 });

@@ -1,0 +1,16 @@
+{
+  "id": "https://openalex.org/W2000000001",
+  "doi": "https://doi.org/10.1038/nature14539",
+  "title": "Deep learning",
+  "publication_year": 2015,
+  "authorships": [
+    { "author": { "display_name": "Yann LeCun" }, "raw_author_name": "Y. LeCun" },
+    { "author": { "display_name": "Yoshua Bengio" }, "raw_author_name": "Y. Bengio" },
+    { "author": { "display_name": "Geoffrey Hinton" }, "raw_author_name": "G. Hinton" }
+  ],
+  "primary_location": {
+    "landing_page_url": "https://www.nature.com/articles/nature14539",
+    "source": { "display_name": "Nature" }
+  },
+  "type": "article"
+}

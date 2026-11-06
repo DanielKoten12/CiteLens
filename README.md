@@ -3,7 +3,8 @@
 TODO: Update this README.md
 
 Academic-reference verification: upload a PDF and the system extracts its bibliography and in-text
-citations (GROBID), validates each reference against Crossref metadata, ranks candidate matches,
+citations (GROBID), validates each reference against external metadata (Crossref first, with
+Garuda/Semantic Scholar/OpenAlex fallbacks), ranks candidate matches,
 resolves citations to references and reports problems such as hallucinated DOIs, unverifiable
 references, missing DOIs and citation/reference mismatches.
 
@@ -15,7 +16,8 @@ references, missing DOIs and citation/reference mismatches.
 ```text
 Vue 3 SPA ──REST/JSON──▶ Laravel API ──▶ PostgreSQL
                               │  ├──▶ queue worker (async analysis + reports)
-                              │  ├──▶ Crossref REST (outbound)
+                              │  ├──▶ metadata sources (outbound: Crossref → Garuda →
+                              │  │      Semantic Scholar → OpenAlex)
                               │  ├──▶ FastAPI inference (private) ──▶ GROBID
                               │  └──▶ Gotenberg (private; report PDFs)
                               └──
@@ -49,7 +51,9 @@ docker compose -f compose.yaml -f compose.remote-grobid.yaml up -d --build
 The analysis pipeline requires the internal services (PostgreSQL, inference, GROBID, Gotenberg),
 all of which the stack starts. Semantic scoring is disabled in containers
 (`SCORING_SEMANTIC_ENABLED=false`) because the SBERT `POST /v1/embeddings` capability is not
-implemented yet — see the runbook for details and caveats.
+implemented yet — see the runbook for details and caveats. Semantic Scholar and OpenAlex are
+optional supplemental metadata sources and stay disabled unless `SEMANTIC_SCHOLAR_API_KEY` /
+`OPENALEX_API_KEY` are configured (see `.env.example`).
 
 Production-shaped stack and debug port publishing:
 

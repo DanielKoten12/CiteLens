@@ -1,17 +1,22 @@
 <?php
 
+use App\Enums\MetadataSource;
 use App\Exceptions\CrossrefUnavailableException;
 use App\Models\ResearchedDocumentReference;
 use App\Services\Analysis\AnalysisContext;
 use App\Services\Analysis\ReferenceVerification;
 use App\Services\Analysis\Steps\ValidateReferencesStep;
-use App\Services\Crossref\DoiLookup;
+use App\Services\Metadata\DoiLookup;
+use App\Services\Scoring\MatchReasonBuilder;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Tests\Support\CrossrefFake;
 use Tests\Support\DocumentTree;
 use Tests\Support\Fixtures;
+use Tests\Support\GarudaFake;
+use Tests\Support\OpenAlexFake;
+use Tests\Support\SemanticScholarFake;
 
 function verificationFor(AnalysisContext $context, string $referenceId): ReferenceVerification
 {
@@ -214,4 +219,197 @@ it('reports progress across the crossref validation range', function () {
 
     expect($document->refresh()->analysis_progress)->toBeGreaterThanOrEqual(35)
         ->and($document->analysis_progress)->toBeLessThanOrEqual(60);
+});
+
+it('records the fallback resolver that confirmed a doi', function () {
+    config([
+        'services.semantic_scholar.enabled' => true,
+        'services.semantic_scholar.api_key' => 'test-key',
+        'services.semantic_scholar.base_url' => 'https://api.semanticscholar.org',
+        'services.semantic_scholar.retries' => 0,
+        'services.semantic_scholar.min_interval_ms' => 0,
+        'services.openalex.enabled' => true,
+        'services.openalex.api_key' => 'test-key',
+        'services.openalex.base_url' => 'https://api.openalex.org',
+        'services.openalex.retries' => 0,
+        'services.openalex.min_interval_ms' => 0,
+    ]);
+
+    CrossrefFake::install();
+    SemanticScholarFake::install(doiFixtures: ['10.1234/not-in-crossref' => 'semantic_scholar/doi-found']);
+    OpenAlexFake::empty();
+
+    $tree = DocumentTree::create();
+    $reference = $tree->reference([
+        'doi' => '10.1234/not-in-crossref',
+        'title' => 'Deep learning',
+        'authors' => 'LeCun, Y.',
+        'publication_year' => 2015,
+    ]);
+
+    $context = new AnalysisContext;
+    app(ValidateReferencesStep::class)->handle($tree->document, $context);
+
+    $verification = verificationFor($context, $reference->getKey());
+
+    expect($verification->doiLookup)->toBe(DoiLookup::Resolved)
+        ->and($verification->doiSource)->toBe(MetadataSource::SemanticScholar)
+        ->and($verification->transientFailure)->toBeFalse()
+        ->and($verification->candidates[0]->doi)->toBe('10.1234/not-in-crossref');
+
+    Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), 'openalex.org'));
+});
+
+it('marks a doi that no enabled resolver could check as a transient failure', function () {
+    config([
+        'analysis.metadata.failure_policies.crossref' => 'degrade',
+        'services.semantic_scholar.enabled' => true,
+        'services.semantic_scholar.api_key' => 'test-key',
+        'services.semantic_scholar.retries' => 0,
+        'services.semantic_scholar.min_interval_ms' => 0,
+        'services.openalex.enabled' => true,
+        'services.openalex.api_key' => 'test-key',
+        'services.openalex.retries' => 0,
+        'services.openalex.min_interval_ms' => 0,
+    ]);
+
+    Http::fake([
+        'api.crossref.org/*' => Http::response('', 503),
+        'api.semanticscholar.org/*' => Http::response('', 503),
+        'api.openalex.org/*' => Http::response('', 404),
+    ]);
+
+    $tree = DocumentTree::create();
+    $reference = $tree->reference([
+        'doi' => '10.1234/unchecked',
+        'title' => 'Deep learning',
+        'authors' => 'LeCun, Y.',
+    ]);
+
+    $context = new AnalysisContext;
+    app(ValidateReferencesStep::class)->handle($tree->document, $context);
+
+    $verification = verificationFor($context, $reference->getKey());
+
+    expect($verification->doiLookup)->toBe(DoiLookup::Unknown)
+        ->and($verification->transientFailure)->toBeTrue()
+        ->and($verification->pendingReason)->toBe(MatchReasonBuilder::DOI_UNKNOWN);
+});
+
+it('does not consult semantic scholar when a primary candidate satisfies the stop policy', function () {
+    config([
+        'services.semantic_scholar.enabled' => true,
+        'services.semantic_scholar.api_key' => 'test-key',
+        'services.semantic_scholar.retries' => 0,
+        'services.semantic_scholar.min_interval_ms' => 0,
+    ]);
+
+    $payload = ['message' => ['items' => [[
+        'DOI' => '10.1234/crossref-strong',
+        'title' => ['Deep learning'],
+        'author' => [['given' => 'Yann', 'family' => 'LeCun']],
+        'container-title' => ['Nature'],
+        'issued' => ['date-parts' => [[2015]]],
+        'URL' => 'https://doi.org/10.1234/crossref-strong',
+        'type' => 'journal-article',
+    ]]]];
+
+    CrossrefFake::install(searchRoutes: ['Deep learning' => $payload]);
+    SemanticScholarFake::results();
+
+    $tree = DocumentTree::create();
+    $tree->reference(['doi' => null, 'title' => 'Deep learning', 'authors' => 'LeCun, Y.', 'publication_year' => 2015]);
+
+    $context = new AnalysisContext;
+    app(ValidateReferencesStep::class)->handle($tree->document, $context);
+
+    expect(verificationFor($context, $tree->document->references()->firstOrFail()->getKey())->candidates[0]->source)
+        ->toBe(MetadataSource::Crossref);
+
+    Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), 'semanticscholar.org'));
+});
+
+it('consults semantic scholar after garuda misses and stops before openalex', function () {
+    $title = 'Literasi Digital Sebagai Upaya Menangkal Hoax di Lingkungan Masyarakat Indonesia';
+
+    config([
+        'services.garuda.enabled' => true,
+        'services.garuda.retries' => 0,
+        'services.garuda.min_interval_ms' => 0,
+        'services.semantic_scholar.enabled' => true,
+        'services.semantic_scholar.api_key' => 'test-key',
+        'services.semantic_scholar.retries' => 0,
+        'services.semantic_scholar.min_interval_ms' => 0,
+        'services.openalex.enabled' => true,
+        'services.openalex.api_key' => 'test-key',
+        'services.openalex.retries' => 0,
+        'services.openalex.min_interval_ms' => 0,
+    ]);
+
+    CrossrefFake::install();
+    GarudaFake::empty();
+
+    Http::fake([
+        'api.semanticscholar.org/*' => Http::response([
+            'total' => 1,
+            'data' => [[
+                'paperId' => 's2-1',
+                'title' => $title,
+                'authors' => [['name' => 'A. Mursyida']],
+                'year' => 2023,
+                'venue' => 'Jurnal Tonggak Pendidikan Dasar',
+                'externalIds' => ['DOI' => '10.1234/s2-title'],
+                'url' => 'https://www.semanticscholar.org/paper/s2-1',
+            ]],
+        ]),
+        'api.openalex.org/*' => Http::response(Fixtures::json('openalex/search-results')),
+    ]);
+
+    $tree = DocumentTree::create();
+    $tree->reference([
+        'doi' => null,
+        'title' => $title,
+        'authors' => 'Mursyida, A.',
+        'publication_year' => 2023,
+    ]);
+
+    $context = new AnalysisContext;
+    app(ValidateReferencesStep::class)->handle($tree->document, $context);
+
+    $verification = $context->verification()->verifications[0];
+
+    expect($verification->candidates[0]->source)->toBe(MetadataSource::SemanticScholar)
+        ->and($verification->candidates[0]->doi)->toBe('10.1234/s2-title')
+        ->and($verification->transientFailure)->toBeFalse();
+
+    Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), 'openalex.org'));
+});
+
+it('marks the reference transient instead of not found when every fallback fails', function () {
+    config([
+        'services.semantic_scholar.enabled' => true,
+        'services.semantic_scholar.api_key' => 'test-key',
+        'services.semantic_scholar.retries' => 0,
+        'services.semantic_scholar.min_interval_ms' => 0,
+        'services.openalex.enabled' => true,
+        'services.openalex.api_key' => 'test-key',
+        'services.openalex.retries' => 0,
+        'services.openalex.min_interval_ms' => 0,
+    ]);
+
+    CrossrefFake::install();
+    SemanticScholarFake::unavailable(503);
+    OpenAlexFake::unavailable(503);
+
+    $tree = DocumentTree::create();
+    $tree->reference(['doi' => null, 'title' => 'Literasi Digital Sebagai Upaya Menangkal Hoax', 'authors' => 'Mursyida, A.']);
+
+    $context = new AnalysisContext;
+    app(ValidateReferencesStep::class)->handle($tree->document, $context);
+
+    $verification = $context->verification()->verifications[0];
+
+    expect($verification->candidates)->toBe([])
+        ->and($verification->transientFailure)->toBeTrue()
+        ->and($verification->pendingReason)->toBe(app(MatchReasonBuilder::class)->transient(MetadataSource::SemanticScholar));
 });

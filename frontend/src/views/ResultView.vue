@@ -175,7 +175,7 @@ const references: Reference[] = [
     citedAt: [4],
     citedInText: true,
     haluReasons: [
-      "DOI tidak ditemukan di Crossref, OpenAlex, maupun Semantic Scholar.",
+      "DOI tidak ditemukan di Crossref, Garuda, OpenAlex, maupun Semantic Scholar.",
       "Tidak ada jejak publikasi dengan judul dan penulis ini di internet.",
     ],
     doiCheck: { status: "not_found" },

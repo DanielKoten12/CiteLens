@@ -1,6 +1,7 @@
 # Phase 09 — Multi-Source Metadata Search (Semantic Scholar + OpenAlex)
 
-> **Status:** proposed — **not implemented**
+> **Status:** implemented (Phase 09) — see `docs/ARCHITECTURE.md` §13 and `AGENTS.md` §14 for the
+> verified repo status.
 > **Depends on:** Phase 04 (Crossref verification/scoring, implemented), Phase 05 (citation
 > resolution, implemented), Phase 08 (Garuda fallback + `BibliographicSource` seam, implemented)
 > **Canonical references:** `docs/API_SPEC.md` §2.6/§5/§10, `docs/DB_SCHEMA.md`

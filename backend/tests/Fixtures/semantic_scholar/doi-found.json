@@ -1,0 +1,16 @@
+{
+  "paperId": "s2-doi-found-001",
+  "title": "Deep learning",
+  "authors": [
+    { "authorId": "s2-author-1", "name": "Yann LeCun" },
+    { "authorId": "s2-author-2", "name": "Yoshua Bengio" },
+    { "authorId": "s2-author-3", "name": "Geoffrey Hinton" }
+  ],
+  "year": 2015,
+  "venue": "Nature",
+  "publicationVenue": { "name": "Nature" },
+  "journal": { "name": "Nature" },
+  "externalIds": { "DOI": "10.1038/nature14539" },
+  "url": "https://www.semanticscholar.org/paper/s2-doi-found-001",
+  "publicationTypes": ["JournalArticle"]
+}

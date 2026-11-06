@@ -6,7 +6,7 @@ use App\Services\Analysis\EmbeddingIndex;
 use App\Services\Analysis\ReferenceVerification;
 use App\Services\Analysis\ReferenceVerificationBatch;
 use App\Services\Analysis\Steps\EmbedReferencesStep;
-use App\Services\Crossref\DoiLookup;
+use App\Services\Metadata\DoiLookup;
 use App\Services\Metadata\WorkMetadata;
 use App\Services\Scoring\ScoringReference;
 use Illuminate\Support\Facades\Http;
