@@ -3,7 +3,7 @@
 namespace App\Services\Scoring;
 
 use App\Services\Analysis\EmbeddingIndex;
-use App\Services\Crossref\CrossrefWorkData;
+use App\Services\Metadata\WorkMetadata;
 
 /**
  * Pure candidate ranking engine.
@@ -28,7 +28,7 @@ final class ReferenceScorer
     ) {}
 
     /**
-     * @param  list<CrossrefWorkData>  $candidates
+     * @param  list<WorkMetadata>  $candidates
      * @return list<ScoredCandidate> ranked best-first, `rank = 1..N`
      */
     public function score(ScoringReference $reference, array $candidates, EmbeddingIndex $embeddings): array
@@ -81,7 +81,7 @@ final class ReferenceScorer
      */
     private function scoreCandidate(
         ScoringReference $reference,
-        CrossrefWorkData $candidate,
+        WorkMetadata $candidate,
         int $index,
         EmbeddingIndex $embeddings,
         array $weights,
@@ -120,13 +120,13 @@ final class ReferenceScorer
             work: $candidate,
             breakdown: $breakdown,
             rank: 0,
-            matchReason: $this->reasons->forCandidate($breakdown),
+            matchReason: $this->reasons->forCandidate($breakdown, $candidate->source),
         );
     }
 
     private function titleSemantic(
         ScoringReference $reference,
-        CrossrefWorkData $candidate,
+        WorkMetadata $candidate,
         int $index,
         EmbeddingIndex $embeddings,
     ): ?float {
@@ -164,7 +164,7 @@ final class ReferenceScorer
         return abs($referenceYear - $candidateYear) <= $this->config->yearTolerance() ? 1.0 : 0.0;
     }
 
-    private function doiMatch(ScoringReference $reference, CrossrefWorkData $candidate): bool
+    private function doiMatch(ScoringReference $reference, WorkMetadata $candidate): bool
     {
         return $reference->doi !== null
             && $candidate->doi !== null

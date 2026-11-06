@@ -25,6 +25,15 @@ final class ScoringConfig
     }
 
     /**
+     * Best primary-candidate title similarity at/above which the Garuda
+     * fallback is not consulted (`config('scoring.fallback.title_threshold')`).
+     */
+    public function fallbackTitleThreshold(): float
+    {
+        return $this->clamp((float) config('scoring.fallback.title_threshold', 0.85));
+    }
+
+    /**
      * @return array{title: float, authors: float, journal: float, year: float}
      *
      * @throws InvalidArgumentException when the configured weights do not sum to 1.0

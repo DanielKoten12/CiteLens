@@ -40,6 +40,8 @@
         <env name="TELESCOPE_ENABLED" value="false" force="true"/>
         <env name="NIGHTWATCH_ENABLED" value="false" force="true"/>
         <env name="SCORING_SEMANTIC_ENABLED" value="true" force="true"/>
+        <!-- Off by default: tests that exercise the fallback enable it explicitly. -->
+        <env name="GARUDA_ENABLED" value="false" force="true"/>
 
         <!--
             Mirror every entry into $_SERVER as well: PHPUnit's force="true" only

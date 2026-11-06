@@ -1,5 +1,7 @@
 <?php
 
+use App\Services\Crossref\CrossrefClient;
+
 return [
 
     /*
@@ -29,6 +31,17 @@ return [
     | `docs/plans/backend/03-analysis-pipeline.md` §3.6). `AnalysisProgress`
     | interpolates inside `[floor, ceiling]` and only `complete()` reaches 100.
     */
+    /*
+    | Primary metadata sources, in query order. Each entry must implement
+    | App\Contracts\Metadata\BibliographicSource. Garuda is a fallback and is
+    | wired separately (config/services.garuda). OpenAlex joins this list.
+    */
+    'metadata' => [
+        'primary_sources' => [
+            CrossrefClient::class,
+        ],
+    ],
+
     'progress' => [
         'queued' => ['floor' => 0, 'ceiling' => 0],
         'extracting' => ['floor' => 5, 'ceiling' => 25],

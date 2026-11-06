@@ -1,8 +1,8 @@
 <?php
 
 use App\Enums\ReferenceFindingStatus;
-use App\Services\Crossref\CrossrefWorkData;
 use App\Services\Crossref\DoiLookup;
+use App\Services\Metadata\WorkMetadata;
 use App\Services\Scoring\LocalVenueDetector;
 use App\Services\Scoring\MatchReasonBuilder;
 use App\Services\Scoring\ScoreBreakdown;
@@ -41,7 +41,7 @@ function verdictReference(?string $doi = null, ?string $publicationName = null):
 function rankedCandidate(float $confidence, int $rank, bool $doiMatch = false, array $conflicts = []): ScoredCandidate
 {
     return new ScoredCandidate(
-        work: new CrossrefWorkData(doi: $doiMatch ? '10.1/same' : '10.1/other', title: 'Deep learning'),
+        work: new WorkMetadata(doi: $doiMatch ? '10.1/same' : '10.1/other', title: 'Deep learning'),
         breakdown: new ScoreBreakdown(
             signals: ['title' => $confidence, 'authors' => null, 'journal' => null, 'year' => null],
             final: $confidence,

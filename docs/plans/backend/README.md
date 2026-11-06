@@ -121,13 +121,16 @@ same change.
   `/health`, `/v1/extract`, `/v1/embeddings`; `Data/Inference/*` DTOs; `ExtractionFailedException`,
   `InferenceClientException`; `Services/Crossref/DoiNormalizer`.
 - Crossref verification and scoring (Phase 04): `Services/Crossref/*` (`CrossrefClient`,
-  `CrossrefQueryBuilder`, `CrossrefResultMapper`, `CrossrefWorkData`, `ReferenceQuery`, `DoiLookup`,
-  `CrossrefUnavailableException`); the pure `Services/Scoring/*` engine (`StringSimilarity`,
+  `CrossrefQueryBuilder`, `CrossrefResultMapper`, `DoiLookup`, `CrossrefUnavailableException`);
+  the source-agnostic seam `Services/Metadata/*` (`WorkMetadata`, `ReferenceQuery`),
+  `Contracts/Metadata/BibliographicSource` and `Enums/MetadataSource` (Phase 08 T1); the pure
+  `Services/Scoring/*` engine (`StringSimilarity`,
   `AuthorMatcher`, `SemanticSimilarity`, `LocalVenueDetector`, `MatchReasonBuilder`,
   `ReferenceScorer`, `VerdictDecider`, `ScoringConfig` + value objects); the
   `ValidateReferencesStep` / `EmbedReferencesStep` / `ScoreReferencesStep` pipeline steps and the
-  `ReferenceFindingWriter` single writer; `config/scoring.php` `semantic.title_blend` and the
-  `services.crossref` retry/back-off/User-Agent keys.
+  `ReferenceFindingWriter` single writer; candidate provenance
+  (`reference_finding_candidates.source`, `MetadataSource`); `config/scoring.php`
+  `semantic.title_blend` and the `services.crossref` retry/back-off/User-Agent keys.
 - Citation resolution and review (Phase 05): `Services/Citations/*` (`CitationMarkerParser`,
   `CitationResolver`, `CitationMatchConfig`, `CitationReference`/`CitationResolution` value
   objects) and the `ResolveCitationsStep`; `Services/Reference/ReferenceQueryService`,
@@ -155,6 +158,12 @@ same change.
   `ReportStateService`, `ReportFailureHandler` and `ReportDeletionService`; the `/reports` endpoints
   (`ReportController`, `ReportGenerationService`, `ReportQueryService`, `Data/Report/*` DTOs,
   `ListReportsRequest`); report DTO/schema/config tests plus the sync-queue end-to-end suite.
+- Garuda fallback source (Phase 08): the source-agnostic seam (`Services/Metadata/*`,
+  `Contracts/Metadata/BibliographicSource`, `Enums/MetadataSource`), candidate provenance
+  (`reference_finding_candidates.source`), `Services/Garuda/{GarudaClient,GarudaSearchParser,
+  GarudaResultMapper}` with `GarudaUnavailableException`, the gated/budgeted fallback in
+  `ValidateReferencesStep` (fatal on the first failure, `pending` afterwards), `VerificationRunState`,
+  `GARUDA_*` config/env, and the `GarudaFake` fixtures/end-to-end suite.
 - Canonical error envelope renderers for `401`/`422`/`429` (now centralized in
   `ApiExceptionRenderer`) and `ErrorResponseData`; custom exceptions render their own envelope
   (`DocumentUploadFailedException`, `InvalidCredentialsException`).
@@ -401,6 +410,7 @@ Every new endpoint gets at least one ownership-isolation test (two users) per
 | 05.1 | [`05-1-citation-resolution-robustness-detail.md`](05-1-citation-resolution-robustness-detail.md) | Resolution robustness: hints, initials, soft year, ambiguity/`unresolved`, candidates, provenance, evaluation harness | 05 |
 | 06 | [`06-reports.md`](06-reports.md) | Async PDF report generation + `/reports` endpoints + file lifecycle | 02 (shell), 05 (content) |
 | 07 | [`07-hardening-and-evaluation.md`](07-hardening-and-evaluation.md) | Full test matrix, evaluation harness, performance, docs sync, e2e verification | 01–06 |
+| 08 | [`08-garuda-fallback-source.md`](08-garuda-fallback-source.md) | Garuda fallback metadata source for Indonesian references; `source` provenance on candidates; `BibliographicSource` seam for OpenAlex | 04 |
 
 ```text
 01 ──▶ 02 ──▶ 03 ──▶ 04 ──▶ 05 ──▶ 06 ──▶ 07

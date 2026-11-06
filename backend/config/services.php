@@ -52,6 +52,30 @@ return [
     ],
 
     /*
+    | Garuda (Garba Rujukan Digital) — Indonesian fallback metadata source.
+    | No public API: the client parses the server-rendered search page. Queried
+    | only when the primary sources return no plausible candidate. Every
+    | politeness knob is env-tunable (throttle, cache, rows, budget).
+    */
+    'garuda' => [
+        'enabled' => (bool) env('GARUDA_ENABLED', true),
+        'base_url' => env('GARUDA_BASE_URL', 'https://garuda.kemdiktisaintek.go.id'),
+        'timeout' => (int) env('GARUDA_TIMEOUT', 10),
+        'connect_timeout' => (int) env('GARUDA_CONNECT_TIMEOUT', 5),
+        'retries' => (int) env('GARUDA_RETRIES', 1),
+        'retry_backoff_ms' => (int) env('GARUDA_RETRY_BACKOFF_MS', 200),
+        'rows' => (int) env('GARUDA_ROWS', 3),
+        'query_max_length' => (int) env('GARUDA_QUERY_MAX_LENGTH', 180),
+        'cache_ttl' => (int) env('GARUDA_CACHE_TTL', 2592000),
+        'negative_cache_ttl' => (int) env('GARUDA_NEGATIVE_CACHE_TTL', 86400),
+        'min_interval_ms' => (int) env('GARUDA_MIN_INTERVAL_MS', 1000),
+        'redirect_max' => (int) env('GARUDA_REDIRECT_MAX', 3),
+        'max_requests_per_document' => (int) env('GARUDA_MAX_REQUESTS_PER_DOCUMENT', 500),
+        'max_response_bytes' => (int) env('GARUDA_MAX_RESPONSE_BYTES', 2097152),
+        'user_agent' => env('GARUDA_USER_AGENT'),
+    ],
+
+    /*
     | Internal FastAPI inference service (`docs/API_SPEC.md` §9). Private network only;
     | never exposed to the frontend.
     */

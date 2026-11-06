@@ -1,6 +1,6 @@
 <?php
 
-use App\Services\Crossref\CrossrefWorkData;
+use App\Services\Metadata\WorkMetadata;
 use App\Services\Scoring\MatchReasonBuilder;
 use App\Services\Scoring\ScoreBreakdown;
 use App\Services\Scoring\ScoredCandidate;
@@ -57,7 +57,7 @@ it('names conflicting fields in a doi conflict reason', function () {
 
 it('suggests the doi when the best candidate has one', function () {
     $candidate = new ScoredCandidate(
-        work: new CrossrefWorkData(doi: '10.1234/example', title: 'Deep learning'),
+        work: new WorkMetadata(doi: '10.1234/example', title: 'Deep learning'),
         breakdown: new ScoreBreakdown(
             signals: ['title' => 0.9, 'authors' => null, 'journal' => null, 'year' => null],
             final: 0.9,

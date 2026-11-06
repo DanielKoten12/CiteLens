@@ -1,14 +1,17 @@
 <?php
 
-namespace App\Services\Crossref;
+namespace App\Services\Metadata;
 
 use App\Models\ResearchedDocumentReference;
 
 /**
- * Bibliographic search input for Crossref `/works`.
+ * Bibliographic search input shared by every {@see \App\Contracts\Metadata\BibliographicSource}.
  *
- * Built from one bibliography entry; the author is reduced to a single surname
- * because `query.author` is a relevance hint, not a full author index.
+ * Built from one bibliography entry. `bibliographic` is the free-text Crossref
+ * query (title + first author + year); `title` is the raw title for sources
+ * whose matcher performs better on a title-only query. The author is reduced to
+ * a single surname because `query.author` is a relevance hint, not a full author
+ * index.
  */
 final class ReferenceQuery
 {
@@ -16,6 +19,7 @@ final class ReferenceQuery
         public readonly string $bibliographic,
         public readonly ?string $author = null,
         public readonly ?int $year = null,
+        public readonly ?string $title = null,
     ) {}
 
     public static function fromReference(ResearchedDocumentReference $reference): self
@@ -32,6 +36,7 @@ final class ReferenceQuery
             bibliographic: implode(' ', $parts),
             author: $author,
             year: $reference->publication_year,
+            title: $reference->title,
         );
     }
 

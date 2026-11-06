@@ -1,0 +1,297 @@
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <meta name="description" content="garuda garba rujukan digital">
+        <meta name="author" content="kementrian riset, teknologi dan pendidikan tinggi">
+        <link rel="icon" href="/assets/img/garuda-icon.png">
+
+        <title>Garuda - Garba Rujukan Digital</title>
+
+        <!-- SEMANTIC UI -->
+        <link href="/assets/semantic/semantic.min.css" rel="stylesheet">
+        <link href="/assets/semantic/components/reset.css" rel="stylesheet"> 
+
+        <link href="/assets/css/main.css" rel="stylesheet">
+        <link href="/assets/css/app.css" rel="stylesheet">
+        <link href="/assets/css/flash-message.css" rel="stylesheet">
+        
+        <!-- JQUERY UI - AUTOCOMPLETE -->
+        <link href="/assets/css/jquery-ui/jquery-ui.css" rel="stylesheet" />
+
+        <script src="/assets/js/jquery.js"></script>
+        <script src="/assets/semantic/semantic.min.js"></script>
+        <script src="/assets/js/jquery.tagcloud.js" type="text/javascript"></script>
+        <script src="/assets/js/Chart.js"></script>
+        <script src="/assets/custom/main.js"></script>
+        <script src="/assets/js/app.js"></script>
+        <!-- JQUERY UI - AUTOCOMPLETE -->
+        <script src="/assets/js/jquery-ui/jquery-ui.min.js"></script>
+    </head>
+
+
+
+    <body>
+                <div class="ui stackable menu top-menu">
+            <a class="header item brand" href="/">
+                 <img src="/assets/img/garuda1.png" alt=""> 
+            </a>
+            <div class="right menu">
+                <a class="nav item " href="/">Home</a>
+                <a class="nav item " href="/publisher">Publisher</a>
+                <a class="nav item " href="/journal">Journal / Conference</a>
+                <a class="nav item " href="/area">Subject</a>
+                <a class="nav item " href="/suggest">Suggest</a>
+                <a class="nav item" target="_blank" href="https://drive.google.com/drive/folders/19TuyOLkABcMgh99AgLweV-B8BE1wcUl8?usp=sharing">Guidebook</a>
+                <a class="nav item disabled">&nbsp;</a>
+            </div>
+        </div>
+
+        <main role="main" class="container">
+
+<div class="row" style="margin: 0 15px;">
+    <form class="ui form" action="" method="GET">
+        <div class="ui stackable padded grid">
+            <div class="three wide field column">
+                <label>Search By</label>
+                <select class="ui selection dropdown" name="select">
+                    <option value="title" >Title</option>
+                    <option value="abstract" >Abstract</option>
+                    <option value="author" >Author</option>
+                    <option value="doi" >DOI</option>
+                </select>
+                <div class="ui checkbox" style="margin-top: 10px;">
+                    <input type="checkbox" tabindex="0" name="pdf" value="1" >
+                    <label>Downloadable PDF Only</label>
+                </div>
+            </div>
+            <div class="seven wide field column">
+                <label>Keywords</label>
+                <input type="text" name="q" placeholder="Source Title" value="zzzqqqxxxyyy1234" minlength="3" required> 
+            </div>
+            <div class="four wide field column">
+                <label>Publisher</label>
+                <input type="text" name="pub" placeholder="Publisher Name" value="" minlength="3">
+            </div>
+            <div class="two wide field column">
+                <label>&nbsp;</label>
+                <button class="ui fluid button" type="submit"><i class="search icon"></i> Search</button>
+            </div>
+        </div>
+    </form>
+    
+    <div class="ui stackable grid">
+        <div class="four wide column">
+            <div class="ui basic segment">
+                <h4 class="ui header">Filter By Year</h4>
+                <p>
+                    1945                    <span style="float: right"> 2024</span>
+                </p> 
+                <div id="slider-range"></div>
+                <br>
+
+                <form id="filter_year" class="ui mini form" action="" method="get">
+                                            <input type="hidden" name="q" value="zzzqqqxxxyyy1234">
+                                                        
+                                        
+                    <div class="equal width fields">
+                        <div class="field">
+                            <label>From</label>
+                            <input type="text" id="from" name="from">
+                        </div>
+                        <div class="field">
+                            <label>To</label>
+                            <input type="text" id="to" name="to">
+                        </div>
+                    </div>
+                    <div class="equal width fields">
+                        <div class="field">
+                            <button class="ui mini fluid button" type="submit">Filter</button>
+                        </div>
+                        <div class="field">
+                            <a class="ui mini fluid button basic red" href="/documents/?q=zzzqqqxxxyyy1234&select=&pub=&pdf=">Reset</a>
+                        </div>
+                    </div>
+                    
+                </form>
+            </div>
+        </div>
+        <div class="twelve wide column">
+            <div class="ui equal width grid">
+                <div class="column">
+                    <h2 class="ui header">
+                        <i class="search icon"></i>
+                        <div class="content">
+                            Found 5 documents
+                            <div class="sub header">Search  
+                                <i><xmp>zzzqqqxxxyyy1234</xmp></i> 
+                                <i><xmp></xmp></i> 
+                                <i><xmp></xmp></i>  
+                                <i><xmp></xmp></i>
+                                <i><xmp></xmp></i>
+                            </div>
+                        </div>
+                    </h2>
+                </div>
+                <div class="column right aligned">
+                                    </div>
+            </div>
+
+            <div class="ui">
+                <div class="ui divider"></div>
+                            
+                            </div>
+            <!-- </div> -->
+        </div>
+    </div>
+</div>
+
+<script>
+    $( function() {
+        $("#slider-range" ).slider({
+            range: true,
+            min: 1945,
+            max: 2024,
+            values: [ 1945, 2024 ],
+            slide: function( event, ui ) {
+                $("#from").val(ui.values[ 0 ]);
+                $("#to").val(ui.values[ 1 ]);
+            }
+        });
+        $("#from").val( $( "#slider-range" ).slider( "values", 0 ));
+        $("#to").val($( "#slider-range" ).slider( "values", 1 ));
+    });
+</script><!-- </div> -->
+</main>
+
+<div class="links-box">
+    <ul>
+        <li><a href="https://sinta.kemdiktisaintek.go.id" target="_blank">Sinta</a></li>
+        <li><a title="Basis Informasi Penelitian dan Pengabdian kepada Masyarakat" href="https://bima.kemdiktisaintek.go.id" target="_blank">Bima</a></li>
+        <li><a title="Akreditasi Jurnal Nasional" href="https://arjuna.kemdiktisaintek.go.id" target="_blank">Arjuna</a></li>
+        <li><a title="Pangkalan Data Pendidikan Tinggi Ristekdikti" href="https://pddikti.kemdiktisaintek.go.id" target="_blank">PDDIKTI</a></li>
+        <li><a title="Data Riset dan Pengembangan Ristekdikti" href="https://dikti.kemdiktisaintek.go.id/" target="_blank">Risbang</a></li>
+        <li><a title="The Largest Abstract and Citation Database of Peer-Reviewed Literature" href="https://www.scopus.com" target="_blank">Scopus</a></li>
+        <li><a title="Repositori Tugas Akhir Mahasiswa" href="https://rama.kemdiktisaintek.go.id/" target="_blank">Rama</a></li>
+    </ul>
+</div>
+<footer class="ui grid equal width footer">
+    <div class="clearfix"></div>
+    <div class="column">
+        <img src="/assets/img/logo_dikbud.png" />
+        <div class="footer-company">Kementerian Pendidikan, Kebudayaan, Riset, dan Teknologi </div>
+        <div class="footer-subcompany">(The Ministry of Education, Culture, Research, and Technology)</div>
+        <div class="footer-copyright">&copy; 2018</div>
+    </div>
+    <div class="column"></div>
+</footer>
+<!-- UI KIT -->
+
+
+
+
+<script>
+    setTimeout(function() {
+        // $('#flash_message').slideUp( 300, "linear" );
+        $('#flash_message').fadeOut( "slow");
+    }, 2000);
+</script>
+<!-- AUTOSEARCH BUKU-->
+<script>
+    $(function() {
+        $("#suggest_pub").autocomplete({
+            source: "/suggest/findPublisher",
+            select: function( event, ui ) {
+                event.preventDefault();
+                $("#suggest_pub").val(ui.item.value);
+            }
+        });
+    });
+</script>
+<!-- END AUTOSEARCH BUKU-->
+
+
+<script type="text/javascript">
+    $('.ui.checkbox').checkbox();
+    $('select.dropdown').dropdown();
+    $('.ui.dropdown').dropdown();
+    $('.top.menu .item').tab();
+
+    $(document).ready(function () {
+
+        $("#sort").change(function () {
+            var page = 1;
+            // $("#sort").val(page);
+            $("#form_sort").submit();
+        });
+
+        $("#select_item").change(function () {
+            var page = 1;
+            $("#page").val(page);
+            $("#form_journal").submit();
+        });        
+
+        $("#select_item").change(function () {
+            var page = 1;
+            $("#page").val(page);
+            $("#form_alphabeth").submit();
+        });
+
+        $("#select_item").change(function () {
+            var page = 1;
+            $("#page").val(page);
+            $("#form_search").submit();
+        });
+
+        $('#page').keydown(function () {
+            var key = e.which;
+            if (key == 13) {
+                $('#form_journal').submit();
+            }
+        });
+
+        $('#form_journal').keydown(function () {
+            var key = e.which;
+            if (key == 13) {
+                // As ASCII code for ENTER key is "13"
+                $('#form_journal').submit(); // Submit form code
+            }
+        });
+
+        $('.demo.menu .item').tab({history: false});
+
+        $('.area-cloud a').tagcloud();
+
+    });
+
+    $('.ui.top.attached.tabular.menu .item').tab({history: false});
+
+    $.fn.tagcloud.defaults = {
+        size: {start: 9, end: 30, unit: 'pt'},
+        color: {start: '#444', end: '#ed462f'}
+    };
+
+    function show_abstract(id){
+        $('#show_abstract'+id).slideToggle();
+    }
+
+    $(document).ready(function () {
+        $('#adv-btn').on('click', function () {
+            $('#adv-box').slideToggle('slow');
+            $('#form-journal').slideToggle('slow');
+        });
+
+        $('#adv-less').on('click', function () {
+            $('#adv-box').slideToggle('slow');
+            $('#form-journal').slideToggle('slow');
+        });
+    });
+
+
+
+</script>
+
+</body>
+</html>
