@@ -1,0 +1,36 @@
+{
+  "meta": { "count": 2, "page": 1, "per_page": 5 },
+  "results": [
+    {
+      "id": "https://openalex.org/W4400000001",
+      "doi": "https://doi.org/10.1234/openalex-jesasi-2026",
+      "title": "Beyond Borders, Beyond Classrooms: Pendampingan Literasi Finansial Digital melalui Aktivitas Edukatif bagi Anak Diaspora Indonesia di Sanggar Bimbingan Kampung Bharu, Malaysia",
+      "display_name": "Beyond Borders, Beyond Classrooms: Pendampingan Literasi Finansial Digital melalui Aktivitas Edukatif bagi Anak Diaspora Indonesia di Sanggar Bimbingan Kampung Bharu, Malaysia",
+      "publication_year": 2026,
+      "authorships": [
+        { "author": { "display_name": "Dwi Enggrina" }, "raw_author_name": "D. Enggrina" },
+        { "author": { "display_name": "A. W. Liwang" }, "raw_author_name": "A. W. Liwang" },
+        { "author": { "display_name": "W. Rahman" }, "raw_author_name": "W. Rahman" }
+      ],
+      "primary_location": {
+        "landing_page_url": "https://jesasi.example.org/article/1",
+        "source": { "display_name": "JESASI (Jurnal Edukasi, Sains, dan Inovasi)" }
+      },
+      "type": "article"
+    },
+    {
+      "id": "https://openalex.org/W4400000002",
+      "doi": null,
+      "title": "Unrelated Work on Metadata Quality",
+      "publication_year": 2019,
+      "authorships": [
+        { "author": { "display_name": "Someone Else" }, "raw_author_name": "Someone Else" }
+      ],
+      "primary_location": {
+        "landing_page_url": "https://metadata.example.org/unrelated",
+        "source": { "display_name": "Journal of Metadata" }
+      },
+      "type": "review"
+    }
+  ]
+}

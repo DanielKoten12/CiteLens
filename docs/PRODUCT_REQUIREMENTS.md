@@ -63,7 +63,7 @@ evaluator. Scope is limited to DOI validation and citation consistency.
 |---|---|---|
 | **Unauthorized visitor** | Not logged in. | Register, log in. |
 | **Registered user** (student/author) | Uploads a thesis/draft. | Upload, understand findings, review, correct, download a report. |
-| **External metadata service** | Crossref (and, per proposal, OpenAlex). | Not a user; a system dependency. |
+| **External metadata service** | Crossref (primary/authoritative), Garuda (Indonesian fallback), Semantic Scholar, OpenAlex. | Not a user; a system dependency. |
 
 There is no admin role in v1. Every user sees only their own documents.
 
@@ -84,7 +84,8 @@ Supporting capabilities:
 
 - PDF upload (≤ 20 MB) with automatic analysis start.
 - Extraction of bibliography entries and in-text citations (GROBID) including page coordinates.
-- Crossref metadata lookup and candidate ranking.
+- Ordered multi-source metadata lookup (Crossref → Garuda → Semantic Scholar → OpenAlex) and
+  candidate ranking, including multi-source DOI resolution.
 - Citation resolution (pairing in-text citations to references).
 - Findings/highlight feed for the document viewer.
 - Manual review of reference verdicts and citation pairing.
@@ -132,7 +133,7 @@ Requirement IDs are grouped by capability and map to the endpoint groups in `doc
 | ID | Requirement |
 |---|---|
 | FR-R1 | The system extracts bibliography entries with `raw_text`, DOI, title, authors, publication name/year and text offsets. |
-| FR-R2 | For each reference the system obtains ranked Crossref candidates. |
+| FR-R2 | For each reference the system obtains ranked candidates from the configured metadata sources (Crossref primary; Garuda/Semantic Scholar/OpenAlex fallbacks) and resolves DOIs through an ordered Crossref → Semantic Scholar → OpenAlex chain. |
 | FR-R3 | The system computes a confidence score and assigns a finding status (`pending`/`valid`/`suspicious`/`invalid`/`not_found`) with a human-readable reason. |
 | FR-R4 | A user can list references for a document (filter by finding status and DOI presence). |
 | FR-R5 | A user can view reference detail including finding, ranked candidates, highlight locations and resolved citations. |
@@ -216,9 +217,10 @@ marks an entry as valid; below that, entries from local/non-indexed venues are d
 
 - PDF + DOCX were intended by the proposal; API v1 supports **PDF only**.
 - Citation format validation targets **APA and IEEE**.
-- Validation depends on Crossref availability and rate limits (and, per the proposal, OpenAlex —
-  not part of the v1 contract).
-- Local/Indonesian journals may not be indexed by Crossref and will be reported as
+- Validation depends on external metadata availability and rate limits. Garuda has no public API;
+  Semantic Scholar and OpenAlex are optional, key-gated sources. A degraded source yields
+  `pending`, never a false `invalid`/`not_found`.
+- Local/Indonesian journals may not be indexed in any enabled catalogue and will be reported as
   `not_found`/`suspicious`, which is not proof of fabrication.
 - Scanned PDFs without a usable text layer cannot be processed.
 
@@ -229,7 +231,10 @@ marks an entry as valid; below that, entries from local/non-indexed venues are d
 Do not silently resolve these; implement against the canonical contract and flag the conflict.
 
 1. **DOCX:** proposal scopes PDF + DOCX; `API_SPEC.md` v1 is PDF only.
-2. **OpenAlex:** proposal allows Crossref + OpenAlex; `API_SPEC.md` defines Crossref only.
+2. **OpenAlex / Semantic Scholar:** the proposal allows Crossref + OpenAlex. Phase 09 deliberately
+   extended the contract to OpenAlex **and** Semantic Scholar as supplemental, key-gated sources
+   (Semantic Scholar is an engineering extension beyond the proposal). `API_SPEC.md` documents the
+   ordered chains.
 3. **DB_SCHEMA.md** contains a second stale DBML block; the **first** block is canonical.
 4. **Citation styles:** proposal limits format validation to APA and IEEE.
 5. **Frontend prototype types** (`valid | warning | halu`) do not match API enums — the API wins.

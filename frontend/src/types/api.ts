@@ -118,7 +118,7 @@ export interface Candidate {
   id: string;
   rank: number;
   confidence: number; // 0-1
-  source: "crossref" | "openalex" | "garuda";
+  source: "crossref" | "openalex" | "garuda" | "semantic_scholar";
   doi: string | null;
   title: string | null;
   authors: string | null;

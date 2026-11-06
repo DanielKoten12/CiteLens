@@ -1,0 +1,15 @@
+{
+  "id": "https://openalex.org/W2000000002",
+  "doi": "https://doi.org/10.1234/conflicting-publication",
+  "title": "Quantum gravity in the early universe",
+  "publication_year": 1999,
+  "authorships": [
+    { "author": { "display_name": "Ada Cosmologist" }, "raw_author_name": "A. Cosmologist" },
+    { "author": { "display_name": "Bruno Astrophysicist" }, "raw_author_name": "B. Astrophysicist" }
+  ],
+  "primary_location": {
+    "landing_page_url": "https://physics.example.org/quantum",
+    "source": { "display_name": "Journal of Impossible Physics" }
+  },
+  "type": "article"
+}

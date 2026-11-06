@@ -607,7 +607,7 @@ paths:
                           id: 3c4d5e6f-7081-4c9d-ae1f-2a3b4c5d6e7f
                           status: valid
                           confidence: 0.95
-                          reason: Exact DOI match with Crossref.
+                          reason: DOI cocok dengan metadata Crossref.
                           selected_candidate_id: 5e6f7081-92a3-4ebf-8a3b-4c5d6e7f8091
                     meta:
                       current_page: 1
@@ -632,7 +632,7 @@ paths:
       summary: Reference detail
       description: |
         The bibliography entry plus its highlight locations, its finding with the
-        ranked Crossref candidates, and the resolved citations pointing to it.
+        ranked metadata candidates, and the resolved citations pointing to it.
       parameters:
         - $ref: '#/components/parameters/ReferenceId'
       responses:
@@ -674,7 +674,7 @@ paths:
                         id: 4d5e6f70-8192-4dae-bf2a-3b4c5d6e7f80
                         status: suspicious
                         confidence: 0.63
-                        reason: Judul pada metadata Crossref memiliki perbedaan.
+                        reason: Judul pada metadata kandidat memiliki perbedaan.
                         selected_candidate_id: 5e6f7081-92a3-4ebf-8a3b-4c5d6e7f8091
                         is_manual: false
                         reviewed_by: null
@@ -683,6 +683,7 @@ paths:
                           - id: 5e6f7081-92a3-4ebf-8a3b-4c5d6e7f8091
                             rank: 1
                             confidence: 0.63
+                            source: crossref
                             doi: 10.1234/example
                             title: Sistem Pendeteksi Plagiarisme Dokumen
                             authors: Koten, D. B.
@@ -1666,12 +1667,15 @@ components:
         selected_candidate_id: {type: [string, 'null'], format: uuid}
     ReferenceFindingCandidate:
       type: object
-      description: One ranked Crossref candidate of a reference finding.
-      required: [id, rank, confidence, doi, title, authors, publication_name, publication_year, url, match_reason]
+      description: One ranked metadata candidate of a reference finding.
+      required: [id, rank, confidence, source, doi, title, authors, publication_name, publication_year, url, match_reason]
       properties:
         id: {type: string, format: uuid}
         rank: {type: integer, minimum: 1}
         confidence: {type: number, format: float, minimum: 0, maximum: 1}
+        source:
+          type: string
+          enum: [crossref, garuda, semantic_scholar, openalex]
         doi: {type: [string, 'null']}
         title: {type: [string, 'null']}
         authors: {type: [string, 'null']}

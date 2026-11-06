@@ -46,8 +46,9 @@ it('pins the canonical citation status values', function () {
 
 it('pins the canonical metadata source values', function () {
     expect(array_column(MetadataSource::cases(), 'value'))
-        ->toBe(['crossref', 'openalex', 'garuda'])
-        ->and(MetadataSource::Garuda->label())->toBe('Garuda');
+        ->toBe(['crossref', 'openalex', 'garuda', 'semantic_scholar'])
+        ->and(MetadataSource::Garuda->label())->toBe('Garuda')
+        ->and(MetadataSource::SemanticScholar->label())->toBe('Semantic Scholar');
 });
 
 it('pins the canonical report status values', function () {

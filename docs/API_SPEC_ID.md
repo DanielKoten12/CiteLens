@@ -14,7 +14,8 @@ Vue.js (SPA)
 Laravel API  ── autentikasi, dokumen, referensi, sitasi, temuan, laporan, DB
    │
    ├── MySQL/Postgres  (lihat docs/DB_SCHEMA.md)
-   ├── Crossref REST API (HTTP keluar, diorkestrasi oleh Laravel)
+   ├── Sumber metadata (HTTP keluar, diorkestrasi oleh Laravel):
+   │     Crossref (utama/otoritatif) → Garuda → Semantic Scholar → OpenAlex
    ├── Queue worker  (pipeline analisis asinkron)
    └── Server inferensi FastAPI (internal, jaringan privat)
           ├── GROBID  → ekstraksi referensi + sitasi dalam teks + koordinat
@@ -26,7 +27,7 @@ Laravel API  ── autentikasi, dokumen, referensi, sitasi, temuan, laporan, DB
 | Aspek | Penanggung jawab |
 |---|---|
 | Autentikasi, persistensi, orkestrasi analisis, status/progres | Laravel |
-| Pencarian Crossref, peringkat kandidat, skor, resolusi sitasi | Laravel |
+| Pencarian metadata (Crossref, Garuda, Semantic Scholar, OpenAlex), resolusi DOI, peringkat kandidat, skor, resolusi sitasi | Laravel |
 | Kemiripan string (Jaro-Winkler, Levenshtein), pencocokan persis | Laravel |
 | Parsing dokumen / ekstraksi referensi + sitasi (GROBID) | FastAPI (inferensi) |
 | Embedding semantik (SBERT) | FastAPI (inferensi) |
@@ -37,6 +38,11 @@ publik.
 > **Catatan (OQ-11):** REST API Crossref tidak memerlukan autentikasi pada v1; Laravel
 > mengidentifikasi dirinya melalui `CROSSREF_MAILTO` dan `User-Agent` kontak. Tidak ada
 > `CROSSREF_API_KEY` yang digunakan.
+>
+> **Catatan (Phase 09):** Semantic Scholar dan OpenAlex adalah sumber pelengkap opsional. Keduanya
+> memerlukan API key: tanpa key sumber dinonaktifkan dan rantai berjalan dengan sumber lain yang
+> aktif. Key dikirim melalui header permintaan, tidak pernah di URL, dan tidak pernah diekspos ke
+> frontend.
 
 ---
 
@@ -149,14 +155,21 @@ Setiap respons non-2xx memakai bentuk yang sama:
 | `valid` | Cocok dengan meyakinkan |
 | `suspicious` | Cocok tetapi confidence rendah / sebagian tidak cocok |
 | `invalid` | Kecocokan ditemukan tetapi metadata bertentangan |
-| `not_found` | Tidak ada kandidat ditemukan di Crossref |
+| `not_found` | Tidak ada kandidat ditemukan di **sumber metadata yang aktif** (semua sumber aktif menjawab) |
 
-> **Catatan (OQ-02):** DOI yang ada di dokumen tetapi tidak dapat diresolusi di Crossref berstatus
-> `invalid` dengan alasan `"DOI tidak ditemukan di Crossref."` (DOI rusak bertentangan dengan klaim
-> dokumen itu sendiri). `not_found` hanya untuk referensi tanpa DOI dan tanpa kandidat Crossref;
-> DOI dengan format tidak valid berstatus `invalid` dengan alasan `"Format DOI tidak valid."`
-> `suspicious` mencakup kecocokan lemah/sebagian, termasuk kemungkinan venue lokal yang tidak
-> terindeks.
+> **Catatan (OQ-02, direvisi oleh Phase 09):** DOI diresolusi melalui rantai berurutan
+> (Crossref → Semantic Scholar → OpenAlex). DOI yang **semua resolver aktif menyatakan tidak
+> ditemukan** (`404`) berstatus `invalid` dengan alasan
+> `"DOI tidak ditemukan pada sumber metadata."` (DOI rusak bertentangan dengan klaim dokumen).
+> Bila ada resolver aktif yang tidak dapat menjawab (gangguan, circuit breaker, atau kuota) dan
+> tidak ada resolver yang mengonfirmasi, hasilnya **tidak diketahui**: temuan berstatus `pending`
+> dengan alasan `"DOI belum dapat diverifikasi karena sumber metadata tidak tersedia. Coba lagi
+> nanti."` — tidak pernah `invalid`. DOI dengan format tidak valid tetap `invalid` dengan
+> `"Format DOI tidak valid."` tanpa panggilan jaringan resolusi DOI.
+>
+> `not_found` mensyaratkan **setiap sumber pencarian aktif menjawab dan tidak ada yang cocok**;
+> sumber yang gagal atau terlewat karena kuota menghasilkan `pending`. `suspicious` mencakup
+> kecocokan lemah/sebagian, termasuk kemungkinan venue lokal yang tidak terindeks.
 
 **Status sitasi** (derived, tidak disimpan — dihitung ulang dari pasangan dan temuan referensi)
 
@@ -557,7 +570,7 @@ Filter: `status` (status temuan), `has_doi` (bool). Dipaginasi.
         "id": "f-101-uuid",
         "status": "valid",
         "confidence": 0.9500,
-        "reason": "Exact DOI match with Crossref.",
+        "reason": "DOI cocok dengan metadata Crossref.",
         "selected_candidate_id": "c-101-uuid"
       }
     },
@@ -575,7 +588,7 @@ Filter: `status` (status temuan), `has_doi` (bool). Dipaginasi.
         "id": "f-102-uuid",
         "status": "suspicious",
         "confidence": 0.6300,
-        "reason": "Judul pada metadata Crossref memiliki perbedaan.",
+        "reason": "Judul pada metadata kandidat memiliki perbedaan.",
         "selected_candidate_id": "c-102-uuid"
       }
     }
@@ -626,7 +639,7 @@ referensi ini.
       "id": "f-102-uuid",
       "status": "suspicious",
       "confidence": 0.6300,
-      "reason": "Judul pada metadata Crossref memiliki perbedaan.",
+      "reason": "Judul pada metadata kandidat memiliki perbedaan.",
       "selected_candidate_id": "c-102-uuid",
       "is_manual": false,
       "reviewed_by": null,
@@ -654,10 +667,13 @@ referensi ini.
 }
 ```
 
-> `finding.candidates[].source` adalah katalog asal data: `crossref`, `openalex`, atau `garuda`
-> (fallback Indonesia). Finding `valid` dapat memilih kandidat dengan `doi: null` bila kecocokan
-> berasal dari Garuda — `valid` berarti publikasi terverifikasi di sebuah katalog, bukan berarti
-> DOI-nya ditemukan.
+> `finding.candidates[].source` adalah katalog asal data: `crossref` (utama), `garuda`
+> (fallback Indonesia), `semantic_scholar`, atau `openalex`. Kandidat mengikuti urutan sumber yang
+> dikonfigurasi dan dideduplikasi lintas sumber; rekaman ber-DOI dapat menggantikan rekaman setara
+> tanpa DOI. Finding `valid` dapat memilih kandidat dengan `doi: null` bila kecocokan berasal dari
+> Garuda — `valid` berarti publikasi terverifikasi di sebuah katalog, bukan berarti DOI-nya
+> ditemukan. Bila DOI dikonfirmasi oleh resolver fallback, `reason` menyebut resolver tersebut
+> (mis. `"DOI cocok dengan metadata OpenAlex."`).
 
 **Gagal — `404`**
 
@@ -881,7 +897,7 @@ Filter: `type` (`reference_invalid|reference_suspicious|reference_not_found|cita
       "id": "ref-finding:f-102-uuid",
       "type": "reference_suspicious",
       "severity": "medium",
-      "message": "Judul pada metadata Crossref memiliki perbedaan.",
+      "message": "Judul pada metadata kandidat memiliki perbedaan.",
       "reference_id": "r-102-uuid",
       "citation_id": null,
       "text": "Koten, D. B. (2023). Sistem Deteksi Plagiarisme. Jurnal Informatika.",
@@ -1143,10 +1159,18 @@ Dipicu oleh `POST /documents`.
       → insert researched_document_citations
       → insert researched_document_citation_locations
 3. Untuk setiap referensi:
-      → pencarian metadata utama: Crossref (DOI atau pencarian bibliografis)
-      → fallback Garuda (hanya pencarian bibliografis) bila tidak ada kandidat utama yang
-        mirip judulnya; dibatasi kuota dan dapat dimatikan lewat konfigurasi
-      → insert reference_finding_candidates (diperingkat, dengan `source`)
+      → rantai resolusi DOI: Crossref → Semantic Scholar → OpenAlex
+            · resolver pertama yang mengembalikan karya menang (Crossref otoritatif bila menjawab)
+            · semua resolver aktif menjawab 404 → DOI tidak ditemukan → `invalid`
+            · resolver aktif tidak dapat menjawab dan tidak ada yang mengonfirmasi → DOI tidak
+              diketahui → `pending`
+      → rantai pencarian bibliografis: Crossref (selalu) → Garuda → Semantic Scholar → OpenAlex
+            · fallback berhenti pada kecocokan judul pertama yang masuk akal (opsional dengan DOI)
+            · setiap sumber memiliki gerbang, kuota, throttle, cache, dan kebijakan gangguan
+              `fatal|degrade` sendiri
+      → gabungkan/deduplikasi kandidat lintas sumber (DOI dulu, lalu judul ternormalisasi;
+        duplikat ber-DOI menggantikan rekaman setara tanpa DOI)
+      → insert reference_finding_candidates (diperingkat, dengan `source`, dibatasi setelah ranking)
 4. Skor kemiripan (Laravel): Jaro-Winkler + Levenshtein + embedding SBERT
       → hitung confidence, pilih selected_candidate_id
       → upsert reference_findings (status, reason)

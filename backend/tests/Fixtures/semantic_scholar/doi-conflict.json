@@ -1,0 +1,13 @@
+{
+  "paperId": "s2-doi-conflict-001",
+  "title": "Quantum gravity in the early universe",
+  "authors": [
+    { "authorId": "s2-author-7", "name": "Ada Cosmologist" },
+    { "authorId": "s2-author-8", "name": "Bruno Astrophysicist" }
+  ],
+  "year": 1999,
+  "venue": "Journal of Impossible Physics",
+  "externalIds": { "DOI": "10.1234/conflicting-publication" },
+  "url": "https://www.semanticscholar.org/paper/s2-doi-conflict-001",
+  "publicationTypes": ["JournalArticle"]
+}

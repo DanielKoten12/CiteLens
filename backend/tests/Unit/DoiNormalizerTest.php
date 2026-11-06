@@ -1,6 +1,6 @@
 <?php
 
-use App\Services\Crossref\DoiNormalizer;
+use App\Services\Metadata\DoiNormalizer;
 
 beforeEach(function () {
     $this->normalizer = new DoiNormalizer;

@@ -133,7 +133,7 @@ const howItWorks = [
     icon: "check",
     highlighted: false,
     title: "Validasi DOI",
-    desc: "Dicocokkan dengan database Crossref",
+    desc: "Dicocokkan ke empat katalog metadata",
   },
   {
     icon: "report",
@@ -150,6 +150,27 @@ const dataSources = [
     dot: "#2d5be3",
     bg: "#eaf0fd",
     fg: "#1e3a6e",
+  },
+  {
+    name: "Garuda",
+    desc: "Jurnal Indonesia",
+    dot: "#0f766e",
+    bg: "#e6f7f4",
+    fg: "#115e59",
+  },
+  {
+    name: "Semantic Scholar",
+    desc: "200M+ makalah",
+    dot: "#7c3aed",
+    bg: "#f1ebff",
+    fg: "#5b21b6",
+  },
+  {
+    name: "OpenAlex",
+    desc: "Katalog terbuka",
+    dot: "#b45309",
+    bg: "#fff4e5",
+    fg: "#92400e",
   },
 ];
 </script>
@@ -175,7 +196,7 @@ const dataSources = [
 
       <p class="mt-4 text-sm sm:text-base max-w-lg" :style="{ color: 'var(--muted-foreground)' }">
         Unggah dokumen <strong :style="{ color: 'var(--foreground)' }">.pdf</strong> dan semua referensi
-        divalidasi otomatis ke Crossref.
+        divalidasi otomatis ke empat katalog metadata.
       </p>
     </div>
 
@@ -353,7 +374,7 @@ const dataSources = [
         SUMBER DATABASE
       </p>
 
-      <div class="grid grid-cols-1 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div
           v-for="source in dataSources"
           :key="source.name"
