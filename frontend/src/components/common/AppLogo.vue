@@ -22,8 +22,17 @@ const heightClass = computed(() => {
       return "h-9";
   }
 });
+
+const sizeClass = computed(() => `brand-logo-${props.size}`);
 </script>
 
 <template>
-  <img :src="citelensLogo" alt="CiteLens" :class="[heightClass, 'w-auto select-none']" />
+  <div :class="['brand-logo', sizeClass]" role="img" aria-label="CiteLens">
+    <span class="brand-logo-mark" aria-hidden="true">
+      <img :src="citelensLogo" alt="" :class="[heightClass, 'w-auto select-none']" />
+    </span>
+    <span class="brand-logo-wordmark" aria-hidden="true">
+      <span class="brand-logo-cite">Cite</span><span class="brand-logo-lens">Lens</span>
+    </span>
+  </div>
 </template>

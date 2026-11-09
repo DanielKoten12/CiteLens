@@ -243,9 +243,9 @@ async function downloadEntry(doc: ApiDocument) {
           :key="filter.key"
           class="text-sm font-semibold px-3.5 py-2 rounded-lg border transition-colors"
           :style="{
-            borderColor: statusFilter === filter.key ? 'var(--foreground)' : 'var(--border)',
-            background: statusFilter === filter.key ? 'white' : 'transparent',
-            color: statusFilter === filter.key ? 'var(--foreground)' : 'var(--muted-foreground)',
+            borderColor: statusFilter === filter.key ? 'var(--selected-foreground)' : 'var(--border)',
+            background: statusFilter === filter.key ? 'var(--selected-surface)' : 'transparent',
+            color: statusFilter === filter.key ? 'var(--selected-foreground)' : 'var(--muted-foreground)',
             boxShadow: statusFilter === filter.key ? '0 1px 3px rgba(15,22,41,0.12)' : 'none',
           }"
           @click="statusFilter = filter.key"
@@ -256,7 +256,7 @@ async function downloadEntry(doc: ApiDocument) {
 
       <button
         class="flex items-center gap-2 text-sm font-semibold px-3.5 py-2 rounded-lg border"
-        :style="{ borderColor: 'var(--foreground)', color: 'var(--foreground)', background: 'white' }"
+        :style="{ borderColor: 'var(--selected-foreground)', color: 'var(--selected-foreground)', background: 'var(--selected-surface)' }"
         @click="toggleSort"
       >
         <svg width="13" height="13" viewBox="0 0 13 13" fill="none">

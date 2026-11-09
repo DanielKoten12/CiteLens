@@ -17,7 +17,7 @@ function isActive(matchNames: string[]) {
 
 <template>
   <header
-    class="flex items-center justify-between px-6 py-3 border-b"
+    class="site-header flex items-center justify-between px-6 py-3 border-b"
     :style="{ borderColor: 'var(--border)', background: 'var(--card)' }"
   >
     <div class="flex items-center gap-8">

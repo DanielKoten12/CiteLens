@@ -10,6 +10,13 @@ interface AuthResponse {
 export const useAuthStore = defineStore("auth", () => {
   const user = ref<AuthUser | null>(null);
   const isAuthenticated = computed(() => user.value !== null);
+  const uiOnly = import.meta.env.VITE_UI_ONLY === "true";
+
+  const demoUser: AuthUser = {
+    id: "ui-demo-user",
+    name: "Demo UI",
+    email: "demo@citelens.local",
+  };
 
   function applyAuth(res: AuthResponse) {
     tokenStorage.set(res.data.token);
@@ -18,6 +25,11 @@ export const useAuthStore = defineStore("auth", () => {
 
   /** POST /auth/login. Gagal -> ApiError (422 untuk kredensial salah, 429 rate limit). */
   async function login(email: string, password: string) {
+    if (uiOnly) {
+      user.value = { ...demoUser, email: email || demoUser.email };
+      return;
+    }
+
     applyAuth(
       await api<AuthResponse>("/auth/login", {
         method: "POST",
@@ -33,6 +45,11 @@ export const useAuthStore = defineStore("auth", () => {
     password: string,
     passwordConfirmation: string = password,
   ) {
+    if (uiOnly) {
+      user.value = { ...demoUser, name, email };
+      return;
+    }
+
     applyAuth(
       await api<AuthResponse>("/auth/register", {
         method: "POST",
@@ -48,6 +65,11 @@ export const useAuthStore = defineStore("auth", () => {
 
   /** Pulihkan sesi dari token tersimpan. Panggil sekali sebelum router dipasang. */
   async function init() {
+    if (uiOnly) {
+      user.value = demoUser;
+      return;
+    }
+
     if (!tokenStorage.get()) return;
     try {
       user.value = (await api<{ data: AuthUser }>("/auth/me")).data;
@@ -57,6 +79,11 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   async function logout() {
+    if (uiOnly) {
+      clearSession();
+      return;
+    }
+
     try {
       await api("/auth/logout", { method: "POST" });
     } catch {

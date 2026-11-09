@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { mockDocument, mockPage } from "@/mocks";
 import type {
   ApiCitation,
   ApiDocument,
@@ -43,8 +44,13 @@ export const documentsApi = {
     });
   },
 
-  list: (p?: PageParams & { status?: string; q?: string; sort?: string }) =>
-    api<Paginated<ApiDocument>>(`/documents${qs(p)}`),
+  list: async (p?: PageParams & { status?: string; q?: string; sort?: string }) => {
+    if (import.meta.env.VITE_UI_ONLY === "true") {
+      return mockPage([mockDocument]);
+    }
+
+    return api<Paginated<ApiDocument>>(`/documents${qs(p)}`);
+  },
 
   get: (id: string) => api<Envelope<ApiDocument>>(`/documents/${id}`),
 

@@ -40,6 +40,7 @@ const retryError = ref("");
 const retrying = ref(false);
 
 let redirectTimer: ReturnType<typeof setTimeout> | undefined;
+const demoTimers: number[] = [];
 
 const polling = props.id
   ? useDocumentPolling(props.id, onUpdate, (e: ApiError) => {
@@ -110,11 +111,34 @@ onMounted(() => {
     router.replace({ name: "upload" });
     return;
   }
+
+  if (import.meta.env.VITE_UI_ONLY === "true") {
+    status.value = "processing";
+    currentStep.value = "extracting";
+    percent.value = 25;
+    demoTimers.push(window.setTimeout(() => {
+      currentStep.value = "crossref_validation";
+      percent.value = 55;
+    }, 700));
+    demoTimers.push(window.setTimeout(() => {
+      currentStep.value = "scoring";
+      percent.value = 78;
+    }, 1400));
+    demoTimers.push(window.setTimeout(() => {
+      status.value = "completed";
+      currentStep.value = "completed";
+      percent.value = 100;
+      redirectTimer = window.setTimeout(() => router.push({ name: "result", params: { id: props.id } }), 600);
+    }, 2100));
+    return;
+  }
+
   polling?.start();
 });
 
 onBeforeUnmount(() => {
   if (redirectTimer) clearTimeout(redirectTimer);
+  demoTimers.forEach((timer) => window.clearTimeout(timer));
 });
 </script>
 

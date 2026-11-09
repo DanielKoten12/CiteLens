@@ -38,10 +38,13 @@ async function renderPdf() {
     const loadedDocument = await loadingTask.promise;
     pdfDocument.value = loadedDocument;
 
+    const viewer = document.querySelector<HTMLElement>(".document-viewer");
+    const availableWidth = Math.max(280, (viewer?.clientWidth ?? 760) - 40);
     const pages: RenderedPdfPage[] = [];
     for (let pageNumber = 1; pageNumber <= loadedDocument.numPages; pageNumber += 1) {
       const page = await loadedDocument.getPage(pageNumber);
-      const viewport = page.getViewport({ scale: 1.35 });
+      const baseViewport = page.getViewport({ scale: 1 });
+      const viewport = page.getViewport({ scale: availableWidth / baseViewport.width });
       pages.push({ number: pageNumber, width: viewport.width, height: viewport.height, viewport });
     }
     renderedPages.value = pages;
@@ -377,7 +380,7 @@ function downloadReport() {
 </script>
 
 <template>
-  <div>
+  <div class="result-page">
     <div class="border-b" :style="{ borderColor: 'var(--border)', background: 'var(--card)' }">
       <div class="max-w-7xl mx-auto px-6 py-4 flex flex-wrap items-center justify-between gap-4">
         <div class="flex flex-wrap items-center gap-3">
@@ -537,7 +540,7 @@ function downloadReport() {
           </button>
         </div>
 
-        <div class="flex flex-col gap-3">
+        <div class="reference-list flex flex-col gap-3">
           <div
             v-for="reference in filteredReferences"
             :key="reference.id"

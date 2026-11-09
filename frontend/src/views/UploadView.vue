@@ -107,6 +107,11 @@ async function handleCta() {
     // Disimpan juga ke store lama supaya view yang masih membacanya tidak rusak.
     documentStore.setFile(selectedFile.value);
 
+    if (import.meta.env.VITE_UI_ONLY === "true") {
+      router.push({ name: "processing", params: { id: "ui-demo-document" } });
+      return;
+    }
+
     const { data } = await documentsApi.upload(selectedFile.value);
     router.push({ name: "processing", params: { id: data.id } });
   } catch (e) {
@@ -161,8 +166,7 @@ const dataSources = [
         class="inline-flex items-center gap-2 text-xs font-semibold px-3.5 py-1.5 rounded-full mb-6"
         :style="{ background: 'var(--secondary)', color: 'var(--primary)' }"
       >
-        <span class="w-1.5 h-1.5 rounded-full" :style="{ background: 'var(--accent)' }" />
-        Validasi daftar pustaka otomatis
+    
       </span>
 
       <h1
@@ -284,10 +288,6 @@ const dataSources = [
       >
         {{ ctaLabel }}
       </button>
-
-      <p class="flex items-center justify-center gap-1.5 text-xs mt-3" :style="{ color: 'var(--muted-foreground)' }">
-        🔒 Dokumenmu hanya bisa diakses oleh akunmu dan bisa dihapus kapan saja dari Riwayat
-      </p>
     </div>
 
     <div class="h-px my-12" :style="{ background: 'var(--border)' }" />

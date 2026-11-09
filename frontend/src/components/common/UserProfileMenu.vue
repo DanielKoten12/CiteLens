@@ -88,8 +88,8 @@ const menuItems = [
 
     <div
       v-if="open"
-      class="absolute right-0 top-full mt-2 rounded-xl border shadow-lg overflow-hidden z-50"
-      :style="{ background: 'var(--card)', borderColor: 'var(--border)', minWidth: '200px' }"
+      class="profile-menu absolute right-0 top-full mt-2 rounded-xl border shadow-lg overflow-hidden z-50"
+      :style="{ borderColor: 'var(--border)', minWidth: '200px' }"
       @click.stop
     >
       <div class="px-4 py-3 border-b" :style="{ borderColor: 'var(--border)' }">
