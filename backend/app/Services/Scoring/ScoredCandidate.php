@@ -2,7 +2,7 @@
 
 namespace App\Services\Scoring;
 
-use App\Services\Crossref\CrossrefWorkData;
+use App\Services\Metadata\WorkMetadata;
 
 /**
  * One scored candidate, in final rank order (`rank` 1..N, best first).
@@ -10,7 +10,7 @@ use App\Services\Crossref\CrossrefWorkData;
 final class ScoredCandidate
 {
     public function __construct(
-        public readonly CrossrefWorkData $work,
+        public readonly WorkMetadata $work,
         public readonly ScoreBreakdown $breakdown,
         public readonly int $rank,
         public readonly string $matchReason,

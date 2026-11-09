@@ -17,7 +17,7 @@ deployment topology. The **public contract** is `docs/API_SPEC.md`; the **domain
                                                                        │
                         ┌──────────────────────────────┬───────────────┼───────────────────┐
                         ▼                              ▼               ▼                   ▼
-                 MySQL / Postgres              Queue worker     FastAPI inference    Crossref REST
+                 MySQL / Postgres              Queue worker     FastAPI inference   Crossref + Garuda
                  (docs/DB_SCHEMA.md)          (async pipeline)  (internal network)   (outbound HTTP)
                                                                       │
                                                           ┌───────────┴───────────┐
@@ -31,7 +31,9 @@ deployment topology. The **public contract** is `docs/API_SPEC.md`; the **domain
   public endpoints.
 - **FastAPI (`inference/`) is an internal inference server only.** It is not part of the public
   contract and must never be called by the browser.
-- **Crossref** is fetched outbound by Laravel only (queue workers).
+- **Crossref** and the **Garuda** catalogue page are fetched outbound by Laravel only (queue
+  workers). Garuda has no public API and is used only as a fallback for references with no
+  plausible Crossref candidate.
 
 ---
 
@@ -41,7 +43,7 @@ deployment topology. The **public contract** is `docs/API_SPEC.md`; the **domain
 |---|---|---|
 | Auth, authorization, persistence, document lifecycle | Laravel | Sanctum tokens; ownership scoped queries |
 | Orchestration, status/progress | Laravel | Queue job + `analysis_*` columns |
-| Crossref lookups, candidate ranking/scoring | Laravel | Never from the frontend |
+| Crossref/Garuda lookups, candidate ranking/scoring | Laravel | Never from the frontend |
 | String similarity (Jaro-Winkler, Levenshtein), exact matching | Laravel | Scoring stays server-side |
 | Document parsing, reference/citation extraction, coordinates | FastAPI + GROBID | Internal |
 | Semantic embeddings (SBERT) | FastAPI + SBERT | Internal, batched |
@@ -51,7 +53,7 @@ deployment topology. The **public contract** is `docs/API_SPEC.md`; the **domain
 Hard rules:
 
 1. GROBID/SBERT functionality is never exposed as public API endpoints.
-2. The frontend never accesses the database, GROBID, SBERT or Crossref directly.
+2. The frontend never accesses the database, GROBID, SBERT, Crossref or Garuda directly.
 3. The frontend never decides whether a reference is valid; it renders Laravel's verdicts.
 4. Scoring and citation-status derivation are implemented **once**, server-side.
 
@@ -67,7 +69,7 @@ Hard rules:
 | Queue | Laravel queue (`QUEUE_CONNECTION=database` by default; `sync` in tests) |
 | Inference | Python 3.14, FastAPI (`fastapi[standard]`), uv-managed; GROBID + SBERT |
 | Reports | `gotenberg/gotenberg-php` 2.x (HTML→PDF) over a Guzzle PSR-18 client; Blade template rendered to HTML in Laravel |
-| External | Crossref REST API |
+| External | Crossref REST API; Garuda search page (HTML fallback, no public API) |
 
 ---
 
@@ -154,8 +156,9 @@ POST /documents
   3. FastAPI POST /v1/extract (GROBID)
         → insert references + reference locations
         → insert citations + citation locations
-  4. per reference: Crossref lookup (DOI or bibliographic search)
-        → insert ranked reference_finding_candidates
+  4. per reference: primary metadata lookup (Crossref DOI/bibliographic search)
+        → Garuda fallback when no candidate is a plausible title match
+        → insert ranked reference_finding_candidates (with `source`)
   5. scoring (Laravel): Jaro-Winkler + Levenshtein + SBERT embeddings
         → confidence, selected_candidate_id → upsert reference_findings
   6. resolve citations → set researched_document_citations.researched_document_reference_id
@@ -300,7 +303,7 @@ Never commit secrets, tokens or credentials.
 | Queue worker | Private; same codebase, `queue:work` |
 | Database | Private |
 | FastAPI inference | **Private only** (not internet-facing) |
-| Crossref | Outbound HTTPS from workers |
+| Crossref, Garuda | Outbound HTTPS from workers; metadata only (Garuda is parsed HTML, no API) |
 
 Report and document files are stored on a private disk; access is via signed/temporary URLs
 (`FilePreviewData->url`).
@@ -310,9 +313,13 @@ Report and document files are stored on a private disk; access is via signed/tem
 The repository implements this topology with Compose files at the repo root (runbook:
 `docker/README.md`):
 
-- `compose.yaml` — development stack (amd64 default: GROBID `0.9.1-full`, bind-mounted sources,
+- `compose.yaml` — development stack (multi-arch GROBID `0.9.1-crf`, bind-mounted sources,
   Vite dev server, php-fpm + nginx);
-- `compose.arm64.yaml` — arm64 overlay that swaps in the native GROBID `0.9.1-crf` image;
+- `compose.full.yaml` — overlay that swaps in the amd64-only GROBID `0.9.1-full` image when the
+  higher reference-parsing accuracy is wanted (emulated on arm64 hosts);
+- `compose.remote-grobid.yaml` — dev/demo overlay that skips the local GROBID container and points
+  `inference` at a hosted GROBID (`REMOTE_GROBID_URL`), so no multi-GB image is needed. It moves
+  uploaded documents outside the private network; not a production shape (`docs/SECURITY.md` §7);
 - `compose.prod.yaml` — production-shaped overlay (built `prod` targets, no bind mounts, SPA baked
   into nginx, non-root inference service, config/view caches warmed at start);
 - `compose.debug.yaml` — opt-in overlay publishing PostgreSQL/GROBID/inference/Gotenberg on
@@ -382,8 +389,13 @@ Verified against the repository:
   `ReportPayload`, `ReportTemplateRenderer`, `reports/document-report.blade.php`),
   `GenerateDocumentReportJob` with `ReportStateService`/`ReportFailureHandler`/
   `ReportDeletionService`, and the `/reports` endpoints (`ReportController`,
-  `ReportGenerationService`, `ReportQueryService`, report DTOs). **Missing:** the inference service
-  implementation (FastAPI).
+  `ReportGenerationService`, `ReportQueryService`, report DTOs). Phase 08 adds the Indonesian
+  fallback: the source-agnostic `Services/Metadata/*` (`WorkMetadata`, `ReferenceQuery`) +
+  `Contracts/Metadata/BibliographicSource` + `Enums/MetadataSource`, candidate provenance
+  (`reference_finding_candidates.source`), `Services/Garuda/{GarudaClient,GarudaSearchParser,
+  GarudaResultMapper}`, the gated/budgeted fallback in `ValidateReferencesStep`, and
+  `GarudaUnavailableException` with the Crossref-shaped outage policy. **Missing:** the inference
+  service implementation (FastAPI).
 - **Frontend** is a working Vue 3 + Vite SPA with mocked auth and prototype types; the API is not
   wired yet.
 - **Inference** implements the GROBID extraction slice (`GET /health`, `POST /v1/extract`) in

@@ -368,6 +368,9 @@ Table reference_finding_candidates {
 
   confidence decimal [not null]
 
+  // Catalogue the candidate came from: crossref | openalex | garuda
+  source varchar [not null, default: 'crossref']
+
   // Candidate publication
   doi varchar
 

@@ -1,18 +1,20 @@
 <?php
 
-namespace App\Services\Crossref;
+namespace App\Services\Metadata;
+
+use App\Enums\MetadataSource;
 
 /**
- * One publication record returned by Crossref, normalized to the fields the
- * verification pipeline needs (`docs/API_SPEC.md` §10).
+ * One publication record returned by an external metadata source, normalized
+ * to the fields the verification pipeline needs (`docs/API_SPEC.md` §10).
  *
  * Pure value object: no Eloquent, no container. `doi` is already canonical
- * (lowercased, no URL prefix) because the mapper runs it through
- * {@see DoiNormalizer}. Any field may be `null` — Crossref metadata is
- * inconsistent, and the scorer treats a missing field as a missing signal
- * rather than a zero.
+ * (lowercased, no URL prefix) because each source mapper runs it through
+ * {@see \App\Services\Crossref\DoiNormalizer}. Any field may be `null` — source
+ * metadata is inconsistent, and the scorer treats a missing field as a missing
+ * signal rather than a zero.
  */
-final class CrossrefWorkData
+final class WorkMetadata
 {
     /**
      * @param  list<string>  $authors  one "Given Family" string per author
@@ -25,6 +27,7 @@ final class CrossrefWorkData
         public readonly ?int $publicationYear = null,
         public readonly ?string $url = null,
         public readonly ?string $type = null,
+        public readonly MetadataSource $source = MetadataSource::Crossref,
     ) {}
 
     /**

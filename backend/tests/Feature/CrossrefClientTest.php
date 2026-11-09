@@ -1,8 +1,9 @@
 <?php
 
+use App\Enums\MetadataSource;
 use App\Exceptions\CrossrefUnavailableException;
 use App\Services\Crossref\CrossrefClient;
-use App\Services\Crossref\ReferenceQuery;
+use App\Services\Metadata\ReferenceQuery;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
@@ -33,7 +34,8 @@ it('resolves a doi and maps the work', function () {
         ->title->toBe('Deep learning')
         ->containerTitle->toBe('Nature')
         ->publicationYear->toBe(2015)
-        ->authors->toBe(['Yann LeCun', 'Yoshua Bengio', 'Geoffrey Hinton']);
+        ->authors->toBe(['Yann LeCun', 'Yoshua Bengio', 'Geoffrey Hinton'])
+        ->source->toBe(MetadataSource::Crossref);
 
     Http::assertSent(fn (Request $request): bool => str_contains($request->url(), '/works/10.1038/nature14539'));
 });
@@ -102,7 +104,7 @@ it('throws on a connection error', function () {
 it('maps a bibliographic search and sends the documented params', function () {
     Http::fake(['api.crossref.org/*' => Http::response(Fixtures::json('crossref/search-multiple'))]);
 
-    $results = app(CrossrefClient::class)->searchBibliographic(
+    $results = app(CrossrefClient::class)->search(
         new ReferenceQuery('Sistem deteksi plagiarisme Koten 2023', 'Koten', 2023),
     );
 
@@ -128,8 +130,8 @@ it('does not cache bibliographic searches', function () {
     $client = app(CrossrefClient::class);
     $query = new ReferenceQuery('Deep learning');
 
-    $client->searchBibliographic($query);
-    $client->searchBibliographic($query);
+    $client->search($query);
+    $client->search($query);
 
     Http::assertSentCount(2);
 });
@@ -137,12 +139,12 @@ it('does not cache bibliographic searches', function () {
 it('throws on an unexpected 4xx from a search', function () {
     Http::fake(['api.crossref.org/*' => Http::response('', 400)]);
 
-    expect(fn () => app(CrossrefClient::class)->searchBibliographic(new ReferenceQuery('Deep learning')))
+    expect(fn () => app(CrossrefClient::class)->search(new ReferenceQuery('Deep learning')))
         ->toThrow(CrossrefUnavailableException::class);
 });
 
 it('returns an empty list for a search with no items', function () {
     Http::fake(['api.crossref.org/*' => Http::response(Fixtures::json('crossref/search-empty'))]);
 
-    expect(app(CrossrefClient::class)->searchBibliographic(new ReferenceQuery('Nothing')))->toBe([]);
+    expect(app(CrossrefClient::class)->search(new ReferenceQuery('Nothing')))->toBe([]);
 });

@@ -2,6 +2,8 @@
 
 namespace App\Services\Scoring;
 
+use App\Enums\MetadataSource;
+
 /**
  * The single source of user-facing verification reason strings (D-04-09).
  *
@@ -21,14 +23,18 @@ final class MatchReasonBuilder
 
     public const SUSPICIOUS = 'Judul pada metadata Crossref memiliki perbedaan.';
 
-    public const NOT_FOUND = 'Tidak ada kandidat ditemukan di Crossref.';
+    public const NOT_FOUND = 'Tidak ada kandidat ditemukan.';
 
-    public const LOCAL_VENUE = 'Sumber tidak terindeks Crossref; perlu pemeriksaan manual.';
+    public const LOCAL_VENUE = 'Sumber tidak terindeks Crossref/Garuda; perlu pemeriksaan manual.';
+
+    public const GARUDA_TRANSIENT = 'Validasi Garuda gagal sementara. Coba lagi nanti.';
+
+    public const GARUDA_BUDGET = 'Batas permintaan Garuda tercapai; coba lagi nanti.';
 
     /**
      * Deterministic component evidence for one candidate.
      */
-    public function forCandidate(ScoreBreakdown $breakdown): string
+    public function forCandidate(ScoreBreakdown $breakdown, MetadataSource $source = MetadataSource::Crossref): string
     {
         $parts = [];
 
@@ -64,9 +70,13 @@ final class MatchReasonBuilder
             $parts[] = 'kemiripan semantik tidak tersedia';
         }
 
-        return $parts === []
+        $evidence = $parts === []
             ? 'Tidak ada sinyal yang dapat dibandingkan.'
             : implode('; ', $parts).'.';
+
+        return $source === MetadataSource::Crossref
+            ? $evidence
+            : $source->label().': '.$evidence;
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\MetadataSource;
 use Database\Factories\ReferenceFindingCandidateFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -23,6 +24,7 @@ class ReferenceFindingCandidate extends Model
         'reference_finding_id',
         'rank',
         'confidence',
+        'source',
         'doi',
         'title',
         'authors',
@@ -42,6 +44,7 @@ class ReferenceFindingCandidate extends Model
         return [
             'rank' => 'integer',
             'confidence' => 'float',
+            'source' => MetadataSource::class,
             'publication_year' => 'integer',
         ];
     }

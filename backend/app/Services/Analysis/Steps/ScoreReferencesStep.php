@@ -50,6 +50,7 @@ final class ScoreReferencesStep implements PipelineStep
                 $verification->doiLookup,
                 $verification->transientFailure,
                 $ranked,
+                $verification->pendingReason,
             );
 
             $this->progress->report($document, $this->step(), $index + 1, $total);

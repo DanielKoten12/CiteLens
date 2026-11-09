@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\DocumentStatus;
+use App\Enums\MetadataSource;
 use App\Enums\ReferenceFindingStatus;
 use App\Enums\ReportStatus;
 use App\Models\File;
@@ -60,6 +61,12 @@ it('builds and resolves the full document tree', function () {
         ->and($finding->fresh()->selectedCandidate->is($candidate))->toBeTrue()
         ->and($finding->fresh()->reference->is($reference))->toBeTrue()
         ->and($report->fresh()->file)->toBeNull();
+});
+
+it('casts the candidate metadata source to an enum', function () {
+    $candidate = ReferenceFindingCandidate::factory()->create(['source' => MetadataSource::Garuda]);
+
+    expect($candidate->fresh()->source)->toBe(MetadataSource::Garuda);
 });
 
 it('casts document lifecycle attributes to enums', function () {

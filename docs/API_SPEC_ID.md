@@ -636,6 +636,7 @@ referensi ini.
           "id": "c-102-uuid",
           "rank": 1,
           "confidence": 0.6300,
+          "source": "crossref",
           "doi": "10.1234/example",
           "title": "Sistem Pendeteksi Plagiarisme Dokumen",
           "authors": "Koten, D. B.",
@@ -652,6 +653,11 @@ referensi ini.
   }
 }
 ```
+
+> `finding.candidates[].source` adalah katalog asal data: `crossref`, `openalex`, atau `garuda`
+> (fallback Indonesia). Finding `valid` dapat memilih kandidat dengan `doi: null` bila kecocokan
+> berasal dari Garuda — `valid` berarti publikasi terverifikasi di sebuah katalog, bukan berarti
+> DOI-nya ditemukan.
 
 **Gagal — `404`**
 
@@ -1137,8 +1143,10 @@ Dipicu oleh `POST /documents`.
       → insert researched_document_citations
       → insert researched_document_citation_locations
 3. Untuk setiap referensi:
-      → pencarian Crossref (DOI atau pencarian bibliografis)
-      → insert reference_finding_candidates (diperingkat)
+      → pencarian metadata utama: Crossref (DOI atau pencarian bibliografis)
+      → fallback Garuda (hanya pencarian bibliografis) bila tidak ada kandidat utama yang
+        mirip judulnya; dibatasi kuota dan dapat dimatikan lewat konfigurasi
+      → insert reference_finding_candidates (diperingkat, dengan `source`)
 4. Skor kemiripan (Laravel): Jaro-Winkler + Levenshtein + embedding SBERT
       → hitung confidence, pilih selected_candidate_id
       → upsert reference_findings (status, reason)
@@ -1163,7 +1171,7 @@ Progres dilaporkan melalui `analysis_progress` / `analysis_step` / `analysis_err
 | Referensi | `researched_document_references` (`raw_text`, `doi`, `title`, `authors`, `publication_name`, `publication_year`, `text_start_offset`, `text_end_offset`) |
 | Sorotan referensi | `researched_document_reference_locations` |
 | Verdikt referensi | `reference_findings` (`status`, `confidence`, `reason`, `selected_candidate_id`, `is_manual`, `reviewed_by`, `reviewed_at`) |
-| Kandidat referensi | `reference_finding_candidates` (`rank`, `confidence`, `doi`, `title`, `authors`, `publication_name`, `publication_year`, `url`, `match_reason`) |
+| Kandidat referensi | `reference_finding_candidates` (`rank`, `confidence`, `source`, `doi`, `title`, `authors`, `publication_name`, `publication_year`, `url`, `match_reason`) |
 | Sitasi | `researched_document_citations` (`citation_text`, `citation_marker`, `context_*`, `text_*_offset`, `occurrence_index`, `researched_document_reference_id`) |
 | Status sitasi | **derived**: `hallucination` jika tanpa pasangan; selain itu `valid` / `unreliable` / `pending` dari status temuan referensi pasangannya |
 | Sorotan sitasi | `researched_document_citation_locations` (`page_number`, `x`, `y`, `width`, `height`, `page_*`, `coordinate_system`, `location_index`) |

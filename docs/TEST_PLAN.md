@@ -148,6 +148,9 @@ receive `404 NOT_FOUND` (never `403`).
 | T-REF-06 | Finding status → citation derived status propagation | all paired citations update |
 | T-REF-07 | DOI resolves to different publication | `invalid` with reason |
 | T-REF-08 | Valid reference without DOI | top candidate carries suggested DOI |
+| T-REF-10 | Reference indexed only in Garuda (no Crossref candidate) | fallback finds it; candidate `source=garuda`, DOI may be `null` |
+| T-REF-11 | Garuda outage on the first fallback lookup | document `failed` with the safe Garuda message; later failures degrade to `pending` |
+| T-REF-12 | Garuda page reports `Found 0 documents` | treated as a miss (`not_found`), never as an outage |
 
 ### 5.5 Citations and derivation (`T-CIT`)
 

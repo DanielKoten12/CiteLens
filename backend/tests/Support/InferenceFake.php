@@ -26,6 +26,14 @@ final class InferenceFake
         self::stub('/v1/extract', Fixtures::json('inference/extract'));
     }
 
+    /**
+     * Extraction payload from an alternate fixture (e.g. a Garuda-only reference).
+     */
+    public static function extractionFrom(string $fixture): void
+    {
+        self::stub('/v1/extract', Fixtures::json($fixture));
+    }
+
     public static function emptyExtraction(): void
     {
         self::stub('/v1/extract', Fixtures::json('inference/extract-empty'));

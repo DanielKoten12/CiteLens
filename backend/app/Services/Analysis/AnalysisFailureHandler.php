@@ -5,6 +5,7 @@ namespace App\Services\Analysis;
 use App\Enums\AnalysisStep;
 use App\Exceptions\CrossrefUnavailableException;
 use App\Exceptions\ExtractionFailedException;
+use App\Exceptions\GarudaUnavailableException;
 use App\Exceptions\InferenceUnavailableException;
 use App\Models\ResearchedDocument;
 use App\Services\Document\DocumentAnalysisStateService;
@@ -54,6 +55,7 @@ final class AnalysisFailureHandler
             $exception instanceof ExtractionFailedException => 'Dokumen tidak dapat diproses. Pastikan PDF memuat teks yang dapat diekstrak.',
             $exception instanceof InferenceUnavailableException => 'Layanan analisis tidak tersedia. Coba lagi nanti.',
             $exception instanceof CrossrefUnavailableException => 'Validasi Crossref tidak tersedia. Coba lagi nanti.',
+            $exception instanceof GarudaUnavailableException => 'Validasi Garuda tidak tersedia. Coba lagi nanti.',
             default => 'Analisis dokumen gagal. Silakan coba lagi.',
         };
     }

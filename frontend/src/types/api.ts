@@ -118,13 +118,14 @@ export interface Candidate {
   id: string;
   rank: number;
   confidence: number; // 0-1
+  source: "crossref" | "openalex" | "garuda";
   doi: string | null;
-  title: string;
-  authors: string;
-  publication_name: string;
-  publication_year: number;
-  url: string;
-  match_reason: string;
+  title: string | null;
+  authors: string | null;
+  publication_name: string | null;
+  publication_year: number | null;
+  url: string | null;
+  match_reason: string | null;
 }
 
 export interface Finding {

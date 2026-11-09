@@ -2,6 +2,8 @@
 
 namespace App\Services\Crossref;
 
+use App\Services\Metadata\ReferenceQuery;
+
 /**
  * Builds Crossref request parameters and paths.
  *

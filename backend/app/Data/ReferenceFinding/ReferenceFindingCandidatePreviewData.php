@@ -3,12 +3,13 @@
 namespace App\Data\ReferenceFinding;
 
 use App\Data\BaseData;
+use App\Enums\MetadataSource;
 use App\Models\ReferenceFindingCandidate;
 use Spatie\LaravelData\Attributes\MapName;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
 
 /**
- * One ranked Crossref candidate of a reference finding
+ * One ranked candidate of a reference finding
  * (`docs/API_SPEC.md` §5 reference detail).
  */
 #[MapName(SnakeCaseMapper::class)]
@@ -18,6 +19,7 @@ final class ReferenceFindingCandidatePreviewData extends BaseData
         public string $id,
         public int $rank,
         public float $confidence,
+        public MetadataSource $source,
         public ?string $doi,
         public ?string $title,
         public ?string $authors,
@@ -33,6 +35,7 @@ final class ReferenceFindingCandidatePreviewData extends BaseData
             id: $candidate->getKey(),
             rank: $candidate->rank,
             confidence: $candidate->confidence,
+            source: $candidate->source,
             doi: $candidate->doi,
             title: $candidate->title,
             authors: $candidate->authors,

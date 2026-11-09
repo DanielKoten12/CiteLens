@@ -1,6 +1,6 @@
 <?php
 
-use App\Services\Crossref\CrossrefWorkData;
+use App\Services\Metadata\WorkMetadata;
 use App\Services\Scoring\LocalVenueDetector;
 use App\Services\Scoring\ScoreBreakdown;
 use App\Services\Scoring\ScoredCandidate;
@@ -22,7 +22,7 @@ function venueReference(?string $publicationName): ScoringReference
 function venueCandidate(?string $containerTitle): ScoredCandidate
 {
     return new ScoredCandidate(
-        work: new CrossrefWorkData(doi: '10.1/x', title: 'Sistem deteksi plagiarisme', containerTitle: $containerTitle),
+        work: new WorkMetadata(doi: '10.1/x', title: 'Sistem deteksi plagiarisme', containerTitle: $containerTitle),
         breakdown: new ScoreBreakdown(
             signals: ['title' => 0.9, 'authors' => null, 'journal' => null, 'year' => null],
             final: 0.9,

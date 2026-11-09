@@ -38,6 +38,12 @@ return [
 
     'year_tolerance' => (int) env('SCORING_YEAR_TOLERANCE', 1),
 
+    // Fallback source gate: consult Garuda only when no primary candidate has a
+    // title similarity at/above this threshold.
+    'fallback' => [
+        'title_threshold' => (float) env('SCORING_FALLBACK_TITLE_THRESHOLD', 0.85),
+    ],
+
     // Citation resolution (Phase 05.1). Year is a soft signal, not a gate.
     'citation_matching' => [
         // Weighted signals (must sum to 1.0); missing signals renormalize.
@@ -61,10 +67,16 @@ return [
         'trust_extraction_hint' => (bool) env('SCORING_CITATION_TRUST_EXTRACTION_HINT', true),
     ],
 
-    // Conservative defaults for likely non-indexed/local venues; tuned in Phase 07.
+    // Conservative markers of venue types that rarely register DOIs. The
+    // detector only softens `not_found` to `suspicious`; it never invents a
+    // match. Deliberately excludes "jurnal": it appears in almost every
+    // Indonesian venue name and would weaken every genuine miss.
     'local_venue_keywords' => [
-        // 'jurnal lokal',
-        // 'prosiding nasional',
+        'prosiding',
+        'seminar nasional',
+        'pengabdian masyarakat',
+        'skripsi',
+        'tesis',
     ],
 
 ];
