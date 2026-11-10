@@ -119,9 +119,9 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="max-w-lg mx-auto px-6 py-16">
-    <div class="rounded-2xl border p-10 flex flex-col items-center" :style="{ borderColor: 'var(--border)', background: 'var(--card)' }">
-      <svg width="130" height="130" viewBox="0 0 130 130">
+  <div class="max-w-md mx-auto px-6 pt-8 pb-12">
+    <div class="rounded-2xl border px-8 py-7 flex flex-col items-center" :style="{ borderColor: 'var(--border)', background: 'var(--card)' }">
+      <svg width="104" height="104" viewBox="0 0 130 130">
         <circle cx="65" cy="65" :r="RING_RADIUS" fill="none" stroke="var(--secondary)" stroke-width="9" />
         <circle
           cx="65"
@@ -141,35 +141,22 @@ onBeforeUnmount(() => {
         </text>
       </svg>
 
-      <h1 class="text-xl font-extrabold mt-6" :style="{ color: 'var(--foreground)' }">{{ headline }}</h1>
-      <p class="text-sm mt-1" :style="{ color: 'var(--muted-foreground)' }">{{ subline }}</p>
+      <h1 class="text-lg font-extrabold mt-4" :style="{ color: 'var(--foreground)' }">{{ headline }}</h1>
+      <p class="text-sm mt-0.5" :style="{ color: 'var(--muted-foreground)' }">{{ subline }}</p>
 
-      <ul class="w-full flex flex-col gap-2 mt-8">
+      <ul class="w-full flex flex-col gap-1.5 mt-5">
         <li
           v-for="(step, index) in steps"
           :key="step.num"
-          class="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-300"
-          :style="{
-            background:
-              stepState(index) === 'active'
-                ? 'var(--secondary)'
-                : stepState(index) === 'failed'
-                  ? '#fee2e2'
-                  : 'transparent',
+          class="step-row flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors duration-300"
+          :class="{
+            'step-row-active': stepState(index) === 'active',
+            'step-row-failed': stepState(index) === 'failed',
           }"
         >
           <span
-            class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-300"
-            :style="{
-              background:
-                stepState(index) === 'done'
-                  ? '#4ade80'
-                  : stepState(index) === 'active'
-                    ? 'var(--accent)'
-                    : stepState(index) === 'failed'
-                      ? '#ef4444'
-                      : 'var(--border)',
-            }"
+            class="step-dot w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-300"
+            :class="`step-dot-${stepState(index)}`"
           >
             <Transition name="pop" mode="out-in">
               <svg v-if="stepState(index) === 'done'" key="check" width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -202,15 +189,23 @@ onBeforeUnmount(() => {
         </li>
       </ul>
 
-      <div v-if="isFailed" class="w-full mt-6 flex flex-col items-center gap-3">
-        <p class="text-sm text-center" style="color: #b91c1c">{{ failureText }}</p>
-        <p v-if="retryError" class="text-sm text-center" style="color: #b91c1c">{{ retryError }}</p>
+      <div v-if="isFailed" class="w-full mt-4 flex flex-col items-center gap-3">
+        <div class="failure-box" role="alert">
+          <svg class="failure-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.4" />
+            <path d="M8 4.8v3.8M8 11v.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+          </svg>
+          <div class="min-w-0">
+            <p class="failure-text">{{ failureText }}</p>
+            <p v-if="retryError" class="failure-text mt-1">{{ retryError }}</p>
+          </div>
+        </div>
 
         <div class="flex items-center gap-2">
           <button
             v-if="!fatalError"
-            class="text-sm font-bold px-4 py-2 rounded-lg text-white disabled:opacity-60"
-            :style="{ background: 'var(--accent)' }"
+            class="text-sm font-bold px-4 py-2 rounded-lg disabled:opacity-60"
+            :style="{ background: 'var(--accent)', color: 'var(--accent-foreground)' }"
             :disabled="retrying"
             @click="retry"
           >
@@ -230,6 +225,68 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+/* ---------- Baris langkah ---------- */
+.step-row {
+  background: transparent;
+}
+.step-row-active {
+  background: var(--secondary);
+}
+.step-row-failed {
+  background: #fee2e2;
+}
+.dark .step-row-failed {
+  background: rgba(239, 68, 68, 0.14);
+}
+
+/* ---------- Bulatan status ---------- */
+.step-dot-done {
+  background: #22c55e;
+}
+.step-dot-active {
+  background: var(--accent);
+}
+.step-dot-failed {
+  background: #ef4444;
+}
+.step-dot-pending {
+  background: var(--border);
+}
+/* Di mode gelap --border hampir sama dengan card, jadi bulatan "menunggu" dibuat sedikit lebih terang. */
+.dark .step-dot-pending {
+  background: #2a3a5c;
+}
+
+/* ---------- Kotak error ---------- */
+.failure-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid #fecaca;
+  border-radius: 0.75rem;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+.dark .failure-box {
+  border-color: rgba(248, 113, 113, 0.3);
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+}
+
+.failure-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.failure-text {
+  font-size: 0.875rem;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+/* ---------- Animasi centang ---------- */
 .pop-enter-active {
   transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
 }

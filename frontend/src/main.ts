@@ -24,7 +24,12 @@ async function bootstrap() {
 	// Token kedaluwarsa/dicabut (API membalas 401): bersihkan sesi lalu ke login.
 	setUnauthorizedHandler(() => {
 		auth.clearSession();
-		router.push({ name: "login" });
+
+		const current = router.currentRoute.value;
+		// Sudah di halaman publik (mis. login): tidak perlu redirect.
+		if (current.meta.public) return;
+
+		router.replace({ name: "login" });
 	});
 
 	app.use(router);

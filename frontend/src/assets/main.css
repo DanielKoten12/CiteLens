@@ -1,6 +1,9 @@
 @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
+/* Varian dark: Tailwind v4 default-nya prefers-color-scheme, kita pakai class .dark */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -52,6 +55,7 @@
 }
 
 .dark {
+  color-scheme: dark; /* input, scrollbar, dan dropdown native ikut gelap */
   --background: #0b0f1a;
   --foreground: #eef2f9;
   --card: #131929;
@@ -61,7 +65,7 @@
   --secondary: #1a2340;
   --secondary-foreground: #b8c5e8;
   --muted: #1a2340;
-  --muted-foreground: #6b7a99;
+  --muted-foreground: #8e9bbb;
   --accent: #4a7cf7;
   --accent-foreground: #ffffff;
   --border: #1f2d4a;
@@ -79,6 +83,15 @@ body,
 #app {
   height: 100%;
   font-family: "Manrope", sans-serif;
+}
+
+html {
+  overflow-x: hidden; /* konten yang meluber tidak membuat seluruh halaman tergeser */
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
 }
 
 * {
@@ -367,6 +380,32 @@ input[type="password"]::-ms-clear {
   .document-page-label {
     display: none;
   }
+}
+
+/* ---------- Mode gelap: halaman hasil ---------- */
+/* Kertas dokumen sengaja tetap putih. Yang digelapkan hanya area di sekitarnya. */
+.dark .result-workspace {
+  background: var(--background);
+  background-image: none;
+}
+
+.dark .document-paper {
+  border-color: var(--border);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+}
+
+.dark .document-toolbar {
+  background: var(--card);
+  border-bottom-color: var(--border);
+}
+
+.dark .document-file-name {
+  color: var(--foreground);
+}
+
+.dark .document-file-meta,
+.dark .document-page-label {
+  color: var(--muted-foreground);
 }
 
 @media print {
