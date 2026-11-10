@@ -13,7 +13,7 @@ const router = useRouter();
 
 const steps: PipelineStep[] = [
   { num: "01", title: "Mengekstrak referensi & sitasi", desc: "" },
-  { num: "02", title: "Memvalidasi ke Crossref", desc: "" },
+  { num: "02", title: "Memvalidasi Daftar Pustaka", desc: "" },
   { num: "03", title: "Menghitung skor kecocokan", desc: "" },
   { num: "04", title: "Menautkan sitasi & menyusun hasil", desc: "" },
 ];

@@ -2,8 +2,6 @@
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { CircleAlert, FileText, LoaderCircle, Upload } from "lucide-vue-next";
-import heroLight from "@/assets/animate.gif";
-import heroDark from "@/assets/animate2.gif";
 import { ApiError } from "@/lib/api";
 import { documentsApi } from "@/lib/documents";
 import { useDocumentStore } from "@/stores/document";
@@ -21,21 +19,40 @@ const uploading = ref(false);
 const errorMessage = ref("");
 const fileInput = ref<HTMLInputElement | null>(null);
 
-// Ikuti class "dark" di <html> secara reaktif, termasuk saat tema diganti di Pengaturan.
-const isDark = ref(document.documentElement.classList.contains("dark"));
-let themeObserver: MutationObserver | undefined;
+const heroWords = ["Laporan", "Tugas Akhir", "Proposal", "Skripsi"];
+const typedWord = ref(heroWords[0]);
+let heroWordIndex = 0;
+let isDeleting = true;
+let typingTimer: ReturnType<typeof setTimeout> | undefined;
+
+function updateTypedWord() {
+  if (isDeleting) {
+    typedWord.value = typedWord.value.slice(0, -1);
+    if (!typedWord.value) {
+      heroWordIndex = (heroWordIndex + 1) % heroWords.length;
+      isDeleting = false;
+    }
+  } else {
+    const nextWord = heroWords[heroWordIndex];
+    typedWord.value = nextWord.slice(0, typedWord.value.length + 1);
+    if (typedWord.value === nextWord) isDeleting = true;
+  }
+
+  let delay = 105;
+  if (!typedWord.value) delay = 300;
+  else if (isDeleting) delay = typedWord.value === heroWords[heroWordIndex] ? 1600 : 65;
+  typingTimer = window.setTimeout(updateTypedWord, delay);
+}
 
 onMounted(() => {
-  isDark.value = document.documentElement.classList.contains("dark");
-  themeObserver = new MutationObserver(() => {
-    isDark.value = document.documentElement.classList.contains("dark");
-  });
-  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+  if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    typingTimer = window.setTimeout(updateTypedWord, 1600);
+  }
 });
 
-onBeforeUnmount(() => themeObserver?.disconnect());
-
-const heroImage = computed(() => (isDark.value ? heroDark : heroLight));
+onBeforeUnmount(() => {
+  clearTimeout(typingTimer);
+});
 
 // Counter supaya highlight tidak berkedip saat drag melewati elemen anak.
 let dragDepth = 0;
@@ -160,19 +177,19 @@ const howItWorks = [
     icon: "upload",
     highlighted: true,
     title: "Unggah Dokumen",
-    desc: "PDF tugas akhir kamu",
+    desc: "PDF dokumen kamu",
   },
   {
     icon: "loading",
     highlighted: false,
-    title: "Ekstrak Sitasi",
-    desc: "Semua sitasi in-text terdeteksi otomatis",
+    title: "Ekstrak Dokumen",
+    desc: "Semua daftar pustaka dan sitasi in-text terdeteksi otomatis",
   },
   {
     icon: "check",
     highlighted: false,
-    title: "Validasi DOI",
-    desc: "Dicocokkan dengan database Crossref",
+    title: "Validasi Daftar Pustaka",
+    desc: "Dicocokkan dengan Metadata yang ada",
   },
   {
     icon: "report",
@@ -182,7 +199,6 @@ const howItWorks = [
   },
 ];
 
-const dataSources = [{ name: "Crossref", desc: "100M+ publikasi" }];
 </script>
 
 <template>
@@ -197,12 +213,12 @@ const dataSources = [{ name: "Crossref", desc: "100M+ publikasi" }];
 
         <h1 class="hero-title mt-5">
           Periksa Daftar Pustaka
-          <span class="block"><span class="hero-accent">Tugas Akhir</span> Kamu</span>
+          <span class="block"><span class="hero-accent typing-word">{{ typedWord }}</span> Kamu</span>
         </h1>
 
         <p class="mt-4 max-w-md text-sm sm:text-base leading-relaxed" :style="{ color: 'var(--muted-foreground)' }">
           Unggah dokumen <strong :style="{ color: 'var(--foreground)' }">.pdf</strong> dan semua referensi
-          divalidasi otomatis ke Crossref.
+          divalidasi otomatis.
         </p>
 
         <input
@@ -274,9 +290,56 @@ const dataSources = [{ name: "Crossref", desc: "100M+ publikasi" }];
         </p>
       </section>
 
-      <!-- Ilustrasi: di HP tampil di atas dropzone, di desktop di kanan -->
+      <!-- Ilustrasi berkas: di HP tampil di atas dropzone, di desktop di kanan -->
       <div class="hero-art order-1 lg:order-2">
-        <img :src="heroImage" alt="" class="hero-img" draggable="false" />
+        <svg class="hero-document" viewBox="0 0 400 340" role="img" aria-labelledby="hero-document-title">
+          <title id="hero-document-title">Animasi berkas PDF yang sedang diperiksa</title>
+          <circle class="document-glow" cx="200" cy="170" r="145" />
+          <circle class="document-dot" cx="48" cy="83" r="5" />
+          <circle class="document-dot" cx="344" cy="88" r="4" />
+          <circle class="document-dot" cx="350" cy="304" r="5" />
+
+          <g class="document-back" transform="rotate(-11 190 170)">
+            <rect x="105" y="52" width="190" height="246" rx="18" />
+          </g>
+          <g class="document-back" transform="rotate(9 190 170)">
+            <rect x="105" y="52" width="190" height="246" rx="18" />
+          </g>
+
+          <g class="document-front">
+            <rect class="document-page" x="105" y="42" width="190" height="250" rx="18" />
+            <rect class="document-icon-bg" x="125" y="63" width="42" height="42" rx="10" />
+            <path class="document-icon" d="M138 72h11l6 6v18h-17z M149 72v7h6 M142 85h10 M142 90h10" />
+            <rect class="document-pdf-tag" x="232" y="69" width="42" height="20" rx="10" />
+            <text class="document-pdf-text" x="253" y="83" text-anchor="middle">PDF</text>
+
+            <rect class="document-line-primary" x="125" y="122" width="130" height="9" rx="4.5" />
+            <rect class="document-line" x="125" y="141" width="148" height="7" rx="3.5" />
+            <rect class="document-line" x="125" y="156" width="108" height="7" rx="3.5" />
+            <path class="document-divider" d="M125 179h150" />
+
+            <circle class="document-number-bg" cx="137" cy="200" r="12" />
+            <text class="document-number" x="137" y="204" text-anchor="middle">1</text>
+            <rect class="document-line" x="157" y="196" width="80" height="7" rx="3.5" />
+            <circle class="document-check-bg" cx="264" cy="200" r="11" />
+            <path class="document-check" d="m259 200 3 3 6-7" />
+
+            <circle class="document-number-bg" cx="137" cy="233" r="12" />
+            <text class="document-number" x="137" y="237" text-anchor="middle">2</text>
+            <rect class="document-line" x="157" y="229" width="65" height="7" rx="3.5" />
+            <circle class="document-check-bg" cx="264" cy="233" r="11" />
+            <path class="document-check" d="m259 233 3 3 6-7" />
+
+            <rect class="document-scan" x="118" y="106" width="164" height="4" rx="2" />
+          </g>
+
+          <g class="document-badge">
+            <rect class="document-badge-bg" x="223" y="266" width="145" height="45" rx="14" />
+            <circle class="document-badge-icon" cx="246" cy="288" r="11" />
+            <path class="document-check" d="m241 288 3 3 6-7" />
+            <text class="document-badge-text" x="266" y="293">Terverifikasi</text>
+          </g>
+        </svg>
       </div>
     </div>
 
@@ -322,22 +385,6 @@ const dataSources = [{ name: "Crossref", desc: "100M+ publikasi" }];
       </div>
     </section>
 
-    <!-- ================= Sumber database ================= -->
-    <div class="h-px my-10 sm:my-14" :style="{ background: 'var(--border)' }" />
-
-    <section>
-      <p class="section-label">SUMBER DATABASE</p>
-
-      <div class="grid grid-cols-1 gap-4">
-        <div v-for="source in dataSources" :key="source.name" class="source-card">
-          <span class="source-dot" aria-hidden="true" />
-          <div>
-            <p class="source-name">{{ source.name }}</p>
-            <p class="source-desc">{{ source.desc }}</p>
-          </div>
-        </div>
-      </div>
-    </section>
   </main>
 </template>
 
@@ -370,6 +417,17 @@ const dataSources = [{ name: "Crossref", desc: "100M+ publikasi" }];
 }
 .hero-accent {
   color: var(--accent);
+}
+.typing-word {
+  border-right: 0.06em solid currentColor;
+  padding-right: 0.04em;
+  animation: typing-cursor 0.8s step-end infinite;
+}
+@keyframes typing-cursor {
+  50% { border-color: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .typing-word { animation: none; border-right: 0; padding-right: 0; }
 }
 
 /* ---------- Dropzone ---------- */
@@ -555,6 +613,7 @@ const dataSources = [{ name: "Crossref", desc: "100M+ publikasi" }];
 .hero-art {
   display: flex;
   justify-content: center;
+  align-items: center;
   min-width: 0;
 }
 @media (min-width: 1024px) {
@@ -563,51 +622,52 @@ const dataSources = [{ name: "Crossref", desc: "100M+ publikasi" }];
   }
 }
 
-.hero-img {
+.hero-document {
   display: block;
   width: 100%;
-  max-width: 12rem; /* HP: kecil supaya dropzone tetap terlihat tanpa banyak scroll */
+  max-width: 19rem;
   height: auto;
-  user-select: none;
-}
-@media (min-width: 480px) {
-  .hero-img {
-    max-width: 15rem;
-  }
-}
-@media (min-width: 1080px) {
-  .hero-img {
-    max-width: 22rem;
-  }
-}
-
-/* Mode gelap: gambar dibuat lebih besar */
-/* Mode gelap: ukuran + posisi gambar */
-.dark .hero-img {
-  max-width: 18rem;
-}
-@media (min-width: 480px) {
-  .dark .hero-img {
-    max-width: 24rem;
-  }
 }
 @media (min-width: 1024px) {
-  .dark .hero-img {
-    max-width: min(34rem, 100%);
-    transform: translateX(2rem);
+  .hero-document {
+    max-width: 25rem;
   }
 }
-@media (min-width: 1280px) {
-  .dark .hero-img {
-    max-width: min(40rem, 100%);
-    transform: translateX(3rem);
-  }
+.document-glow { fill: var(--secondary); }
+.document-dot { fill: var(--accent); opacity: 0.55; }
+.document-back rect, .document-page, .document-badge-bg {
+  fill: var(--card);
+  stroke: var(--border);
+  stroke-width: 2;
 }
-@media (min-width: 1800px) {
-  .dark .hero-img {
-    max-width: min(48rem, 100%);
-    transform: translateX(4rem);
-  }
+.document-back rect { fill: var(--secondary); }
+.document-front { animation: document-float 4s ease-in-out infinite; }
+.document-page { filter: drop-shadow(0 14px 18px rgb(20 46 100 / 12%)); }
+.document-icon-bg, .document-pdf-tag, .document-number-bg { fill: var(--secondary); }
+.document-icon { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.document-pdf-text, .document-number, .document-badge-text {
+  fill: var(--primary);
+  font: 700 12px system-ui, sans-serif;
+}
+.document-pdf-text { font-size: 10px; }
+.document-line-primary { fill: var(--primary); opacity: 0.8; }
+.document-line { fill: var(--border); }
+.document-divider { stroke: var(--border); stroke-width: 2; }
+.document-check-bg, .document-badge-icon { fill: var(--accent); }
+.document-check { fill: none; stroke: white; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.document-scan { fill: var(--accent); opacity: 0.55; animation: document-scan 3.5s ease-in-out infinite; }
+.document-badge { animation: document-float 4s ease-in-out 0.5s infinite; }
+.document-badge-bg { filter: drop-shadow(0 8px 12px rgb(20 46 100 / 12%)); }
+@keyframes document-float {
+  50% { transform: translateY(-7px); }
+}
+@keyframes document-scan {
+  0%, 100% { transform: translateY(0); opacity: 0; }
+  15%, 85% { opacity: 0.55; }
+  50% { transform: translateY(150px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .document-front, .document-scan, .document-badge { animation: none; }
 }
 
 /* ---------- Seksi bawah ---------- */
