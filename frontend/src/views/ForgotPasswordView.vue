@@ -94,7 +94,7 @@ async function handleSubmit() {
           :style="{ color: 'var(--accent)' }"
           @click="router.push({ name: 'login' })"
         >
-          <span aria-hidden="true">&larr;</span> Kembali ke halaman login
+          <span aria-hidden="true"></span> Kembali ke halaman login
         </button>
       </CardContent>
     </Card>
