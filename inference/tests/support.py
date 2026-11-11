@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 from inference.config import Settings, get_settings
 from inference.grobid import GrobidClient, get_grobid_client
 from inference.main import create_app
+from inference.sbert import SbertEncoder, get_sbert_encoder
 
 GROBID_TEST_URL = "http://grobid.test"
 
@@ -96,14 +97,57 @@ def minimal_pdf_bytes() -> bytes:
     return b"".join(chunks)
 
 
-def make_app(stub: GrobidStub, *, max_upload_mb: int = 20) -> FastAPI:
-    """Build the real app with settings and the GROBID client overridden."""
+class FakeSentenceModel:
+    """Stands in for ``SentenceTransformer``: records calls, returns tiny vectors.
+
+    Each vector is derived from the text (length and first character), so equal
+    texts embed identically and different texts differ, without torch.
+    """
+
+    def __init__(self, dimensions: int = 4, failure: Exception | None = None) -> None:
+        self.dimensions = dimensions
+        self.failure = failure
+        self.calls: list[tuple[list[str], dict[str, Any]]] = []
+
+    def encode(self, sentences: list[str], **kwargs: Any) -> list[list[float]]:
+        self.calls.append((list(sentences), kwargs))
+        if self.failure is not None:
+            raise self.failure
+        return [
+            [float(len(text)), float(ord(text[0])), 0.5, 0.25][: self.dimensions]
+            for text in sentences
+        ]
+
+
+def make_encoder(model: FakeSentenceModel | Exception | None = None, batch_size: int = 32) -> SbertEncoder:
+    """A real ``SbertEncoder`` whose loader returns ``model`` (or raises it)."""
+
+    resolved = model if model is not None else FakeSentenceModel()
+
+    def loader(name: str) -> FakeSentenceModel:
+        if isinstance(resolved, Exception):
+            raise resolved
+        return resolved
+
+    return SbertEncoder(model_name="test-model", batch_size=batch_size, loader=loader)
+
+
+def make_app(
+    stub: GrobidStub,
+    *,
+    max_upload_mb: int = 20,
+    encoder: SbertEncoder | None = None,
+    embedding_max_texts: int = 256,
+) -> FastAPI:
+    """Build the real app with settings, the GROBID client and the SBERT encoder overridden."""
 
     app = create_app()
     app.dependency_overrides[get_settings] = lambda: Settings(
         grobid_url=GROBID_TEST_URL,
         max_upload_mb=max_upload_mb,
+        embedding_max_texts=embedding_max_texts,
     )
+    app.dependency_overrides[get_sbert_encoder] = lambda: encoder or make_encoder()
     app.dependency_overrides[get_grobid_client] = lambda: GrobidClient(
         base_url=GROBID_TEST_URL,
         transport=httpx.MockTransport(stub),
@@ -111,5 +155,20 @@ def make_app(stub: GrobidStub, *, max_upload_mb: int = 20) -> FastAPI:
     return app
 
 
-def make_client(stub: GrobidStub, *, max_upload_mb: int = 20, **kwargs: Any) -> TestClient:
-    return TestClient(make_app(stub, max_upload_mb=max_upload_mb), **kwargs)
+def make_client(
+    stub: GrobidStub,
+    *,
+    max_upload_mb: int = 20,
+    encoder: SbertEncoder | None = None,
+    embedding_max_texts: int = 256,
+    **kwargs: Any,
+) -> TestClient:
+    return TestClient(
+        make_app(
+            stub,
+            max_upload_mb=max_upload_mb,
+            encoder=encoder,
+            embedding_max_texts=embedding_max_texts,
+        ),
+        **kwargs,
+    )

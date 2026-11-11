@@ -1,9 +1,10 @@
 # Dafpus Cek — Internal Inference Service (FastAPI)
 
 Internal-only service that extracts bibliography references, in-text citations and PDF coordinates
-from a document through [GROBID](https://github.com/kermitt2/grobid). Laravel queue workers call it
-over the private network (`docs/API_SPEC.md` §9); it is **never** exposed publicly and never called
-by the frontend. SBERT embeddings (`POST /v1/embeddings`) are planned but not implemented yet.
+from a document through [GROBID](https://github.com/kermitt2/grobid), and turns text into SBERT
+sentence embeddings for semantic similarity. Laravel queue workers call it over the private network
+(`docs/API_SPEC.md` §9); it is **never** exposed publicly and never called by the frontend. It only
+produces vectors; cosine similarity and the verdict are computed in Laravel.
 
 ## Layout
 
@@ -18,8 +19,9 @@ inference/
 │   ├── main.py                  # create_app(), exception handlers, `app`
 │   ├── config.py                # Settings + get_settings()
 │   ├── schemas.py               # wire models (`API_SPEC.md` §9)
-│   ├── api/                     # health.py, extract.py
-│   └── grobid/                  # client.py (GrobidClient), tei.py (TEI -> JSON)
+│   ├── api/                     # health.py, extract.py, embeddings.py
+│   ├── grobid/                  # client.py (GrobidClient), tei.py (TEI -> JSON)
+│   └── sbert/                   # encoder.py (SbertEncoder: lazy model load + encode)
 └── tests/                       # pytest: hermetic MockTransport + opt-in integration
 ```
 
@@ -42,11 +44,13 @@ use the service name (e.g. `http://grobid:8070`). Interactive docs: `http://loca
 `200` — liveness of the service and its capabilities:
 
 ```json
-{ "status": "ok", "grobid": "up" }
+{ "status": "ok", "grobid": "up", "sbert": "up" }
 ```
 
 `status` becomes `degraded` and `grobid` becomes `down` when GROBID cannot be reached, or answers
-anything other than `200` on `/api/isalive`. `sbert` is added by the SBERT slice.
+anything other than `200` on `/api/isalive`. `sbert` is `up` once the model is in
+memory and `down` before that: `/health` never loads the model (the container healthcheck has a
+short timeout). Set `SBERT_PRELOAD=true` to load it in the background at startup.
 
 ### `POST /v1/extract`
 
@@ -116,11 +120,37 @@ curl -X POST http://localhost:8000/v1/extract -F "file=@paper.pdf"
 | `422` | `EXTRACTION_FAILED` | Empty/invalid PDF bytes or unusable TEI |
 | `503` | `EXTRACTION_FAILED` | GROBID unreachable or 5xx |
 
+### `POST /v1/embeddings`
+
+JSON body with `texts` (non-empty list of non-blank strings) and optional `model` (`"sbert"`).
+Returns one L2-normalised vector per text, in request order:
+
+```bash
+curl -X POST http://localhost:8000/v1/embeddings   -H "Content-Type: application/json"   -d '{"texts": ["Deep learning", "Pembelajaran mendalam"], "model": "sbert"}'
+```
+
+```json
+{ "data": { "model": "sbert", "dimensions": 768, "embeddings": [[0.021, -0.133, "…"], [0.004, 0.088, "…"]] } }
+```
+
+Vectors are normalised, so the cosine similarity of two texts is the dot product of their vectors.
+The service does not compute similarity or decide validity — Laravel does (`AGENTS.md` §12).
+Laravel already batches (default 32 texts per call); inside a request the model batches by
+`EMBEDDING_BATCH_SIZE`.
+
+| Status | Code | When |
+|---|---|---|
+| `422` | `VALIDATION_ERROR` | `texts` missing/empty/blank, unknown `model`, or more than `EMBEDDING_MAX_TEXTS` texts |
+| `503` | `INFERENCE_FAILED` | The model cannot be loaded or encoding failed |
+
+The model is loaded lazily on first use and kept in memory; the first request after a cold start
+downloads it from Hugging Face (~1 GB) and can take minutes, so keep a persistent `HF_HOME`.
+
 ## Tests
 
 ```bash
 cd inference
-uv run pytest                    # hermetic: httpx.MockTransport + TestClient
+uv run pytest                    # hermetic: httpx.MockTransport + fake SBERT model, no torch load
 uv run pytest -m integration     # opt-in live GROBID (skipped by default)
 uv lock --check
 ```
@@ -141,6 +171,11 @@ uv run pytest -m integration
 | `GROBID_TIMEOUT_SECONDS` | `300` | Extract read timeout |
 | `GROBID_HEALTH_TIMEOUT_SECONDS` | `5` | `/api/isalive` timeout |
 | `MAX_UPLOAD_MB` | `20` | Upload cap (mirrors the public API) |
+| `SBERT_MODEL` | `sentence-transformers/paraphrase-multilingual-mpnet-base-v2` | Embedding model (768 dims, multilingual) |
+| `EMBEDDING_BATCH_SIZE` | `32` | Model batch size inside one request |
+| `EMBEDDING_MAX_TEXTS` | `256` | Max texts per `/v1/embeddings` request (else `422`) |
+| `EMBEDDING_MAX_TEXT_CHARS` | `2000` | Each text is cut to this length before encoding (never an error) |
+| `SBERT_PRELOAD` | `false` | Load the model in a background thread at startup |
 
 `.env` is git-ignored; never commit real values. The service is private-network only — do not
 expose it to the internet, and do not add public/frontend-facing endpoints here.
