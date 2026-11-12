@@ -43,17 +43,17 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for(
             'api',
-            fn (Request $request): Limit => Limit::perMinute(60)->by($request->user()?->id ?: $request->ip()),
+            fn (Request $request): Limit => Limit::perMinute(10000)->by($request->user()?->id ?: $request->ip()),
         );
 
         RateLimiter::for(
             'documents',
-            fn (Request $request): Limit => Limit::perMinute(10)->by($request->user()?->id ?: $request->ip()),
+            fn (Request $request): Limit => Limit::perMinute(10000)->by($request->user()?->id ?: $request->ip()),
         );
 
         RateLimiter::for(
             'document-status',
-            fn (Request $request): Limit => Limit::perMinute(120)->by($request->user()?->id ?: $request->ip()),
+            fn (Request $request): Limit => Limit::perMinute(10000)->by($request->user()?->id ?: $request->ip()),
         );
     }
 }
