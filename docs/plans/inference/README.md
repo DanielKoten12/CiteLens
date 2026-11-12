@@ -1,7 +1,7 @@
 # Inference Implementation Plan — Dafpus Cek
 
 > **Status:** broad plan (v1) — Phase 01 implemented and tested on PR #17 (`Grobid-1`);
-> Phase 02 (SBERT) pending.
+> Phase 02 (SBERT `/v1/embeddings` + `/health.sbert`) implemented; Phase 03 (deployment) pending.
 > Detailed, task-level plans are kept per phase (see §7). Each phase document is structured so it
 > can be expanded into an executable plan without re-deriving a contract, invariant or acceptance
 > criterion.

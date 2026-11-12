@@ -5,6 +5,7 @@ use App\Enums\CitationStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\FindingSeverity;
 use App\Enums\FindingType;
+use App\Enums\MetadataSource;
 use App\Enums\ReferenceFindingStatus;
 use App\Enums\ReportStatus;
 
@@ -41,6 +42,13 @@ it('pins the canonical reference finding status values', function () {
 it('pins the canonical citation status values', function () {
     expect(array_column(CitationStatus::cases(), 'value'))
         ->toBe(['valid', 'unreliable', 'pending', 'unresolved', 'hallucination']);
+});
+
+it('pins the canonical metadata source values', function () {
+    expect(array_column(MetadataSource::cases(), 'value'))
+        ->toBe(['crossref', 'openalex', 'garuda', 'semantic_scholar'])
+        ->and(MetadataSource::Garuda->label())->toBe('Garuda')
+        ->and(MetadataSource::SemanticScholar->label())->toBe('Semantic Scholar');
 });
 
 it('pins the canonical report status values', function () {

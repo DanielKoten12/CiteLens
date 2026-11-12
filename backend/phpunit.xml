@@ -40,6 +40,10 @@
         <env name="TELESCOPE_ENABLED" value="false" force="true"/>
         <env name="NIGHTWATCH_ENABLED" value="false" force="true"/>
         <env name="SCORING_SEMANTIC_ENABLED" value="true" force="true"/>
+        <!-- Off by default: tests that exercise a fallback enable it explicitly. -->
+        <env name="GARUDA_ENABLED" value="false" force="true"/>
+        <env name="SEMANTIC_SCHOLAR_ENABLED" value="false" force="true"/>
+        <env name="OPENALEX_ENABLED" value="false" force="true"/>
 
         <!--
             Mirror every entry into $_SERVER as well: PHPUnit's force="true" only
@@ -64,5 +68,8 @@
         <server name="TELESCOPE_ENABLED" value="false"/>
         <server name="NIGHTWATCH_ENABLED" value="false"/>
         <server name="SCORING_SEMANTIC_ENABLED" value="true"/>
+        <server name="GARUDA_ENABLED" value="false"/>
+        <server name="SEMANTIC_SCHOLAR_ENABLED" value="false"/>
+        <server name="OPENALEX_ENABLED" value="false"/>
     </php>
 </phpunit>

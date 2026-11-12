@@ -1,8 +1,9 @@
 <?php
 
+use App\Enums\MetadataSource;
 use App\Exceptions\CrossrefUnavailableException;
 use App\Services\Crossref\CrossrefClient;
-use App\Services\Crossref\ReferenceQuery;
+use App\Services\Metadata\ReferenceQuery;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
@@ -26,14 +27,15 @@ beforeEach(function (): void {
 it('resolves a doi and maps the work', function () {
     Http::fake(['api.crossref.org/*' => Http::response(Fixtures::json('crossref/doi-found'))]);
 
-    $work = app(CrossrefClient::class)->findByDoi('10.1038/nature14539');
+    $work = app(CrossrefClient::class)->resolve('10.1038/nature14539');
 
     expect($work)->not->toBeNull()
         ->doi->toBe('10.1038/nature14539')
         ->title->toBe('Deep learning')
         ->containerTitle->toBe('Nature')
         ->publicationYear->toBe(2015)
-        ->authors->toBe(['Yann LeCun', 'Yoshua Bengio', 'Geoffrey Hinton']);
+        ->authors->toBe(['Yann LeCun', 'Yoshua Bengio', 'Geoffrey Hinton'])
+        ->source->toBe(MetadataSource::Crossref);
 
     Http::assertSent(fn (Request $request): bool => str_contains($request->url(), '/works/10.1038/nature14539'));
 });
@@ -41,15 +43,15 @@ it('resolves a doi and maps the work', function () {
 it('returns null when the doi does not resolve', function () {
     Http::fake(['api.crossref.org/*' => Http::response('', 404)]);
 
-    expect(app(CrossrefClient::class)->findByDoi('10.1234/missing'))->toBeNull();
+    expect(app(CrossrefClient::class)->resolve('10.1234/missing'))->toBeNull();
 });
 
 it('caches a resolved doi and does not hit http twice', function () {
     Http::fake(['api.crossref.org/*' => Http::response(Fixtures::json('crossref/doi-found'))]);
 
     $client = app(CrossrefClient::class);
-    $client->findByDoi('10.1038/nature14539');
-    $client->findByDoi('10.1038/nature14539');
+    $client->resolve('10.1038/nature14539');
+    $client->resolve('10.1038/nature14539');
 
     Http::assertSentCount(1);
 });
@@ -58,8 +60,8 @@ it('caches a doi miss too', function () {
     Http::fake(['api.crossref.org/*' => Http::response('', 404)]);
 
     $client = app(CrossrefClient::class);
-    $client->findByDoi('10.1234/missing');
-    $client->findByDoi('10.1234/missing');
+    $client->resolve('10.1234/missing');
+    $client->resolve('10.1234/missing');
 
     Http::assertSentCount(1);
 });
@@ -77,7 +79,7 @@ it('retries a transient server error and succeeds', function () {
             : Http::response(Fixtures::json('crossref/doi-found'));
     }]);
 
-    $work = app(CrossrefClient::class)->findByDoi('10.1038/nature14539');
+    $work = app(CrossrefClient::class)->resolve('10.1038/nature14539');
 
     expect($attempts)->toBe(2)
         ->and($work)->not->toBeNull();
@@ -88,21 +90,21 @@ it('throws when every attempt fails with a server error', function () {
 
     Http::fake(['api.crossref.org/*' => Http::response('', 503)]);
 
-    expect(fn () => app(CrossrefClient::class)->findByDoi('10.1038/nature14539'))
+    expect(fn () => app(CrossrefClient::class)->resolve('10.1038/nature14539'))
         ->toThrow(CrossrefUnavailableException::class);
 });
 
 it('throws on a connection error', function () {
     Http::fake(['api.crossref.org/*' => fn () => throw new ConnectionException('Connection refused.')]);
 
-    expect(fn () => app(CrossrefClient::class)->findByDoi('10.1038/nature14539'))
+    expect(fn () => app(CrossrefClient::class)->resolve('10.1038/nature14539'))
         ->toThrow(CrossrefUnavailableException::class);
 });
 
 it('maps a bibliographic search and sends the documented params', function () {
     Http::fake(['api.crossref.org/*' => Http::response(Fixtures::json('crossref/search-multiple'))]);
 
-    $results = app(CrossrefClient::class)->searchBibliographic(
+    $results = app(CrossrefClient::class)->search(
         new ReferenceQuery('Sistem deteksi plagiarisme Koten 2023', 'Koten', 2023),
     );
 
@@ -128,8 +130,8 @@ it('does not cache bibliographic searches', function () {
     $client = app(CrossrefClient::class);
     $query = new ReferenceQuery('Deep learning');
 
-    $client->searchBibliographic($query);
-    $client->searchBibliographic($query);
+    $client->search($query);
+    $client->search($query);
 
     Http::assertSentCount(2);
 });
@@ -137,12 +139,12 @@ it('does not cache bibliographic searches', function () {
 it('throws on an unexpected 4xx from a search', function () {
     Http::fake(['api.crossref.org/*' => Http::response('', 400)]);
 
-    expect(fn () => app(CrossrefClient::class)->searchBibliographic(new ReferenceQuery('Deep learning')))
+    expect(fn () => app(CrossrefClient::class)->search(new ReferenceQuery('Deep learning')))
         ->toThrow(CrossrefUnavailableException::class);
 });
 
 it('returns an empty list for a search with no items', function () {
     Http::fake(['api.crossref.org/*' => Http::response(Fixtures::json('crossref/search-empty'))]);
 
-    expect(app(CrossrefClient::class)->searchBibliographic(new ReferenceQuery('Nothing')))->toBe([]);
+    expect(app(CrossrefClient::class)->search(new ReferenceQuery('Nothing')))->toBe([]);
 });

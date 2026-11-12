@@ -41,7 +41,7 @@ FastAPI inference service implementation and deployment are separate efforts (se
 | ID | Question | Decision | Date | Decided by |
 |---|---|---|---|---|
 | OQ-01 | Upload-time `503` policy | Always `202` after persistence; no preflight by default (`analysis.require_inference_at_upload=false` opt-in). Unavailability surfaces as `failed` + `analysis_error`. | 2026-10-06 | user (default) |
-| OQ-02 | Non-resolving DOI classification | `invalid` with `"DOI tidak ditemukan di Crossref."`; `not_found` only when no DOI and no candidate. | 2026-10-06 | user (default) |
+| OQ-02 | Non-resolving DOI classification | `invalid` with `"DOI tidak ditemukan di Crossref."`; `not_found` only when no DOI and no candidate. **Revised by Phase 09:** DOI resolution is a Crossref → Semantic Scholar → OpenAlex chain; a `404` from every enabled resolver → `invalid` with `"DOI tidak ditemukan pada sumber metadata."`; an unanswerable resolver with no confirmation → `pending` (never `invalid`). | 2026-10-06 (revised 2026-11) | user (default) |
 | OQ-03 | Crossref outage policy | Total outage → document `failed` with a safe error; per-reference transient failures → `pending` with an explicit reason. | 2026-10-06 | user (default) |
 | OQ-04 | SBERT unavailable | Degrade to string signals, record the degradation in `reason`, document still completes; extract failure stays fatal. | 2026-10-06 | user (default) |
 | OQ-05 | PDF generation | **Gotenberg** (user-selected): render Blade HTML, POST to `/forms/chromium/convert/html`. Modern CSS support, no Dompdf quirks. Behind a `ReportRenderer` interface; internal service on the private network. | 2026-10-06 | user |
@@ -121,13 +121,16 @@ same change.
   `/health`, `/v1/extract`, `/v1/embeddings`; `Data/Inference/*` DTOs; `ExtractionFailedException`,
   `InferenceClientException`; `Services/Crossref/DoiNormalizer`.
 - Crossref verification and scoring (Phase 04): `Services/Crossref/*` (`CrossrefClient`,
-  `CrossrefQueryBuilder`, `CrossrefResultMapper`, `CrossrefWorkData`, `ReferenceQuery`, `DoiLookup`,
-  `CrossrefUnavailableException`); the pure `Services/Scoring/*` engine (`StringSimilarity`,
+  `CrossrefQueryBuilder`, `CrossrefResultMapper`, `DoiLookup`, `CrossrefUnavailableException`);
+  the source-agnostic seam `Services/Metadata/*` (`WorkMetadata`, `ReferenceQuery`),
+  `Contracts/Metadata/BibliographicSource` and `Enums/MetadataSource` (Phase 08 T1); the pure
+  `Services/Scoring/*` engine (`StringSimilarity`,
   `AuthorMatcher`, `SemanticSimilarity`, `LocalVenueDetector`, `MatchReasonBuilder`,
   `ReferenceScorer`, `VerdictDecider`, `ScoringConfig` + value objects); the
   `ValidateReferencesStep` / `EmbedReferencesStep` / `ScoreReferencesStep` pipeline steps and the
-  `ReferenceFindingWriter` single writer; `config/scoring.php` `semantic.title_blend` and the
-  `services.crossref` retry/back-off/User-Agent keys.
+  `ReferenceFindingWriter` single writer; candidate provenance
+  (`reference_finding_candidates.source`, `MetadataSource`); `config/scoring.php`
+  `semantic.title_blend` and the `services.crossref` retry/back-off/User-Agent keys.
 - Citation resolution and review (Phase 05): `Services/Citations/*` (`CitationMarkerParser`,
   `CitationResolver`, `CitationMatchConfig`, `CitationReference`/`CitationResolution` value
   objects) and the `ResolveCitationsStep`; `Services/Reference/ReferenceQueryService`,
@@ -155,6 +158,21 @@ same change.
   `ReportStateService`, `ReportFailureHandler` and `ReportDeletionService`; the `/reports` endpoints
   (`ReportController`, `ReportGenerationService`, `ReportQueryService`, `Data/Report/*` DTOs,
   `ListReportsRequest`); report DTO/schema/config tests plus the sync-queue end-to-end suite.
+- Garuda fallback source (Phase 08): the source-agnostic seam (`Services/Metadata/*`,
+  `Contracts/Metadata/BibliographicSource`, `Enums/MetadataSource`), candidate provenance
+  (`reference_finding_candidates.source`), `Services/Garuda/{GarudaClient,GarudaSearchParser,
+  GarudaResultMapper}` with `GarudaUnavailableException`, the gated/budgeted fallback in
+  `ValidateReferencesStep` (fatal on the first failure, `pending` afterwards), `GARUDA_*`
+  config/env, and the `GarudaFake` fixtures/end-to-end suite.
+- Multi-source metadata search (Phase 09): `MetadataSource::SemanticScholar`; the
+  `DoiResolver`/`SourceUnavailableException` contracts; the ordered
+  `Services/Metadata/{MetadataSourceRegistry,MetadataSourceChain,DoiResolutionChain,
+  SourceChainPolicy,SourceChainState,SourceChainResult,DoiResolutionResult,WorkMetadataMerger}`
+  layer with `Support/{SearchCache,RequestThrottle,SourceCircuitBreaker}`;
+  `Services/SemanticScholar/*` and `Services/OpenAlex/*` (search + DOI clients, query builders,
+  tolerant mappers); per-source `fatal|degrade` policies, per-source/document budgets, the DOI
+  `Unknown` → `pending` outcome, cross-source dedupe/DOI promotion, the persisted-candidate cap,
+  and the `semantic_scholar`/`openalex` unit, feature and end-to-end suites.
 - Canonical error envelope renderers for `401`/`422`/`429` (now centralized in
   `ApiExceptionRenderer`) and `ErrorResponseData`; custom exceptions render their own envelope
   (`DocumentUploadFailedException`, `InvalidCredentialsException`).
@@ -162,7 +180,10 @@ same change.
   `ApiErrorTest`, `ApiResponseTest`, `ApiErrorEnvelopeTest`, `OwnershipIsolationTest`,
   `RateLimitersTest`, `DocumentTreeTest`, `FixturesTest`, plus the Phase 03 suites
   (`InferenceDataTest`, `InferenceClientTest`, `AnalysisProgressTest`, `AnalysisFailureHandlerTest`,
-  `ExtractionPersistenceTest`, `AnalysisPipelineTest`, `AnalysisEndToEndTest`, `DoiNormalizerTest`)
+  `ExtractionPersistenceTest`, `AnalysisPipelineTest`, `AnalysisEndToEndTest`, `DoiNormalizerTest`),
+  the Phase 04–09 suites (Crossref client/scoring/verdict, citation resolution and review,
+  findings feed, reports, Garuda fallback, Semantic Scholar/OpenAlex clients, DOI/search chains,
+  merge/policy/circuit-breaker helpers, and the multi-source end-to-end suites)
   (Pest, SQLite `:memory:`, sync queue).
 - Rate limiters `auth` (5/min/IP), `api` (60/min/user), `documents` (10/min/user) and
   `document-status` (120/min/user) in `AppServiceProvider`.
@@ -214,14 +235,17 @@ same change.
   manual end-to-end runs.
 - Deployment/CI tooling (none exists in the repo).
 - Any feature outside DOI validation and citation consistency (no plagiarism, grammar, etc.).
-- DOCX support, OpenAlex, Google Scholar, non-PDF reports — excluded by the canonical contract
-  (`AGENTS.md` §15).
+- DOCX support, Google Scholar, non-PDF reports — excluded by the canonical contract
+  (`AGENTS.md` §15). OpenAlex/Semantic Scholar were added deliberately in Phase 09.
 
 ### 4.3 External dependencies
 
 | Dependency | Contract | Owner |
 |---|---|---|
 | Crossref REST API | `docs/API_SPEC.md` §1/§10; client built in Phase 04 | Laravel (outbound HTTP) |
+| Garuda search page | `docs/API_SPEC.md` §1/§10; Phase 08 | Laravel (outbound HTML parse, fallback only) |
+| Semantic Scholar Graph API | `docs/API_SPEC.md` §1/§10; Phase 09, key-gated | Laravel (outbound HTTP) |
+| OpenAlex Works API | `docs/API_SPEC.md` §1/§10; Phase 09, key-gated | Laravel (outbound HTTP) |
 | FastAPI inference (`/health`, `/v1/extract`, `/v1/embeddings`) | `docs/API_SPEC.md` §9 | Separate service; faked in backend tests |
 | Gotenberg (HTML → PDF reports) | gotenberg.dev HTTP API (`/forms/chromium/convert/html`), OQ-05 | Internal service, private network; called by report jobs |
 | Queue worker (`QUEUE_CONNECTION=database`) | `docs/ARCHITECTURE.md` §8 | Laravel |
@@ -401,6 +425,8 @@ Every new endpoint gets at least one ownership-isolation test (two users) per
 | 05.1 | [`05-1-citation-resolution-robustness-detail.md`](05-1-citation-resolution-robustness-detail.md) | Resolution robustness: hints, initials, soft year, ambiguity/`unresolved`, candidates, provenance, evaluation harness | 05 |
 | 06 | [`06-reports.md`](06-reports.md) | Async PDF report generation + `/reports` endpoints + file lifecycle | 02 (shell), 05 (content) |
 | 07 | [`07-hardening-and-evaluation.md`](07-hardening-and-evaluation.md) | Full test matrix, evaluation harness, performance, docs sync, e2e verification | 01–06 |
+| 08 | [`08-garuda-fallback-source.md`](08-garuda-fallback-source.md) | Garuda fallback metadata source for Indonesian references; `source` provenance on candidates; `BibliographicSource` seam for OpenAlex | 04 |
+| 09 | [`09-multi-source-metadata-search.md`](09-multi-source-metadata-search.md) | **Implemented.** Semantic Scholar + OpenAlex as ordered fallback sources; search + DOI chains, configurable failure policies, budgets/caching/circuit breaker | 04, 08 |
 
 ```text
 01 ──▶ 02 ──▶ 03 ──▶ 04 ──▶ 05 ──▶ 06 ──▶ 07
@@ -521,6 +547,12 @@ Config lives in Laravel config files with `.env` overrides; `.env.example` gets 
 | `reports.template` | `REPORTS_TEMPLATE` | `reports.document-report` | 06 | Blade view rendered to HTML before Gotenberg |
 | `reports.text_preview_length` | `REPORTS_TEXT_PREVIEW_LENGTH` | `500` | 06 | Character cap for extracted text in the report |
 | `reports.pdf.*` (paper/margins) | `REPORTS_PAPER_*`/`REPORTS_MARGIN_*` | A4/0.4in | 06 | Gotenberg Chromium form fields |
+| `services.semantic_scholar.*` | `SEMANTIC_SCHOLAR_*` | key-gated, disabled without key | 09 | Semantic Scholar search/DOI transport, throttle, cache, budget |
+| `services.openalex.*` | `OPENALEX_*` | key-gated, disabled without key | 09 | OpenAlex search/DOI transport, throttle, cache, budget |
+| `analysis.metadata.failure_policies` | `METADATA_FAILURE_POLICY_*` | Crossref/Garuda `fatal`, S2/OpenAlex `degrade` | 09 | Per-source outage policy |
+| `analysis.metadata.fallback.*` | `ANALYSIS_METADATA_MAX_FALLBACK_*` | 300 requests / 300 s | 09 | Document-wide optional-source cap |
+| `analysis.metadata.max_candidates_per_reference` | `ANALYSIS_METADATA_MAX_CANDIDATES` | 10 (0 = unlimited) | 09 | Persisted candidate cap |
+| `analysis.metadata.circuit_breaker.*` | `ANALYSIS_METADATA_CIRCUIT_*` | 3 failures / 120 s | 09 | Circuit breaker for degradable sources |
 
 New Composer dependency: `gotenberg/gotenberg-php ^2.25` (MIT; pulls in `php-http/discovery`).
 
@@ -545,7 +577,7 @@ Gotenberg is an internal service like inference.
 | ID | Question | Decision | Blocks |
 |---|---|---|---|
 | OQ-01 | `POST /documents` lists `503 INFERENCE_UNAVAILABLE`, but analysis is asynchronous. When may upload itself return `503`? | Keep upload always `202` after persistence; inference unavailability becomes `status=failed` + safe `analysis_error`, surfaced by status polling. Optionally add an opt-in preflight (`analysis.require_inference_at_upload=false` by default). | 02, 03 |
-| OQ-02 | A DOI that is present but does **not** resolve in Crossref: `invalid` or `not_found`? | `invalid` with reason "DOI tidak ditemukan di Crossref" (a broken DOI contradicts the document's own claim); reserve `not_found` for no-DOI/no-candidate. Requires a spec clarification note. | 04 |
+| OQ-02 | A DOI that is present but does **not** resolve in Crossref: `invalid` or `not_found`? | `invalid` with reason "DOI tidak ditemukan di Crossref" (a broken DOI contradicts the document's own claim); reserve `not_found` for no-DOI/no-candidate. Requires a spec clarification note. **Superseded by Phase 09** (multi-source DOI chain + `Unknown` → `pending`); see `docs/API_SPEC.md` §2.6. | 04 (revised 09) |
 | OQ-03 | Crossref is unreachable (connection error/5xx after retries): fail the document or degrade per reference? | If Crossref is entirely unreachable, fail the document with a safe error (no misleading verdicts). Per-reference transient failures inside an otherwise healthy run degrade that reference to `pending` with an explicit reason. | 04 |
 | OQ-04 | SBERT `/v1/embeddings` unavailable: fatal or degraded? | Degrade: fall back to string similarity only, record the degraded reason in the finding `reason`; document still completes (aligns with T-SCORE-03). GROBID/`/v1/extract` failure stays fatal. | 03, 04 |
 | OQ-05 | Which PDF dependency for report generation? | **Gotenberg** (user-selected): render Blade HTML and POST it to `/forms/chromium/convert/html`. Modern CSS support, no Dompdf quirks. Wrapped in a `ReportRenderer` interface; Gotenberg stays internal/private. | 06 |

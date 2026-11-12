@@ -1,8 +1,9 @@
 <?php
 
+use App\Enums\MetadataSource;
 use App\Enums\ReferenceFindingStatus;
-use App\Services\Crossref\CrossrefWorkData;
-use App\Services\Crossref\DoiLookup;
+use App\Services\Metadata\DoiLookup;
+use App\Services\Metadata\WorkMetadata;
 use App\Services\Scoring\LocalVenueDetector;
 use App\Services\Scoring\MatchReasonBuilder;
 use App\Services\Scoring\ScoreBreakdown;
@@ -41,7 +42,7 @@ function verdictReference(?string $doi = null, ?string $publicationName = null):
 function rankedCandidate(float $confidence, int $rank, bool $doiMatch = false, array $conflicts = []): ScoredCandidate
 {
     return new ScoredCandidate(
-        work: new CrossrefWorkData(doi: $doiMatch ? '10.1/same' : '10.1/other', title: 'Deep learning'),
+        work: new WorkMetadata(doi: $doiMatch ? '10.1/same' : '10.1/other', title: 'Deep learning'),
         breakdown: new ScoreBreakdown(
             signals: ['title' => $confidence, 'authors' => null, 'journal' => null, 'year' => null],
             final: $confidence,
@@ -174,4 +175,32 @@ it('treats the valid threshold as inclusive', function () {
 
     expect($at->status)->toBe(ReferenceFindingStatus::Valid)
         ->and($below->status)->toBe(ReferenceFindingStatus::Suspicious);
+});
+
+it('returns pending and keeps candidates when the doi outcome is unknown', function () {
+    $verdict = $this->decider->decide(
+        verdictReference('10.1/unchecked'),
+        DoiLookup::Unknown,
+        true,
+        [rankedCandidate(0.95, 1)],
+    );
+
+    expect($verdict->status)->toBe(ReferenceFindingStatus::Pending)
+        ->and($verdict->reason)->toBe(MatchReasonBuilder::DOI_UNKNOWN)
+        ->and($verdict->selectedRank)->toBeNull()
+        ->and($verdict->candidates)->toHaveCount(1);
+});
+
+it('names the resolver that confirmed the doi', function () {
+    $verdict = $this->decider->decide(
+        verdictReference('10.1/same'),
+        DoiLookup::Resolved,
+        false,
+        [rankedCandidate(0.90, 1, doiMatch: true)],
+        null,
+        MetadataSource::OpenAlex,
+    );
+
+    expect($verdict->status)->toBe(ReferenceFindingStatus::Valid)
+        ->and($verdict->reason)->toBe('DOI cocok dengan metadata OpenAlex.');
 });

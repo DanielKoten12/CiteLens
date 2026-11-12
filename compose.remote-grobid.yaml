@@ -1,0 +1,45 @@
+# Remote GROBID overlay: point the inference service at a hosted GROBID instead
+# of running the multi-GB local container.
+#
+# Usage (combine with prod the same way as the other overlays):
+#   docker compose -f compose.yaml -f compose.remote-grobid.yaml up -d --build
+#   docker compose -f compose.yaml -f compose.prod.yaml -f compose.remote-grobid.yaml up -d --build
+#
+# What it does:
+#   * `inference` talks to the remote GROBID (default: the public GROBID full
+#     Space on Hugging Face) through GROBID_URL — the only setting the inference
+#     service has ever needed, so nothing else changes;
+#   * the local `grobid` service is moved behind the `local-grobid` profile, so it
+#     is not started and its image is not pulled. Add `--profile local-grobid` if
+#     you still want the container running for comparison — `inference` keeps
+#     using GROBID_URL, so it will not talk to it;
+#   * the `inference → grobid` health dependency is dropped, because the remote
+#     service is not part of this compose project. `GET /health` still reports
+#     GROBID reachability (`degraded` / `grobid: down`) without failing the
+#     container healthcheck.
+#
+# ⚠ DATA EGRESS — READ BEFORE USING. The local GROBID container is deliberately
+# private-network only (docs/SECURITY.md §7). This overlay breaks that boundary
+# on purpose: every uploaded PDF is sent to a third-party host over the public
+# internet, and the returned TEI comes back untrusted. Use it for demos, local
+# development and quick starts. Do NOT run it against real user documents, and do
+# not treat it as a production deployment shape.
+#
+# Remote caveats:
+#   * The public Space is shared, rate-limited and may be asleep; the first
+#     extraction can be slow while it wakes (GROBID_TIMEOUT_SECONDS already
+#     allows 300s). It can go away at any time.
+#   * Override the target with REMOTE_GROBID_URL (e.g. a self-hosted GROBID
+#     behind HTTPS) in the root `.env`.
+#   * GROBID's error envelope is unknown to us, so a remote failure surfaces as
+#     `503 INFERENCE_UNAVAILABLE` / `422 EXTRACTION_FAILED`, exactly like a local
+#     GROBID failure.
+
+services:
+  grobid:
+    profiles: ["local-grobid"]
+
+  inference:
+    depends_on: !reset {}
+    environment:
+      GROBID_URL: ${REMOTE_GROBID_URL:-https://grobidorg-grobid-full2.hf.space}

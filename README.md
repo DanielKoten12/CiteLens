@@ -3,7 +3,8 @@
 TODO: Update this README.md
 
 Academic-reference verification: upload a PDF and the system extracts its bibliography and in-text
-citations (GROBID), validates each reference against Crossref metadata, ranks candidate matches,
+citations (GROBID), validates each reference against external metadata (Crossref first, with
+Garuda/Semantic Scholar/OpenAlex fallbacks), ranks candidate matches,
 resolves citations to references and reports problems such as hallucinated DOIs, unverifiable
 references, missing DOIs and citation/reference mismatches.
 
@@ -15,7 +16,8 @@ references, missing DOIs and citation/reference mismatches.
 ```text
 Vue 3 SPA ──REST/JSON──▶ Laravel API ──▶ PostgreSQL
                               │  ├──▶ queue worker (async analysis + reports)
-                              │  ├──▶ Crossref REST (outbound)
+                              │  ├──▶ metadata sources (outbound: Crossref → Garuda →
+                              │  │      Semantic Scholar → OpenAlex)
                               │  ├──▶ FastAPI inference (private) ──▶ GROBID
                               │  └──▶ Gotenberg (private; report PDFs)
                               └──
@@ -32,11 +34,14 @@ Prerequisites: Docker Engine with Compose 2.24+ (Docker Desktop / OrbStack ship 
 `!override` merge tags).
 
 ```bash
-# Development stack, amd64 default (GROBID full image)
+# Development stack, GROBID CRF by default (multi-arch: amd64 + arm64, no emulation)
 docker compose up -d --build
 
-# Apple Silicon / arm64 hosts: native GROBID CRF image
-docker compose -f compose.yaml -f compose.arm64.yaml up -d --build
+# GROBID full models instead of CRF (amd64 only; emulated on arm64 hosts)
+docker compose -f compose.yaml -f compose.full.yaml up -d --build
+
+# No local GROBID: use a hosted one (sends uploads to a third party; dev/demo only)
+docker compose -f compose.yaml -f compose.remote-grobid.yaml up -d --build
 ```
 
 - SPA: <http://localhost:5173>
@@ -46,7 +51,9 @@ docker compose -f compose.yaml -f compose.arm64.yaml up -d --build
 The analysis pipeline requires the internal services (PostgreSQL, inference, GROBID, Gotenberg),
 all of which the stack starts. Semantic scoring is disabled in containers
 (`SCORING_SEMANTIC_ENABLED=false`) because the SBERT `POST /v1/embeddings` capability is not
-implemented yet — see the runbook for details and caveats.
+implemented yet — see the runbook for details and caveats. Semantic Scholar and OpenAlex are
+optional supplemental metadata sources and stay disabled unless `SEMANTIC_SCHOLAR_API_KEY` /
+`OPENALEX_API_KEY` are configured (see `.env.example`).
 
 Production-shaped stack and debug port publishing:
 

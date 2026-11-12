@@ -4,7 +4,10 @@ use App\Enums\AnalysisStep;
 use App\Enums\DocumentStatus;
 use App\Exceptions\CrossrefUnavailableException;
 use App\Exceptions\ExtractionFailedException;
+use App\Exceptions\GarudaUnavailableException;
 use App\Exceptions\InferenceUnavailableException;
+use App\Exceptions\OpenAlexUnavailableException;
+use App\Exceptions\SemanticScholarUnavailableException;
 use App\Models\ResearchedDocument;
 use App\Services\Analysis\AnalysisFailureHandler;
 use Illuminate\Support\Facades\Log;
@@ -32,6 +35,16 @@ it('maps an extraction failure to the safe unprocessable-document message', func
     expect($document->refresh())
         ->status->toBe(DocumentStatus::Failed)
         ->analysis_error->toBe('Dokumen tidak dapat diproses. Pastikan PDF memuat teks yang dapat diekstrak.');
+});
+
+it('maps a garuda outage to the safe fallback message', function () {
+    $document = DocumentTree::create()->document;
+
+    $this->handler->handle($document, GarudaUnavailableException::serviceUnavailable(), AnalysisStep::CrossrefValidation);
+
+    expect($document->refresh())
+        ->status->toBe(DocumentStatus::Failed)
+        ->analysis_error->toBe('Validasi Garuda tidak tersedia. Coba lagi nanti.');
 });
 
 it('maps an unexpected exception to the generic safe message', function () {
@@ -97,4 +110,15 @@ it('keeps the safe inference message identical to the exception message', functi
     $exception = InferenceUnavailableException::serviceUnavailable();
 
     expect($this->handler->safeMessage($exception))->toBe($exception->getMessage());
+});
+
+it('maps semantic scholar and openalex outages to safe source messages', function () {
+    $document = DocumentTree::create()->document;
+
+    $handler = app(AnalysisFailureHandler::class);
+
+    expect($handler->safeMessage(SemanticScholarUnavailableException::rateLimited()))
+        ->toBe('Validasi Semantic Scholar tidak tersedia. Coba lagi nanti.')
+        ->and($handler->safeMessage(OpenAlexUnavailableException::serviceUnavailable()))
+        ->toBe('Validasi OpenAlex tidak tersedia. Coba lagi nanti.');
 });

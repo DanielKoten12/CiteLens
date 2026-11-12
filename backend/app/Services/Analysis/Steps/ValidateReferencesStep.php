@@ -3,36 +3,39 @@
 namespace App\Services\Analysis\Steps;
 
 use App\Enums\AnalysisStep;
-use App\Exceptions\CrossrefUnavailableException;
 use App\Models\ResearchedDocument;
+use App\Models\ResearchedDocumentReference;
 use App\Services\Analysis\AnalysisContext;
 use App\Services\Analysis\AnalysisProgress;
 use App\Services\Analysis\Contracts\PipelineStep;
 use App\Services\Analysis\ReferenceVerification;
 use App\Services\Analysis\ReferenceVerificationBatch;
-use App\Services\Crossref\CrossrefClient;
-use App\Services\Crossref\CrossrefWorkData;
-use App\Services\Crossref\DoiLookup;
-use App\Services\Crossref\DoiNormalizer;
-use App\Services\Crossref\ReferenceQuery;
+use App\Services\Metadata\DoiLookup;
+use App\Services\Metadata\DoiNormalizer;
+use App\Services\Metadata\DoiResolutionChain;
+use App\Services\Metadata\MetadataSourceChain;
+use App\Services\Metadata\ReferenceQuery;
+use App\Services\Metadata\SourceChainState;
+use App\Services\Scoring\MatchReasonBuilder;
 use App\Services\Scoring\ScoringReference;
 
 /**
- * `crossref_validation` — retrieves Crossref candidates for every reference.
+ * `crossref_validation` — retrieves candidate metadata for every reference.
  *
  * Performs network I/O only: durable rows are written by `ScoreReferencesStep`
  * after scoring (D-04-05). References are processed in bibliography order
  * (`text_start_offset` ASC, nulls last, `id` tiebreak — OQ-18).
  *
- * Outage policy (D-04-01 / OQ-03): a completed Crossref exchange (a lookup hit
- * or a `404` miss) proves reachability. A `CrossrefUnavailableException` before
- * any completed exchange is rethrown and fails the document; after one, only
- * that reference degrades to `pending` and the rest continue.
+ * This step is a thin orchestrator (D-09-05): the ordered DOI resolution chain
+ * (Crossref → Semantic Scholar → OpenAlex) and the ordered search chain
+ * (Crossref → Garuda → Semantic Scholar → OpenAlex) own their own gating,
+ * budgets, outage policies and merging. No per-source `if` lives here.
  */
 final class ValidateReferencesStep implements PipelineStep
 {
     public function __construct(
-        private readonly CrossrefClient $client,
+        private readonly DoiResolutionChain $doiChain,
+        private readonly MetadataSourceChain $sourceChain,
         private readonly DoiNormalizer $normalizer,
         private readonly AnalysisProgress $progress,
     ) {}
@@ -50,130 +53,82 @@ final class ValidateReferencesStep implements PipelineStep
             ->orderBy('id')
             ->get();
 
-        $receivedAnyResponse = false;
+        $state = new SourceChainState(
+            documentId: (string) $document->getKey(),
+            fallbackBudget: max(0, (int) config('analysis.metadata.fallback.max_requests_per_document', 300)),
+            fallbackSeconds: max(0, (int) config('analysis.metadata.fallback.max_seconds', 300)),
+        );
+
         $verifications = [];
         $total = $references->count();
 
         foreach ($references as $index => $reference) {
-            $referenceValue = ScoringReference::fromModel($reference, $this->normalizer);
-            $doiLookup = DoiLookup::NotPresent;
-            $candidates = [];
-
-            if (! ReferenceQuery::isSearchable($reference)) {
-                $verifications[] = new ReferenceVerification($referenceValue, $doiLookup, []);
-                $this->progress->report($document, $this->step(), $index + 1, $total);
-
-                continue;
-            }
-
-            if ($referenceValue->doi !== null) {
-                if (! $referenceValue->doiValid) {
-                    $doiLookup = DoiLookup::Malformed;
-                } else {
-                    try {
-                        $work = $this->client->findByDoi($referenceValue->doi);
-                        $receivedAnyResponse = true;
-
-                        if ($work === null) {
-                            $doiLookup = DoiLookup::NotFound;
-                        } else {
-                            $doiLookup = DoiLookup::Resolved;
-                            $candidates[] = $work;
-                        }
-                    } catch (CrossrefUnavailableException $exception) {
-                        if (! $receivedAnyResponse) {
-                            throw $exception;
-                        }
-
-                        $verifications[] = new ReferenceVerification($referenceValue, DoiLookup::NotPresent, [], transientFailure: true);
-                        $this->progress->report($document, $this->step(), $index + 1, $total);
-
-                        continue;
-                    }
-                }
-            }
-
-            // Best-effort bibliographic search whenever there is data to search on
-            // (D-04-02): it supplies the correct-publication candidate for a
-            // conflicting/non-resolving DOI and the candidates for a no-DOI entry.
-            $searchQuery = ReferenceQuery::fromReference($reference);
-
-            if ($searchQuery->bibliographic !== '') {
-                try {
-                    $search = $this->client->searchBibliographic($searchQuery);
-                    $receivedAnyResponse = true;
-                    $candidates = $this->merge($candidates, $search);
-                } catch (CrossrefUnavailableException $exception) {
-                    if (! $receivedAnyResponse) {
-                        throw $exception;
-                    }
-
-                    $verifications[] = new ReferenceVerification($referenceValue, $doiLookup, [], transientFailure: true);
-                    $this->progress->report($document, $this->step(), $index + 1, $total);
-
-                    continue;
-                }
-            }
-
-            $verifications[] = new ReferenceVerification($referenceValue, $doiLookup, $candidates);
+            $verifications[] = $this->verifyReference($reference, $state);
             $this->progress->report($document, $this->step(), $index + 1, $total);
         }
 
         $context->setVerification(new ReferenceVerificationBatch($verifications));
     }
 
-    /**
-     * Merge DOI-lookup and search candidates, de-duplicating by normalized DOI
-     * first (keeping the DOI-lookup copy, which is authoritative) and by
-     * normalized title for DOI-less works.
-     *
-     * @param  list<CrossrefWorkData>  $existing
-     * @param  list<CrossrefWorkData>  $incoming
-     * @return list<CrossrefWorkData>
-     */
-    private function merge(array $existing, array $incoming): array
-    {
-        $merged = [];
-        $seenDois = [];
-        $seenTitles = [];
+    private function verifyReference(
+        ResearchedDocumentReference $reference,
+        SourceChainState $state,
+    ): ReferenceVerification {
+        $referenceValue = ScoringReference::fromModel($reference, $this->normalizer);
+        $referenceId = (string) $reference->getKey();
 
-        foreach (array_merge($existing, $incoming) as $work) {
-            if ($work->doi !== null) {
-                if (isset($seenDois[$work->doi])) {
-                    continue;
+        $doiLookup = DoiLookup::NotPresent;
+        $doiSource = null;
+        $candidates = [];
+        $transientFailure = false;
+        $pendingReason = null;
+
+        if ($referenceValue->doi !== null) {
+            if (! $referenceValue->doiValid) {
+                $doiLookup = DoiLookup::Malformed;
+            } else {
+                $result = $this->doiChain->resolve($referenceValue->doi, $state, $referenceId);
+
+                $doiLookup = $result->lookup;
+                $doiSource = $result->source;
+
+                if ($result->work !== null) {
+                    $candidates[] = $result->work;
                 }
 
-                $seenDois[$work->doi] = true;
-                $merged[] = $work;
-
-                continue;
+                if ($result->lookup === DoiLookup::Unknown) {
+                    $transientFailure = true;
+                    $pendingReason = $result->pendingReason ?? MatchReasonBuilder::DOI_UNKNOWN;
+                }
             }
-
-            $title = $this->titleKey($work->title);
-
-            if ($title !== null && isset($seenTitles[$title])) {
-                continue;
-            }
-
-            if ($title !== null) {
-                $seenTitles[$title] = true;
-            }
-
-            $merged[] = $work;
         }
 
-        return $merged;
-    }
+        // Best-effort bibliographic search whenever there is data to search on
+        // (D-04-02): it supplies the correct-publication candidate for a
+        // conflicting/non-resolving DOI and the candidates for a no-DOI entry.
+        $searchQuery = ReferenceQuery::fromReference($reference);
 
-    private function titleKey(?string $title): ?string
-    {
-        if ($title === null) {
-            return null;
+        if ($searchQuery->bibliographic !== '') {
+            $result = $this->sourceChain->search(
+                query: $searchQuery,
+                referenceTitle: $referenceValue->title,
+                existing: $candidates,
+                state: $state,
+                referenceId: $referenceId,
+            );
+
+            $candidates = $result->candidates;
+            $transientFailure = $transientFailure || $result->transientFailure;
+            $pendingReason = $pendingReason ?? $result->pendingReason;
         }
 
-        $title = mb_strtolower(trim($title));
-        $title = preg_replace('/\s+/u', ' ', $title) ?? $title;
-
-        return $title === '' ? null : $title;
+        return new ReferenceVerification(
+            reference: $referenceValue,
+            doiLookup: $doiLookup,
+            candidates: $candidates,
+            transientFailure: $transientFailure,
+            pendingReason: $pendingReason,
+            doiSource: $doiSource,
+        );
     }
 }

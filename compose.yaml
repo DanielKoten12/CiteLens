@@ -1,8 +1,8 @@
 # Dafpus Cek — development stack (`docs/ARCHITECTURE.md` §2/§12).
 #
 # Usage (run from the repository root):
-#   docker compose up -d --build                        # default: amd64 GROBID full image
-#   docker compose -f compose.yaml -f compose.arm64.yaml up -d --build   # Apple Silicon / arm64
+#   docker compose up -d --build                        # default: GROBID CRF (multi-arch)
+#   docker compose -f compose.yaml -f compose.full.yaml up -d --build    # GROBID full (amd64)
 #   docker compose -f compose.yaml -f compose.prod.yaml up -d --build    # production-shaped
 #   docker compose -f compose.yaml -f compose.debug.yaml up -d           # + localhost debug ports
 #
@@ -51,6 +51,21 @@ x-backend-environment: &backend-environment
   GOTENBERG_URL: http://gotenberg:3000
   GOTENBERG_TIMEOUT: "60"
   CROSSREF_MAILTO: ${CROSSREF_MAILTO:-}
+  # Supplemental metadata sources: empty keys keep them disabled.
+  SEMANTIC_SCHOLAR_API_KEY: ${SEMANTIC_SCHOLAR_API_KEY:-}
+  OPENALEX_API_KEY: ${OPENALEX_API_KEY:-}
+  OPENALEX_MAILTO: ${OPENALEX_MAILTO:-${CROSSREF_MAILTO:-}}
+  METADATA_FAILURE_POLICY_CROSSREF: ${METADATA_FAILURE_POLICY_CROSSREF:-fatal}
+  METADATA_FAILURE_POLICY_GARUDA: ${METADATA_FAILURE_POLICY_GARUDA:-fatal}
+  METADATA_FAILURE_POLICY_SEMANTIC_SCHOLAR: ${METADATA_FAILURE_POLICY_SEMANTIC_SCHOLAR:-degrade}
+  METADATA_FAILURE_POLICY_OPENALEX: ${METADATA_FAILURE_POLICY_OPENALEX:-degrade}
+  ANALYSIS_METADATA_STOP_POLICY: ${ANALYSIS_METADATA_STOP_POLICY:-plausible_title_with_doi}
+  ANALYSIS_METADATA_MAX_FALLBACK_REQUESTS: ${ANALYSIS_METADATA_MAX_FALLBACK_REQUESTS:-300}
+  ANALYSIS_METADATA_MAX_FALLBACK_SECONDS: ${ANALYSIS_METADATA_MAX_FALLBACK_SECONDS:-300}
+  ANALYSIS_METADATA_MAX_CANDIDATES: ${ANALYSIS_METADATA_MAX_CANDIDATES:-10}
+  ANALYSIS_METADATA_CIRCUIT_BREAKER: ${ANALYSIS_METADATA_CIRCUIT_BREAKER:-true}
+  ANALYSIS_METADATA_CIRCUIT_THRESHOLD: ${ANALYSIS_METADATA_CIRCUIT_THRESHOLD:-3}
+  ANALYSIS_METADATA_CIRCUIT_COOLDOWN: ${ANALYSIS_METADATA_CIRCUIT_COOLDOWN:-120}
   SCORING_SEMANTIC_ENABLED: ${SCORING_SEMANTIC_ENABLED:-false}
 
 # Development mounts: the bind mount serves live source; the named volumes keep
@@ -180,10 +195,11 @@ services:
       start_period: 10s
 
   grobid:
-    # Default stack targets amd64 hosts (docs/API_SPEC.md §9). On arm64 use
-    # compose.arm64.yaml, which swaps in the CRF image built for linux/arm64.
-    image: grobid/grobid:0.9.1-full
-    platform: linux/amd64
+    # Multi-arch image (linux/amd64 + linux/arm64), so no `platform:` pin: Docker
+    # resolves the host architecture and nothing runs under emulation. CRF models
+    # cover bibliography + in-text citation extraction; compose.full.yaml swaps in
+    # the amd64-only `-full` image when the higher parsing accuracy is needed.
+    image: grobid/grobid:0.9.1-crf
     ulimits:
       core: 0
     healthcheck:

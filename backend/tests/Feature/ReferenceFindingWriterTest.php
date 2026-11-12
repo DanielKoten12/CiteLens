@@ -1,25 +1,27 @@
 <?php
 
+use App\Enums\MetadataSource;
 use App\Enums\ReferenceFindingStatus;
 use App\Models\ReferenceFinding;
 use App\Models\ReferenceFindingCandidate;
-use App\Services\Crossref\CrossrefWorkData;
+use App\Services\Metadata\WorkMetadata;
 use App\Services\ReferenceFinding\ReferenceFindingWriter;
 use App\Services\Scoring\ReferenceVerdict;
 use App\Services\Scoring\ScoreBreakdown;
 use App\Services\Scoring\ScoredCandidate;
 use Tests\Support\DocumentTree;
 
-function writerCandidate(int $rank, float $confidence, string $doi): ScoredCandidate
+function writerCandidate(int $rank, float $confidence, string $doi, MetadataSource $source = MetadataSource::Crossref): ScoredCandidate
 {
     return new ScoredCandidate(
-        work: new CrossrefWorkData(
+        work: new WorkMetadata(
             doi: $doi,
             title: 'Title '.$rank,
             authors: ['A B'],
             containerTitle: 'Journal',
             publicationYear: 2020,
             url: 'https://doi.org/'.$doi,
+            source: $source,
         ),
         breakdown: new ScoreBreakdown(
             signals: ['title' => $confidence, 'authors' => null, 'journal' => null, 'year' => null],
@@ -57,6 +59,28 @@ it('creates one finding with ranked candidates and a selected candidate', functi
         ->and($finding->candidates()->pluck('rank')->all())->toBe([1, 2])
         ->and($finding->selected_candidate_id)->toBe($finding->candidates()->where('rank', 1)->value('id'))
         ->and($finding->candidates()->where('rank', 1)->value('doi'))->toBe('10.1/a');
+});
+
+it('persists the metadata source of every candidate', function () {
+    $tree = DocumentTree::create();
+    $reference = $tree->reference();
+
+    app(ReferenceFindingWriter::class)->persistBatch($tree->document, [
+        writerVerdict($reference->getKey(), ReferenceFindingStatus::Valid, 0.9, 1, [
+            writerCandidate(1, 0.9, '10.1/a', MetadataSource::Garuda),
+            writerCandidate(2, 0.6, '10.1/b'),
+        ]),
+    ]);
+
+    $rows = ReferenceFinding::query()
+        ->where('researched_document_reference_id', $reference->getKey())
+        ->firstOrFail()
+        ->candidates()
+        ->orderBy('rank')
+        ->get();
+
+    expect($rows[0]->source)->toBe(MetadataSource::Garuda)
+        ->and($rows[1]->source)->toBe(MetadataSource::Crossref);
 });
 
 it('updates the existing finding in place on a second run', function () {

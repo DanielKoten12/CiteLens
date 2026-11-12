@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\MetadataSource;
 use App\Enums\ReportStatus;
 use App\Models\File;
 use App\Models\ReferenceFinding;
@@ -178,6 +179,24 @@ it('cascades citation resolution candidates when a citation is deleted', functio
     DB::table('researched_documents')->where('id', $tree['document'])->delete();
 
     expect(DB::table('citation_resolution_candidates')->count())->toBe(0);
+});
+
+it('defaults the candidate metadata source to crossref', function () {
+    $finding = ReferenceFinding::factory()->create();
+    $id = (string) Str::uuid();
+
+    DB::table('reference_finding_candidates')->insert([
+        'id' => $id,
+        'reference_finding_id' => $finding->getKey(),
+        'rank' => 1,
+        'confidence' => 0.5,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $candidate = ReferenceFindingCandidate::query()->findOrFail($id);
+
+    expect($candidate->source)->toBe(MetadataSource::Crossref);
 });
 
 it('adds a non-null disk column to files', function () {

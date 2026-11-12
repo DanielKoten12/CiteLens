@@ -1,7 +1,7 @@
 <?php
 
 use App\Services\Analysis\EmbeddingIndex;
-use App\Services\Crossref\CrossrefWorkData;
+use App\Services\Metadata\WorkMetadata;
 use App\Services\Scoring\ReferenceScorer;
 use App\Services\Scoring\ScoringReference;
 
@@ -35,8 +35,8 @@ it('ranks the higher-confidence candidate first', function () {
     $ranked = app(ReferenceScorer::class)->score(
         scoringReference(),
         [
-            new CrossrefWorkData(doi: '10.1/partial', title: 'Deep neural learning'),
-            new CrossrefWorkData(doi: '10.1/exact', title: 'Deep learning'),
+            new WorkMetadata(doi: '10.1/partial', title: 'Deep neural learning'),
+            new WorkMetadata(doi: '10.1/exact', title: 'Deep learning'),
         ],
         EmbeddingIndex::empty(),
     );
@@ -60,7 +60,7 @@ it('redistributes weight over the available signals', function () {
 
     $ranked = app(ReferenceScorer::class)->score(
         scoringReference(['title' => 'Deep learning', 'authors' => null]),
-        [new CrossrefWorkData(doi: '10.1/a', title: 'Deep learning')],
+        [new WorkMetadata(doi: '10.1/a', title: 'Deep learning')],
         EmbeddingIndex::empty(),
     );
 
@@ -71,7 +71,7 @@ it('redistributes weight over the available signals', function () {
 it('floors an agreeing doi match above the valid threshold', function () {
     $ranked = app(ReferenceScorer::class)->score(
         scoringReference(['doi' => '10.1/same', 'title' => 'Deep learning']),
-        [new CrossrefWorkData(doi: '10.1/same', title: 'Deep learning methods')],
+        [new WorkMetadata(doi: '10.1/same', title: 'Deep learning methods')],
         EmbeddingIndex::empty(),
     );
 
@@ -83,7 +83,7 @@ it('floors an agreeing doi match above the valid threshold', function () {
 it('does not floor a conflicting doi match', function () {
     $ranked = app(ReferenceScorer::class)->score(
         scoringReference(['doi' => '10.1/same', 'title' => 'Deep learning']),
-        [new CrossrefWorkData(doi: '10.1/same', title: 'Completely unrelated work')],
+        [new WorkMetadata(doi: '10.1/same', title: 'Completely unrelated work')],
         EmbeddingIndex::empty(),
     );
 
@@ -106,8 +106,8 @@ it('uses the semantic signal when embeddings are available', function () {
     $ranked = app(ReferenceScorer::class)->score(
         $reference,
         [
-            new CrossrefWorkData(doi: '10.1/orthogonal', title: 'Deep learning'),
-            new CrossrefWorkData(doi: '10.1/identical', title: 'Deep learning'),
+            new WorkMetadata(doi: '10.1/orthogonal', title: 'Deep learning'),
+            new WorkMetadata(doi: '10.1/identical', title: 'Deep learning'),
         ],
         $embeddings,
     );
@@ -121,7 +121,7 @@ it('marks semantics as degraded when embeddings are unavailable', function () {
 
     $ranked = app(ReferenceScorer::class)->score(
         scoringReference(),
-        [new CrossrefWorkData(doi: '10.1/a', title: 'Deep learning')],
+        [new WorkMetadata(doi: '10.1/a', title: 'Deep learning')],
         EmbeddingIndex::unavailable(),
     );
 
@@ -132,7 +132,7 @@ it('marks semantics as degraded when embeddings are unavailable', function () {
 it('produces a deterministic match reason with component evidence', function () {
     $ranked = app(ReferenceScorer::class)->score(
         scoringReference(['title' => 'Deep learning']),
-        [new CrossrefWorkData(doi: '10.1/a', title: 'Deep learning')],
+        [new WorkMetadata(doi: '10.1/a', title: 'Deep learning')],
         EmbeddingIndex::empty(),
     );
 

@@ -14,7 +14,8 @@ Vue.js (SPA)
 Laravel API  ── auth, documents, references, citations, findings, reports, DB
    │
    ├── MySQL/Postgres  (see docs/DB_SCHEMA.md)
-   ├── Crossref REST API (outbound HTTP, orchestrated by Laravel)
+   ├── Metadata sources (outbound HTTP, orchestrated by Laravel):
+   │     Crossref (primary/authoritative) → Garuda → Semantic Scholar → OpenAlex
    ├── Queue worker  (async analysis pipeline)
    └── FastAPI inference server (internal, private network)
           ├── GROBID  → extract references + in-text citations + coordinates
@@ -26,7 +27,7 @@ Laravel API  ── auth, documents, references, citations, findings, reports, D
 | Concern | Owner |
 |---|---|
 | Auth, persistence, analysis orchestration, status/progress | Laravel |
-| Crossref lookups, candidate ranking, scoring, citation resolution | Laravel |
+| Metadata lookups (Crossref, Garuda, Semantic Scholar, OpenAlex), DOI resolution, candidate ranking, scoring, citation resolution | Laravel |
 | String similarity (Jaro-Winkler, Levenshtein), exact matching | Laravel |
 | Document parsing / reference + citation extraction (GROBID) | FastAPI (inference) |
 | Semantic embeddings (SBERT) | FastAPI (inference) |
@@ -35,6 +36,11 @@ Laravel is the source of truth. GROBID/SBERT algorithms are **never** exposed as
 
 > **Note (OQ-11):** the Crossref REST API is unauthenticated in v1; Laravel identifies itself
 > through `CROSSREF_MAILTO` and a contact `User-Agent`. No `CROSSREF_API_KEY` is used.
+>
+> **Note (Phase 09):** Semantic Scholar and OpenAlex are optional supplemental sources. Both are
+> key-gated: without an API key the source is disabled, and the chain runs with the remaining
+> enabled sources. Keys are sent in request headers, never in URLs, and are never exposed to the
+> frontend.
 
 ---
 
@@ -146,13 +152,20 @@ Every non-2xx response uses the same shape:
 | `valid` | Matched confidently |
 | `suspicious` | Matched but low confidence / partial mismatch |
 | `invalid` | Match found but metadata conflicts |
-| `not_found` | No candidate found in Crossref |
+| `not_found` | No candidate found in the **enabled** metadata sources (every enabled source answered) |
 
-> **Note (OQ-02):** a DOI present in the document that does not resolve in Crossref is `invalid`
-> with reason `"DOI tidak ditemukan di Crossref."` (a broken DOI contradicts the document's own
-> claim). `not_found` is reserved for a reference with no DOI and no Crossref candidate; a DOI
-> with an invalid shape is `invalid` with reason `"Format DOI tidak valid."`
-> `suspicious` covers a partial/weak match, including likely non-indexed local venues.
+> **Note (OQ-02, revised by Phase 09):** DOIs are resolved through an ordered chain
+> (Crossref → Semantic Scholar → OpenAlex). A DOI that **every enabled resolver completed a miss
+> for** (`404`) is `invalid` with reason `"DOI tidak ditemukan pada sumber metadata."` (a broken
+> DOI contradicts the document's own claim). If an enabled resolver could not answer (outage,
+> circuit breaker or budget) and no resolver confirmed the DOI, the outcome is **unknown**: the
+> finding is `pending` with reason `"DOI belum dapat diverifikasi karena sumber metadata tidak
+> tersedia. Coba lagi nanti."` — never `invalid`. A DOI whose shape is invalid stays `invalid`
+> with `"Format DOI tidak valid."` without any DOI-resolution network call.
+>
+> `not_found` requires that **every enabled search source answered and none matched**; a source
+> that failed or was budget-skipped yields `pending` instead. `suspicious` covers a partial/weak
+> match, including likely non-indexed local venues.
 
 **Citation status** (derived, not stored — recomputed from the resolution state and the reference
 finding)
@@ -560,7 +573,7 @@ Filters: `status` (finding status), `has_doi` (bool). Paginated.
         "id": "f-101-uuid",
         "status": "valid",
         "confidence": 0.9500,
-        "reason": "Exact DOI match with Crossref.",
+        "reason": "DOI cocok dengan metadata Crossref.",
         "selected_candidate_id": "c-101-uuid"
       }
     },
@@ -578,7 +591,7 @@ Filters: `status` (finding status), `has_doi` (bool). Paginated.
         "id": "f-102-uuid",
         "status": "suspicious",
         "confidence": 0.6300,
-        "reason": "Judul pada metadata Crossref memiliki perbedaan.",
+        "reason": "Judul pada metadata kandidat memiliki perbedaan.",
         "selected_candidate_id": "c-102-uuid"
       }
     }
@@ -629,7 +642,7 @@ pointing to this reference.
       "id": "f-102-uuid",
       "status": "suspicious",
       "confidence": 0.6300,
-      "reason": "Judul pada metadata Crossref memiliki perbedaan.",
+      "reason": "Judul pada metadata kandidat memiliki perbedaan.",
       "selected_candidate_id": "c-102-uuid",
       "is_manual": false,
       "reviewed_by": null,
@@ -639,6 +652,7 @@ pointing to this reference.
           "id": "c-102-uuid",
           "rank": 1,
           "confidence": 0.6300,
+          "source": "crossref",
           "doi": "10.1234/example",
           "title": "Sistem Pendeteksi Plagiarisme Dokumen",
           "authors": "Koten, D. B.",
@@ -655,6 +669,14 @@ pointing to this reference.
   }
 }
 ```
+
+> `finding.candidates[].source` is the catalogue the record came from: `crossref` (primary),
+> `garuda` (Indonesian fallback), `semantic_scholar`, or `openalex`. Candidates follow the
+> configured source order and are de-duplicated across sources; a DOI-bearing record can replace
+> an equivalent DOI-less one. A `valid` finding may select a candidate with `doi: null` when the
+> match came from Garuda — `valid` means the publication exists in a verified catalogue, not that
+> a DOI was found. When a DOI was confirmed by a fallback resolver, `reason` names that resolver
+> (e.g. `"DOI cocok dengan metadata OpenAlex."`).
 
 **Failure — `404`**
 
@@ -922,7 +944,7 @@ Filters: `type` (`reference_invalid|reference_suspicious|reference_not_found|ref
       "id": "ref-finding:f-102-uuid",
       "type": "reference_suspicious",
       "severity": "medium",
-      "message": "Judul pada metadata Crossref memiliki perbedaan.",
+      "message": "Judul pada metadata kandidat memiliki perbedaan.",
       "reference_id": "r-102-uuid",
       "citation_id": null,
       "text": "Koten, D. B. (2023). Sistem Deteksi Plagiarisme. Jurnal Informatika.",
@@ -1183,8 +1205,17 @@ Triggered by `POST /documents`.
       → insert researched_document_citations
       → insert researched_document_citation_locations
 3. For each reference:
-      → Crossref lookup (DOI or bibliographic search)
-      → insert reference_finding_candidates (ranked)
+      → DOI resolution chain: Crossref → Semantic Scholar → OpenAlex
+            · first resolver returning a work wins (Crossref is authoritative when it answers)
+            · every enabled resolver completed a 404 → DOI not found → `invalid`
+            · an enabled resolver could not answer and none confirmed → DOI unknown → `pending`
+      → bibliographic search chain: Crossref (always) → Garuda → Semantic Scholar → OpenAlex
+            · fallbacks stop at the first plausible title match (optionally with a DOI)
+            · each source is gated, budgeted, throttled, cached and governed by its own
+              `fatal|degrade` outage policy
+      → merge/deduplicate candidates across sources (DOI first, then normalized title;
+        a DOI-bearing duplicate replaces an equivalent DOI-less record)
+      → insert reference_finding_candidates (ranked, with `source`, capped after ranking)
 4. Similarity scoring (Laravel): Jaro-Winkler + Levenshtein + SBERT embeddings
       → compute confidence, pick selected_candidate_id
       → upsert reference_findings (status, reason)
@@ -1209,7 +1240,7 @@ Progress is reported via `analysis_progress` / `analysis_step` / `analysis_error
 | Reference | `researched_document_references` (`raw_text`, `doi`, `title`, `authors`, `publication_name`, `publication_year`, `text_start_offset`, `text_end_offset`) |
 | Reference highlight | `researched_document_reference_locations` |
 | Reference verdict | `reference_findings` (`status`, `confidence`, `reason`, `selected_candidate_id`, `is_manual`, `reviewed_by`, `reviewed_at`) |
-| Reference candidates | `reference_finding_candidates` (`rank`, `confidence`, `doi`, `title`, `authors`, `publication_name`, `publication_year`, `url`, `match_reason`) |
+| Reference candidates | `reference_finding_candidates` (`rank`, `confidence`, `source`, `doi`, `title`, `authors`, `publication_name`, `publication_year`, `url`, `match_reason`) |
 | Citation | `researched_document_citations` (`citation_text`, `citation_marker`, `context_*`, `text_*_offset`, `occurrence_index`, `researched_document_reference_id`) |
 | Citation status | **derived**: `hallucination` if unpaired; otherwise `valid` / `unreliable` / `pending` from the paired reference finding status |
 | Citation highlight | `researched_document_citation_locations` (`page_number`, `x`, `y`, `width`, `height`, `page_*`, `coordinate_system`, `location_index`) |

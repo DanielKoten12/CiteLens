@@ -14,6 +14,26 @@ final class Fixtures
     private const BASE_PATH = __DIR__.'/../Fixtures';
 
     /**
+     * Load a raw text fixture (HTML, XML) by path relative to `tests/Fixtures`.
+     */
+    public static function text(string $path): string
+    {
+        $file = self::BASE_PATH.'/'.ltrim($path, '/');
+
+        if (! is_file($file)) {
+            throw new RuntimeException("Fixture not found: {$path}");
+        }
+
+        $contents = file_get_contents($file);
+
+        if ($contents === false) {
+            throw new RuntimeException("Fixture could not be read: {$path}");
+        }
+
+        return $contents;
+    }
+
+    /**
      * Load a JSON fixture by path relative to `tests/Fixtures`, with or without
      * the `.json` extension.
      *

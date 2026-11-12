@@ -1,0 +1,23 @@
+# GROBID "full" overlay (deep-learning models; accuracy upgrade, amd64 only).
+#
+# The default `compose.yaml` runs `grobid/grobid:0.9.1-crf`, which is a multi-arch
+# image (linux/amd64 + linux/arm64) and therefore needs no `platform:` pin — the
+# same file works natively on Intel, Apple Silicon and arm64 Linux. CRF models
+# cover bibliography entries + in-text citations; the full models parse references
+# and citation contexts more accurately, at the cost of a much larger image and
+# more RAM.
+#
+# `0.9.1-full` ships an amd64 manifest only, so this overlay pins
+# `platform: linux/amd64`: a no-op on amd64 hosts, QEMU emulation on arm64 hosts
+# (slow, several GB of RAM — raise the Docker Desktop VM memory limit).
+#
+# Usage:
+#   docker compose -f compose.yaml -f compose.full.yaml up -d --build
+#   docker compose -f compose.yaml -f compose.prod.yaml -f compose.full.yaml up -d --build
+#
+# See docker/README.md §5 for the accuracy trade-off.
+
+services:
+  grobid:
+    image: grobid/grobid:0.9.1-full
+    platform: linux/amd64

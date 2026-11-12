@@ -2,12 +2,13 @@
 
 namespace App\Services\Analysis;
 
-use App\Services\Crossref\CrossrefWorkData;
-use App\Services\Crossref\DoiLookup;
+use App\Enums\MetadataSource;
+use App\Services\Metadata\DoiLookup;
+use App\Services\Metadata\WorkMetadata;
 use App\Services\Scoring\ScoringReference;
 
 /**
- * Transient Crossref retrieval result for one reference, produced by
+ * Transient metadata retrieval result for one reference, produced by
  * {@see Steps\ValidateReferencesStep} and consumed by the embedding/scoring
  * steps.
  *
@@ -17,12 +18,15 @@ use App\Services\Scoring\ScoringReference;
 final class ReferenceVerification
 {
     /**
-     * @param  list<CrossrefWorkData>  $candidates
+     * @param  list<WorkMetadata>  $candidates
+     * @param  MetadataSource|null  $doiSource  resolver that confirmed the DOI, if any
      */
     public function __construct(
         public readonly ScoringReference $reference,
         public readonly DoiLookup $doiLookup,
         public readonly array $candidates,
         public readonly bool $transientFailure = false,
+        public readonly ?string $pendingReason = null,
+        public readonly ?MetadataSource $doiSource = null,
     ) {}
 }

@@ -10,7 +10,14 @@ it('loads the provisional defaults', function () {
         ->and($config->yearTolerance())->toBe(1)
         ->and($config->semanticEnabled())->toBeTrue()
         ->and($config->semanticTitleBlend())->toBe(0.6)
-        ->and($config->localVenueKeywords())->toBe([])
+        ->and($config->fallbackTitleThreshold())->toBe(0.85)
+        ->and($config->localVenueKeywords())->toBe([
+            'prosiding',
+            'seminar nasional',
+            'pengabdian masyarakat',
+            'skripsi',
+            'tesis',
+        ])
         ->and(array_sum($config->weights()))->toEqualWithDelta(1.0, 0.001);
 });
 

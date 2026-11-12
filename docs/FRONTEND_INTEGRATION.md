@@ -65,8 +65,8 @@ Beberapa elemen prototipe tidak punya padanan di API, sehingga tampilannya dises
 | Jumlah halaman (`pages`) | Dihapus | Tidak dikirim API |
 | Kolom "Halu" | "Tidak valid" (`invalid` + `not_found`) dan "Sitasi halu" (`hallucination`) | Sesuai definisi di spec: status referensi dan status sitasi adalah dua hal berbeda |
 | "Dokumen tidak disimpan di server kami" | "Dokumenmu hanya bisa diakses oleh akunmu dan bisa dihapus kapan saja" | Backend memang menyimpan file; kalimat lama tidak akurat |
-| Sumber: Crossref, OpenAlex, Semantic Scholar | Hanya Crossref | Spec hanya memakai Crossref |
-| Langkah progres: ekstrak teks, deteksi sitasi, validasi Crossref & OpenAlex, susun laporan | Ekstrak referensi & sitasi, validasi Crossref, skor kecocokan, tautkan sitasi | Dipetakan dari `current_step` pipeline asli |
+| Sumber: Crossref, OpenAlex, Semantic Scholar | Empat chip sumber: Crossref, Garuda, Semantic Scholar, OpenAlex | Rantai metadata Phase 09; chip hanya teks presentasi, `finding.candidates[].source` adalah provenance otoritatif |
+| Langkah progres: ekstrak teks, deteksi sitasi, validasi Crossref & OpenAlex, susun laporan | Ekstrak referensi & sitasi, validasi metadata (Crossref → Garuda → Semantic Scholar → OpenAlex), skor kecocokan, tautkan sitasi | Dipetakan dari `current_step` pipeline asli |
 
 ---
 

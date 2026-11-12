@@ -17,8 +17,10 @@ deployment topology. The **public contract** is `docs/API_SPEC.md`; the **domain
                                                                        │
                         ┌──────────────────────────────┬───────────────┼───────────────────┐
                         ▼                              ▼               ▼                   ▼
-                 MySQL / Postgres              Queue worker     FastAPI inference    Crossref REST
-                 (docs/DB_SCHEMA.md)          (async pipeline)  (internal network)   (outbound HTTP)
+                 MySQL / Postgres              Queue worker     FastAPI inference   Metadata sources
+                 (docs/DB_SCHEMA.md)          (async pipeline)  (internal network)   Crossref · Garuda ·
+                                                                                     Semantic Scholar · OpenAlex
+                                                                                     (outbound HTTP)
                                                                       │
                                                           ┌───────────┴───────────┐
                                                           ▼                       ▼
@@ -31,7 +33,10 @@ deployment topology. The **public contract** is `docs/API_SPEC.md`; the **domain
   public endpoints.
 - **FastAPI (`inference/`) is an internal inference server only.** It is not part of the public
   contract and must never be called by the browser.
-- **Crossref** is fetched outbound by Laravel only (queue workers).
+- **Crossref**, the **Garuda** catalogue page, **Semantic Scholar** and **OpenAlex** are fetched
+  outbound by Laravel only (queue workers), as ordered metadata chains: Crossref is primary and
+  authoritative; Garuda (parsed HTML, no API), Semantic Scholar and OpenAlex are supplemental
+  fallbacks. DOI resolution runs Crossref → Semantic Scholar → OpenAlex.
 
 ---
 
@@ -41,7 +46,7 @@ deployment topology. The **public contract** is `docs/API_SPEC.md`; the **domain
 |---|---|---|
 | Auth, authorization, persistence, document lifecycle | Laravel | Sanctum tokens; ownership scoped queries |
 | Orchestration, status/progress | Laravel | Queue job + `analysis_*` columns |
-| Crossref lookups, candidate ranking/scoring | Laravel | Never from the frontend |
+| Metadata-source lookups (Crossref, Garuda, Semantic Scholar, OpenAlex), DOI resolution, candidate ranking/scoring | Laravel | Never from the frontend |
 | String similarity (Jaro-Winkler, Levenshtein), exact matching | Laravel | Scoring stays server-side |
 | Document parsing, reference/citation extraction, coordinates | FastAPI + GROBID | Internal |
 | Semantic embeddings (SBERT) | FastAPI + SBERT | Internal, batched |
@@ -51,7 +56,7 @@ deployment topology. The **public contract** is `docs/API_SPEC.md`; the **domain
 Hard rules:
 
 1. GROBID/SBERT functionality is never exposed as public API endpoints.
-2. The frontend never accesses the database, GROBID, SBERT or Crossref directly.
+2. The frontend never accesses the database, GROBID, SBERT or any metadata source directly.
 3. The frontend never decides whether a reference is valid; it renders Laravel's verdicts.
 4. Scoring and citation-status derivation are implemented **once**, server-side.
 
@@ -67,7 +72,7 @@ Hard rules:
 | Queue | Laravel queue (`QUEUE_CONNECTION=database` by default; `sync` in tests) |
 | Inference | Python 3.14, FastAPI (`fastapi[standard]`), uv-managed; GROBID + SBERT |
 | Reports | `gotenberg/gotenberg-php` 2.x (HTML→PDF) over a Guzzle PSR-18 client; Blade template rendered to HTML in Laravel |
-| External | Crossref REST API |
+| External | Crossref REST API; Garuda search page (HTML fallback, no public API); Semantic Scholar Graph API; OpenAlex Works API (both key-gated) |
 
 ---
 
@@ -154,8 +159,12 @@ POST /documents
   3. FastAPI POST /v1/extract (GROBID)
         → insert references + reference locations
         → insert citations + citation locations
-  4. per reference: Crossref lookup (DOI or bibliographic search)
-        → insert ranked reference_finding_candidates
+  4. per reference: ordered metadata chains (Laravel)
+        → DOI resolution: Crossref → Semantic Scholar → OpenAlex (first answer wins;
+          all-miss = invalid, unanswerable + unconfirmed = pending)
+        → bibliographic search: Crossref (always) → Garuda → Semantic Scholar → OpenAlex,
+          stopping at the first plausible title (+DOI) match
+        → merge/dedupe across sources; insert ranked reference_finding_candidates (`source`)
   5. scoring (Laravel): Jaro-Winkler + Levenshtein + SBERT embeddings
         → confidence, selected_candidate_id → upsert reference_findings
   6. resolve citations → set researched_document_citations.researched_document_reference_id
@@ -188,6 +197,18 @@ A DOI that resolves but whose metadata conflicts with the entry must be distingu
 DOI that does not resolve at all (case 1 vs. case 2 in `PRODUCT_REQUIREMENTS.md`). SBERT output is
 only one indicator and must be combined with the other signals — it is never sufficient on its
 own.
+
+Scoring is **source-agnostic** (D-09-11): a candidate's `source` determines provenance, merge order
+and the reason wording, never its score. The ordered chains decide *where* to look and *when to
+stop*, not how good a match is. Candidate merge/dedupe is DOI-first, then normalized title, and a
+DOI-bearing record replaces an equivalent DOI-less one so a local-catalogue hit cannot shadow the
+same publication's DOI. The final persisted list is capped after ranking
+(`analysis.metadata.max_candidates_per_reference`).
+
+Outage policy is per source (`analysis.metadata.failure_policies`, env-overridable): `fatal` fails
+the document on the first failure of a run; `degrade` records the failure, skips the source and can
+never turn "we could not check" into `not_found`/`invalid`. Optional sources get a per-document
+request budget, a shared cache/throttle and a cache-backed circuit breaker.
 
 ---
 
@@ -267,12 +288,12 @@ Base URL `http://inference:8000` (private network, no auth in v1). Defined in `A
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/health` | `{ status, grobid[, sbert] }` liveness |
+| GET | `/health` | `{ status, grobid, sbert }` liveness |
 | POST | `/v1/extract` | Multipart PDF → references + citations + coordinates (GROBID) |
 | POST | `/v1/embeddings` | Batch texts → vectors (SBERT) |
 
 The service currently reports `status`/`grobid`; `sbert` arrives with the embeddings slice.
-Batch embedding requests (e.g. 32 texts) to bound latency/memory. Crossref consolidation is not
+Batch embedding requests (e.g. 32 texts) to bound latency/memory. Metadata consolidation is not
 delegated to GROBID — Laravel controls validation so results stay reproducible. Failures surface
 to the pipeline as `INFERENCE_UNAVAILABLE`.
 
@@ -284,6 +305,12 @@ to the pipeline as `INFERENCE_UNAVAILABLE`.
   git-ignored — never read or commit it.
 - External services are configured through Laravel config (`backend/config/services.php`) plus
   `.env.example` placeholders (e.g. `CROSSREF_API_KEY=<configured through environment>`).
+- The metadata chain **order** lives only in `backend/config/analysis.php`
+  (`analysis.metadata.primary_sources` / `fallback_sources` / `doi_resolvers`) and is not
+  env-overridable. Enablement, failure policy (`METADATA_FAILURE_POLICY_*`) and budgets are.
+- Semantic Scholar and OpenAlex are key-gated (`SEMANTIC_SCHOLAR_API_KEY`,
+  `OPENALEX_API_KEY`): without a key the source is disabled. Keys travel in request headers,
+  never in URLs or logs.
 - Frontend API base URL should come from a `VITE_*` variable, not a hardcoded URL.
 - Inference is uv-managed (`pyproject.toml`, `uv.lock`, `.python-version` = 3.14).
 
@@ -300,7 +327,7 @@ Never commit secrets, tokens or credentials.
 | Queue worker | Private; same codebase, `queue:work` |
 | Database | Private |
 | FastAPI inference | **Private only** (not internet-facing) |
-| Crossref | Outbound HTTPS from workers |
+| Crossref, Garuda, Semantic Scholar, OpenAlex | Outbound HTTPS from workers; metadata only (Garuda is parsed HTML, no API; OpenAlex content downloads are out of scope) |
 
 Report and document files are stored on a private disk; access is via signed/temporary URLs
 (`FilePreviewData->url`).
@@ -310,9 +337,13 @@ Report and document files are stored on a private disk; access is via signed/tem
 The repository implements this topology with Compose files at the repo root (runbook:
 `docker/README.md`):
 
-- `compose.yaml` — development stack (amd64 default: GROBID `0.9.1-full`, bind-mounted sources,
+- `compose.yaml` — development stack (multi-arch GROBID `0.9.1-crf`, bind-mounted sources,
   Vite dev server, php-fpm + nginx);
-- `compose.arm64.yaml` — arm64 overlay that swaps in the native GROBID `0.9.1-crf` image;
+- `compose.full.yaml` — overlay that swaps in the amd64-only GROBID `0.9.1-full` image when the
+  higher reference-parsing accuracy is wanted (emulated on arm64 hosts);
+- `compose.remote-grobid.yaml` — dev/demo overlay that skips the local GROBID container and points
+  `inference` at a hosted GROBID (`REMOTE_GROBID_URL`), so no multi-GB image is needed. It moves
+  uploaded documents outside the private network; not a production shape (`docs/SECURITY.md` §7);
 - `compose.prod.yaml` — production-shaped overlay (built `prod` targets, no bind mounts, SPA baked
   into nginx, non-root inference service, config/view caches warmed at start);
 - `compose.debug.yaml` — opt-in overlay publishing PostgreSQL/GROBID/inference/Gotenberg on
@@ -320,8 +351,9 @@ The repository implements this topology with Compose files at the repo root (run
 
 Only the Laravel edge (`web`) and the SPA are published by default; GROBID, the inference service,
 Gotenberg and the database never receive public ports (`docs/SECURITY.md` §7). Semantic scoring is
-disabled in the container environment (`SCORING_SEMANTIC_ENABLED=false`) until the SBERT slice
-(`POST /v1/embeddings`) is implemented, because a 404 from that step is fatal to the pipeline.
+disabled by default in the container environment (`SCORING_SEMANTIC_ENABLED=false`); SBERT
+(`POST /v1/embeddings`) is implemented, but the model download and image size have not been
+validated in Docker yet (see `docker/README.md` §5).
 
 ---
 
@@ -382,19 +414,32 @@ Verified against the repository:
   `ReportPayload`, `ReportTemplateRenderer`, `reports/document-report.blade.php`),
   `GenerateDocumentReportJob` with `ReportStateService`/`ReportFailureHandler`/
   `ReportDeletionService`, and the `/reports` endpoints (`ReportController`,
-  `ReportGenerationService`, `ReportQueryService`, report DTOs). **Missing:** the inference service
-  implementation (FastAPI).
+  `ReportGenerationService`, `ReportQueryService`, report DTOs). Phase 08 adds the Indonesian
+  fallback: the source-agnostic `Services/Metadata/*` (`WorkMetadata`, `ReferenceQuery`) +
+  `Contracts/Metadata/BibliographicSource` + `Enums/MetadataSource`, candidate provenance
+  (`reference_finding_candidates.source`), `Services/Garuda/{GarudaClient,GarudaSearchParser,
+  GarudaResultMapper}`, the gated/budgeted fallback in `ValidateReferencesStep`, and
+  `GarudaUnavailableException` with the Crossref-shaped outage policy. Phase 09 adds the
+  multi-source metadata search: `Contracts/Metadata/{DoiResolver,SourceUnavailableException}`,
+  `MetadataSource::SemanticScholar`, the ordered `Services/Metadata/{MetadataSourceRegistry,
+  MetadataSources,MetadataSourceChain,DoiResolutionChain,SourceChainPolicy,SourceChainState,
+  SourceChainResult,DoiResolutionResult,WorkMetadataMerger}` layer (with
+  `Support/{SearchCache,RequestThrottle,SourceCircuitBreaker}`), `Services/SemanticScholar/*` +
+  `Services/OpenAlex/*` clients, the `crossref|garuda|semantic_scholar|openalex` provenance set,
+  configurable
+  `fatal|degrade` policies, per-source/document budgets, DOI `Unknown` → `pending`, and the
+  candidate cap. **Missing:** the inference service implementation (FastAPI).
 - **Frontend** is a working Vue 3 + Vite SPA with mocked auth and prototype types; the API is not
   wired yet.
-- **Inference** implements the GROBID extraction slice (`GET /health`, `POST /v1/extract`) in
-  `inference/src/inference/` with a hermetic pytest suite; `/v1/embeddings` (SBERT) is not
-  implemented yet.
+- **Inference** implements `GET /health`, `POST /v1/extract` (GROBID) and `POST /v1/embeddings`
+  (SBERT) in `inference/src/inference/` with a hermetic pytest suite.
 
 Everything described as "the pipeline" or "scoring" above is the **target** design; the document
 lifecycle endpoints, the upload→job dispatch seam, the extraction/persistence half (Phase 03),
 Crossref verification/scoring (Phase 04), citation resolution + the verification endpoints
-(Phase 05) and report generation + the `/reports` endpoints (Phase 06) exist today, while the
-FastAPI inference service implements only the GROBID extraction slice (SBERT embeddings pending).
+(Phase 05), report generation + the `/reports` endpoints (Phase 06), the Garuda fallback (Phase 08)
+and the multi-source metadata/DOI chains (Phase 09) exist today, while the FastAPI inference
+service implements only the GROBID extraction slice (SBERT embeddings pending).
 
 ---
 

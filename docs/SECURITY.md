@@ -19,7 +19,8 @@ invariant below as mandatory.
 | Extracted references/citations + locations | High — derivative of the document |
 | Generated reports | High |
 | API tokens | High |
-| External API credentials (Crossref) | High |
+| External API credentials (Semantic Scholar, OpenAlex) | High |
+| External metadata traffic (Crossref, Garuda, Semantic Scholar, OpenAlex) | Internal, metadata only |
 | Inference service (GROBID/SBERT) | Internal, availability-sensitive |
 
 ### 1.2 Trust boundaries
@@ -27,13 +28,20 @@ invariant below as mandatory.
 ```text
 Browser (untrusted)  ──HTTPS──▶  Laravel API (trusted)  ──private net──▶  FastAPI inference
                                         │
-                                        └──outbound──▶ Crossref
+                                        └──outbound──▶ Crossref, Garuda,
+                                                       Semantic Scholar, OpenAlex
 ```
 
 - The browser is untrusted. Never trust client-supplied ids, ownership claims or verdicts.
 - The inference service is internal and has no authentication in v1; it must **not** be reachable
   from the internet.
 - Crossref is external and independent; Laravel is the only component that talks to it.
+- Garuda is an external catalogue page with no API. Laravel queue workers parse it as a fallback;
+  only bibliographic metadata is read (no PDFs), responses are size-capped, and it is never called
+  from the browser.
+- Semantic Scholar and OpenAlex are external JSON APIs. Laravel queue workers are the only client;
+  only bibliographic metadata is read (no full text/content downloads), responses are size-capped,
+  and their API keys travel in headers (`x-api-key` / `Authorization: Bearer`), never in URLs.
 
 ### 1.3 Primary threats
 
@@ -166,7 +174,10 @@ development easier.
   tests and this document.
 - External credentials belong in `config/services.php` + `.env.example` placeholders, e.g.
   `CROSSREF_API_KEY=<configured through environment>`.
-- The frontend must never receive Crossref credentials or any server secret.
+- Semantic Scholar and OpenAlex are key-gated (`SEMANTIC_SCHOLAR_API_KEY`, `OPENALEX_API_KEY`);
+  without a key the source is disabled rather than called anonymously. Never put a key in a query
+  string, exception message, fixture, log line or the frontend.
+- The frontend must never receive metadata-source credentials or any server secret.
 - Rotate any secret that was ever committed.
 
 ---
@@ -180,6 +191,13 @@ development easier.
   HTML is generated server-side from a Blade template (escaped extracted text only) and is never
   rendered in a browser or returned to the client; only the finished PDF bytes are stored.
 - Neither service may be exposed on the public internet or called from the browser.
+- **Single sanctioned exception (development only):** `compose.remote-grobid.yaml` points the
+  inference service at a hosted GROBID (`REMOTE_GROBID_URL`, default a public Hugging Face Space)
+  so contributors can skip the multi-GB image. It breaks the GROBID isolation above **by design**
+  — treated PDFs are sent to a third party over the public internet, and the returned TEI is
+  untrusted input. Demo/throwaway documents only; never production, never real user documents.
+  Everything else (metadata-source egress from Laravel, private disks, error envelopes) stays
+  unchanged.
 - No public, frontend-facing FastAPI endpoints may be added unless `docs/API_SPEC.md` is
   deliberately changed.
 - Inference endpoints accept only the documented internal shapes (`/health`, `/v1/extract`,
@@ -220,6 +238,8 @@ development easier.
 - Log server-side errors with enough context to debug, but **never** log passwords, tokens, full
   document text or personal data beyond what is operationally necessary.
 - Do not include secrets or signed URLs in logs.
+- Metadata-source failures log the source, operation, document/reference id, HTTP status or
+  exception class and a coarse reason — never the API key, query text, DOI or response body.
 - Client-facing error messages remain generic (§3).
 
 ---

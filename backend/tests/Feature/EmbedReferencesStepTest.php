@@ -6,8 +6,8 @@ use App\Services\Analysis\EmbeddingIndex;
 use App\Services\Analysis\ReferenceVerification;
 use App\Services\Analysis\ReferenceVerificationBatch;
 use App\Services\Analysis\Steps\EmbedReferencesStep;
-use App\Services\Crossref\CrossrefWorkData;
-use App\Services\Crossref\DoiLookup;
+use App\Services\Metadata\DoiLookup;
+use App\Services\Metadata\WorkMetadata;
 use App\Services\Scoring\ScoringReference;
 use Illuminate\Support\Facades\Http;
 use Tests\Support\DocumentTree;
@@ -16,7 +16,7 @@ use Tests\Support\InferenceFake;
 function embeddingVerification(string $id, ?string $title, array $candidateTitles = []): ReferenceVerification
 {
     $candidates = array_map(
-        static fn (string $title): CrossrefWorkData => new CrossrefWorkData(doi: null, title: $title),
+        static fn (string $title): WorkMetadata => new WorkMetadata(doi: null, title: $title),
         $candidateTitles,
     );
 

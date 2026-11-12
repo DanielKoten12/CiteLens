@@ -1,6 +1,7 @@
 <?php
 
-use App\Services\Crossref\CrossrefWorkData;
+use App\Enums\MetadataSource;
+use App\Services\Metadata\WorkMetadata;
 use App\Services\Scoring\MatchReasonBuilder;
 use App\Services\Scoring\ScoreBreakdown;
 use App\Services\Scoring\ScoredCandidate;
@@ -57,7 +58,7 @@ it('names conflicting fields in a doi conflict reason', function () {
 
 it('suggests the doi when the best candidate has one', function () {
     $candidate = new ScoredCandidate(
-        work: new CrossrefWorkData(doi: '10.1234/example', title: 'Deep learning'),
+        work: new WorkMetadata(doi: '10.1234/example', title: 'Deep learning'),
         breakdown: new ScoreBreakdown(
             signals: ['title' => 0.9, 'authors' => null, 'journal' => null, 'year' => null],
             final: 0.9,
@@ -71,4 +72,27 @@ it('suggests the doi when the best candidate has one', function () {
 
     expect($this->reasons->forNoDoiValid($candidate))
         ->toBe('Kandidat dengan DOI 10.1234/example memiliki kemiripan tinggi.');
+});
+
+it('keeps source-aware doi, transient and budget reasons', function () {
+    $reasons = new MatchReasonBuilder;
+
+    expect($reasons->forDoiMatch(MetadataSource::Crossref))
+        ->toBe('DOI cocok dengan metadata Crossref.')
+        ->and($reasons->forDoiMatch(MetadataSource::SemanticScholar))
+        ->toBe('DOI cocok dengan metadata Semantic Scholar.')
+        ->and($reasons->transient(MetadataSource::Garuda))
+        ->toBe(MatchReasonBuilder::GARUDA_TRANSIENT)
+        ->and($reasons->budget(MetadataSource::Garuda))
+        ->toBe(MatchReasonBuilder::GARUDA_BUDGET)
+        ->and($reasons->transient(MetadataSource::OpenAlex))
+        ->toBe('Validasi OpenAlex gagal sementara. Coba lagi nanti.')
+        ->and($reasons->budget(MetadataSource::SemanticScholar))
+        ->toBe('Batas permintaan Semantic Scholar tercapai; coba lagi nanti.');
+});
+
+it('no longer names crossref in generic verdict reasons', function () {
+    expect(MatchReasonBuilder::SUSPICIOUS)->not->toContain('Crossref')
+        ->and(MatchReasonBuilder::LOCAL_VENUE)->not->toContain('Crossref')
+        ->and(MatchReasonBuilder::DOI_NOT_FOUND)->not->toContain('Crossref');
 });

@@ -13,6 +13,8 @@ use App\Services\Analysis\Steps\PersistExtractionStep;
 use App\Services\Analysis\Steps\ResolveCitationsStep;
 use App\Services\Analysis\Steps\ScoreReferencesStep;
 use App\Services\Analysis\Steps\ValidateReferencesStep;
+use App\Services\Metadata\MetadataSourceRegistry;
+use App\Services\Metadata\MetadataSources;
 use App\Services\Scoring\ScoringConfig;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
@@ -35,6 +37,14 @@ final class AnalysisServiceProvider extends ServiceProvider
         $this->app->scoped(AnalysisProgress::class);
 
         $this->app->singleton(ScoringConfig::class);
+
+        // Resolve/validate the ordered metadata source lists per injection. Chains
+        // receive the immutable configuration, so no chain has to know about the
+        // container or re-resolve clients for every reference.
+        $this->app->bind(
+            MetadataSources::class,
+            fn (Application $app): MetadataSources => $app->make(MetadataSourceRegistry::class)->resolve(),
+        );
 
         $this->app->singleton(AnalysisStepRegistry::class, fn (Application $app): AnalysisStepRegistry => new AnalysisStepRegistry([
             $app->make(ExtractDocumentStep::class),

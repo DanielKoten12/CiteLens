@@ -3,7 +3,7 @@
 namespace App\Services\Scoring;
 
 use App\Models\ResearchedDocumentReference;
-use App\Services\Crossref\DoiNormalizer;
+use App\Services\Metadata\DoiNormalizer;
 
 /**
  * Pure scoring input for one bibliography entry.
