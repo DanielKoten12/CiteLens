@@ -2,8 +2,9 @@
 
 namespace App\Services\Scoring;
 
+use App\Enums\MetadataSource;
 use App\Enums\ReferenceFindingStatus;
-use App\Services\Crossref\DoiLookup;
+use App\Services\Metadata\DoiLookup;
 
 /**
  * The single implementation of the verification decision matrix
@@ -30,7 +31,14 @@ final class VerdictDecider
         bool $transientFailure,
         array $ranked,
         ?string $pendingReason = null,
+        ?MetadataSource $doiSource = null,
     ): ReferenceVerdict {
+        // A DOI no enabled resolver could check is pending, never invalid — even
+        // when the search chain produced candidates for manual review (D-09-16).
+        if ($doiLookup === DoiLookup::Unknown) {
+            return $this->verdict($reference, ReferenceFindingStatus::Pending, null, $pendingReason ?? MatchReasonBuilder::DOI_UNKNOWN, null, $ranked);
+        }
+
         if ($transientFailure) {
             return $this->verdict($reference, ReferenceFindingStatus::Pending, null, $pendingReason ?? MatchReasonBuilder::TRANSIENT, null, $ranked);
         }
@@ -46,7 +54,7 @@ final class VerdictDecider
         }
 
         if ($doiLookup === DoiLookup::Resolved) {
-            return $this->decideDoiResolved($reference, $ranked);
+            return $this->decideDoiResolved($reference, $ranked, $doiSource);
         }
 
         return $this->decideWithoutDoi($reference, $ranked);
@@ -55,7 +63,7 @@ final class VerdictDecider
     /**
      * @param  list<ScoredCandidate>  $ranked
      */
-    private function decideDoiResolved(ScoringReference $reference, array $ranked): ReferenceVerdict
+    private function decideDoiResolved(ScoringReference $reference, array $ranked, ?MetadataSource $doiSource): ReferenceVerdict
     {
         $doiCandidate = null;
 
@@ -72,7 +80,7 @@ final class VerdictDecider
                 $reference,
                 ReferenceFindingStatus::Valid,
                 $doiCandidate->confidence(),
-                MatchReasonBuilder::DOI_MATCH,
+                $this->reasons->forDoiMatch($doiSource ?? MetadataSource::Crossref),
                 $doiCandidate->rank,
                 $ranked,
             );

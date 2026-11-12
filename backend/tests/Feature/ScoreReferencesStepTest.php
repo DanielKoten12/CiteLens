@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\MetadataSource;
 use App\Enums\ReferenceFindingStatus;
 use App\Models\ReferenceFinding;
 use App\Models\ReferenceFindingCandidate;
@@ -9,9 +10,10 @@ use App\Services\Analysis\EmbeddingIndex;
 use App\Services\Analysis\ReferenceVerification;
 use App\Services\Analysis\ReferenceVerificationBatch;
 use App\Services\Analysis\Steps\ScoreReferencesStep;
-use App\Services\Crossref\DoiLookup;
-use App\Services\Crossref\DoiNormalizer;
+use App\Services\Metadata\DoiLookup;
+use App\Services\Metadata\DoiNormalizer;
 use App\Services\Metadata\WorkMetadata;
+use App\Services\Scoring\MatchReasonBuilder;
 use App\Services\Scoring\ScoringReference;
 use Tests\Support\DocumentTree;
 
@@ -78,7 +80,7 @@ it('marks a doi that does not resolve as invalid', function () {
     $finding = ReferenceFinding::query()->where('researched_document_reference_id', $reference->getKey())->firstOrFail();
 
     expect($finding->status)->toBe(ReferenceFindingStatus::Invalid)
-        ->and($finding->reason)->toBe('DOI tidak ditemukan di Crossref.');
+        ->and($finding->reason)->toBe(MatchReasonBuilder::DOI_NOT_FOUND);
 });
 
 it('marks a valid reference without a doi as valid and suggests the candidate doi', function () {
@@ -145,7 +147,7 @@ it('marks a transient crossref failure as pending', function () {
 
     expect($finding->status)->toBe(ReferenceFindingStatus::Pending)
         ->and($finding->confidence)->toBeNull()
-        ->and($finding->reason)->toBe('Validasi Crossref gagal sementara. Coba lagi nanti.');
+        ->and($finding->reason)->toBe(MatchReasonBuilder::TRANSIENT);
 });
 
 it('builds deterministic per-candidate match reasons', function () {
@@ -163,4 +165,41 @@ it('builds deterministic per-candidate match reasons', function () {
 
     expect($first)->toBe($second)
         ->and($first)->toContain('kemiripan judul');
+});
+
+it('caps persisted candidates after ranking', function () {
+    config(['analysis.metadata.max_candidates_per_reference' => 2]);
+
+    $tree = DocumentTree::create();
+    $reference = $tree->reference(['doi' => null, 'title' => 'Deep learning', 'authors' => 'LeCun, Y.']);
+
+    $candidates = [
+        new WorkMetadata(doi: '10.1/a', title: 'Deep learning', source: MetadataSource::SemanticScholar),
+        new WorkMetadata(doi: '10.1/b', title: 'Deep learning', source: MetadataSource::OpenAlex),
+        new WorkMetadata(doi: '10.1/c', title: 'Deep learning', source: MetadataSource::Crossref),
+    ];
+
+    runScoring($tree, [scoreVerification($reference, DoiLookup::NotPresent, $candidates)]);
+
+    $finding = ReferenceFinding::query()->firstOrFail();
+
+    expect($finding->candidates()->orderBy('rank')->pluck('rank')->all())->toBe([1, 2])
+        ->and($finding->candidates()->count())->toBe(2);
+});
+
+it('keeps every candidate when the cap is unlimited', function () {
+    config(['analysis.metadata.max_candidates_per_reference' => 0]);
+
+    $tree = DocumentTree::create();
+    $reference = $tree->reference(['doi' => null, 'title' => 'Deep learning', 'authors' => 'LeCun, Y.']);
+
+    $candidates = [
+        new WorkMetadata(doi: '10.1/a', title: 'Deep learning'),
+        new WorkMetadata(doi: '10.1/b', title: 'Deep learning'),
+        new WorkMetadata(doi: '10.1/c', title: 'Deep learning'),
+    ];
+
+    runScoring($tree, [scoreVerification($reference, DoiLookup::NotPresent, $candidates)]);
+
+    expect(ReferenceFinding::query()->firstOrFail()->candidates()->count())->toBe(3);
 });

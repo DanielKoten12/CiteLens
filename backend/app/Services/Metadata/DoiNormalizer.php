@@ -1,16 +1,16 @@
 <?php
 
-namespace App\Services\Crossref;
+namespace App\Services\Metadata;
 
 /**
- * Canonicalizes DOI strings extracted from documents and Crossref metadata.
+ * Canonicalizes DOI strings extracted from documents and external metadata.
  *
- * Pure and dependency-free so it is usable from persistence (Phase 03) and the
- * Crossref client (Phase 04). `normalize()` is best-effort: it strips URL/prefix
- * noise and lowercases, but deliberately does **not** discard a malformed value,
- * because "a DOI is present but broken" is a distinct verification case that
- * Phase 04 must classify as `invalid`. `isValid()` performs the strict shape
- * check separately.
+ * Pure and dependency-free so it is usable from persistence, the verification
+ * pipeline and every metadata-source mapper. `normalize()` is best-effort: it
+ * strips URL/prefix noise and lowercases, but deliberately does **not** discard
+ * a malformed value, because "a DOI is present but broken" is a distinct
+ * verification case that Phase 04 must classify as `invalid`. `isValid()`
+ * performs the strict shape check separately.
  */
 final class DoiNormalizer
 {

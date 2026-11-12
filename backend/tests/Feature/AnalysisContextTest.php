@@ -5,7 +5,7 @@ use App\Services\Analysis\CitationExtractionHints;
 use App\Services\Analysis\EmbeddingIndex;
 use App\Services\Analysis\ReferenceVerification;
 use App\Services\Analysis\ReferenceVerificationBatch;
-use App\Services\Crossref\DoiLookup;
+use App\Services\Metadata\DoiLookup;
 use App\Services\Scoring\ScoringReference;
 
 function contextReference(): ScoringReference

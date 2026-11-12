@@ -1,0 +1,33 @@
+{
+  "total": 2,
+  "offset": 0,
+  "next": 2,
+  "data": [
+    {
+      "paperId": "s2-multi-source-001",
+      "title": "Beyond Borders, Beyond Classrooms: Pendampingan Literasi Finansial Digital melalui Aktivitas Edukatif bagi Anak Diaspora Indonesia di Sanggar Bimbingan Kampung Bharu, Malaysia",
+      "authors": [
+        { "authorId": "s2-author-1", "name": "Dwi Enggrina" },
+        { "authorId": "s2-author-2", "name": "A. W. Liwang" },
+        { "authorId": "s2-author-3", "name": "W. Rahman" }
+      ],
+      "year": 2026,
+      "venue": "JESASI (Jurnal Edukasi, Sains, dan Inovasi)",
+      "publicationVenue": { "name": "JESASI (Jurnal Edukasi, Sains, dan Inovasi)" },
+      "journal": { "name": "JESASI (Jurnal Edukasi, Sains, dan Inovasi)" },
+      "externalIds": { "DOI": "10.1234/s2-jesasi-2026" },
+      "url": "https://www.semanticscholar.org/paper/s2-multi-source-001",
+      "publicationTypes": ["JournalArticle"]
+    },
+    {
+      "paperId": "s2-multi-source-002",
+      "title": "Unrelated Work on Metadata Quality",
+      "authors": [{ "authorId": "s2-author-9", "name": "Someone Else" }],
+      "year": 2019,
+      "venue": "Journal of Metadata",
+      "externalIds": {},
+      "url": "https://www.semanticscholar.org/paper/s2-multi-source-002",
+      "publicationTypes": ["Review"]
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "data": {
+    "references": [
+      {
+        "raw_text": "LeCun, Y., Bengio, Y., & Hinton, G. (2015). Deep learning. Nature, 521(7553), 436-444. https://doi.org/10.1234/not-in-crossref",
+        "title": "Deep learning",
+        "authors": "LeCun, Y., Bengio, Y., & Hinton, G.",
+        "publication_name": "Nature",
+        "publication_year": 2015,
+        "doi": "10.1234/not-in-crossref",
+        "text_start_offset": 100,
+        "text_end_offset": 400,
+        "locations": []
+      }
+    ],
+    "citations": []
+  }
+}

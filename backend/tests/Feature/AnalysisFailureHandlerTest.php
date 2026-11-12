@@ -6,6 +6,8 @@ use App\Exceptions\CrossrefUnavailableException;
 use App\Exceptions\ExtractionFailedException;
 use App\Exceptions\GarudaUnavailableException;
 use App\Exceptions\InferenceUnavailableException;
+use App\Exceptions\OpenAlexUnavailableException;
+use App\Exceptions\SemanticScholarUnavailableException;
 use App\Models\ResearchedDocument;
 use App\Services\Analysis\AnalysisFailureHandler;
 use Illuminate\Support\Facades\Log;
@@ -108,4 +110,15 @@ it('keeps the safe inference message identical to the exception message', functi
     $exception = InferenceUnavailableException::serviceUnavailable();
 
     expect($this->handler->safeMessage($exception))->toBe($exception->getMessage());
+});
+
+it('maps semantic scholar and openalex outages to safe source messages', function () {
+    $document = DocumentTree::create()->document;
+
+    $handler = app(AnalysisFailureHandler::class);
+
+    expect($handler->safeMessage(SemanticScholarUnavailableException::rateLimited()))
+        ->toBe('Validasi Semantic Scholar tidak tersedia. Coba lagi nanti.')
+        ->and($handler->safeMessage(OpenAlexUnavailableException::serviceUnavailable()))
+        ->toBe('Validasi OpenAlex tidak tersedia. Coba lagi nanti.');
 });

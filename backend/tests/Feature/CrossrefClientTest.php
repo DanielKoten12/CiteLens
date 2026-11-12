@@ -27,7 +27,7 @@ beforeEach(function (): void {
 it('resolves a doi and maps the work', function () {
     Http::fake(['api.crossref.org/*' => Http::response(Fixtures::json('crossref/doi-found'))]);
 
-    $work = app(CrossrefClient::class)->findByDoi('10.1038/nature14539');
+    $work = app(CrossrefClient::class)->resolve('10.1038/nature14539');
 
     expect($work)->not->toBeNull()
         ->doi->toBe('10.1038/nature14539')
@@ -43,15 +43,15 @@ it('resolves a doi and maps the work', function () {
 it('returns null when the doi does not resolve', function () {
     Http::fake(['api.crossref.org/*' => Http::response('', 404)]);
 
-    expect(app(CrossrefClient::class)->findByDoi('10.1234/missing'))->toBeNull();
+    expect(app(CrossrefClient::class)->resolve('10.1234/missing'))->toBeNull();
 });
 
 it('caches a resolved doi and does not hit http twice', function () {
     Http::fake(['api.crossref.org/*' => Http::response(Fixtures::json('crossref/doi-found'))]);
 
     $client = app(CrossrefClient::class);
-    $client->findByDoi('10.1038/nature14539');
-    $client->findByDoi('10.1038/nature14539');
+    $client->resolve('10.1038/nature14539');
+    $client->resolve('10.1038/nature14539');
 
     Http::assertSentCount(1);
 });
@@ -60,8 +60,8 @@ it('caches a doi miss too', function () {
     Http::fake(['api.crossref.org/*' => Http::response('', 404)]);
 
     $client = app(CrossrefClient::class);
-    $client->findByDoi('10.1234/missing');
-    $client->findByDoi('10.1234/missing');
+    $client->resolve('10.1234/missing');
+    $client->resolve('10.1234/missing');
 
     Http::assertSentCount(1);
 });
@@ -79,7 +79,7 @@ it('retries a transient server error and succeeds', function () {
             : Http::response(Fixtures::json('crossref/doi-found'));
     }]);
 
-    $work = app(CrossrefClient::class)->findByDoi('10.1038/nature14539');
+    $work = app(CrossrefClient::class)->resolve('10.1038/nature14539');
 
     expect($attempts)->toBe(2)
         ->and($work)->not->toBeNull();
@@ -90,14 +90,14 @@ it('throws when every attempt fails with a server error', function () {
 
     Http::fake(['api.crossref.org/*' => Http::response('', 503)]);
 
-    expect(fn () => app(CrossrefClient::class)->findByDoi('10.1038/nature14539'))
+    expect(fn () => app(CrossrefClient::class)->resolve('10.1038/nature14539'))
         ->toThrow(CrossrefUnavailableException::class);
 });
 
 it('throws on a connection error', function () {
     Http::fake(['api.crossref.org/*' => fn () => throw new ConnectionException('Connection refused.')]);
 
-    expect(fn () => app(CrossrefClient::class)->findByDoi('10.1038/nature14539'))
+    expect(fn () => app(CrossrefClient::class)->resolve('10.1038/nature14539'))
         ->toThrow(CrossrefUnavailableException::class);
 });
 

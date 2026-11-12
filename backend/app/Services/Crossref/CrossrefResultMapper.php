@@ -3,6 +3,7 @@
 namespace App\Services\Crossref;
 
 use App\Enums\MetadataSource;
+use App\Services\Metadata\DoiNormalizer;
 use App\Services\Metadata\WorkMetadata;
 
 /**

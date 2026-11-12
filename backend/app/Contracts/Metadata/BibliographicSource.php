@@ -11,15 +11,22 @@ use App\Services\Metadata\WorkMetadata;
  *
  * Implementations own transport and mapping only: they never rank, decide a
  * verdict or persist anything. A completed search with no results returns an
- * empty list; a source that cannot answer throws its own exception and the
- * caller applies that source's outage policy.
+ * empty list; a source that cannot answer throws its own exception (implementing
+ * {@see SourceUnavailableException}) and the caller applies that source's
+ * outage policy.
  *
- * DOI lookup is deliberately not part of this contract — only Crossref resolves
- * DOIs (`CrossrefClient::findByDoi()`).
+ * DOI lookup is a separate capability: see {@see DoiResolver}. A source may
+ * implement both (Crossref, Semantic Scholar, OpenAlex) or search only (Garuda).
  */
 interface BibliographicSource
 {
     public function source(): MetadataSource;
+
+    /**
+     * Whether the source is configured and usable. Disabled sources are skipped
+     * by the metadata chain and are not treated as an outage.
+     */
+    public function enabled(): bool;
 
     /**
      * @return list<WorkMetadata>

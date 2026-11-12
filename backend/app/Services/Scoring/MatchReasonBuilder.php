@@ -10,22 +10,28 @@ use App\Enums\MetadataSource;
  * Finding `reason` strings are Indonesian and deterministic; candidate
  * `match_reason` strings cite the component evidence. Translating or tuning the
  * wording happens here and nowhere else.
+ *
+ * Wording is source-aware: verification is a chain (Crossref → Garuda →
+ * Semantic Scholar → OpenAlex), so a reason must never claim "Crossref" when
+ * another catalogue answered or could not answer (D-09-16).
  */
 final class MatchReasonBuilder
 {
-    public const DOI_NOT_FOUND = 'DOI tidak ditemukan di Crossref.';
+    public const DOI_NOT_FOUND = 'DOI tidak ditemukan pada sumber metadata.';
+
+    public const DOI_UNKNOWN = 'DOI belum dapat diverifikasi karena sumber metadata tidak tersedia. Coba lagi nanti.';
 
     public const MALFORMED_DOI = 'Format DOI tidak valid.';
 
-    public const TRANSIENT = 'Validasi Crossref gagal sementara. Coba lagi nanti.';
+    public const TRANSIENT = 'Validasi metadata gagal sementara. Coba lagi nanti.';
 
     public const DOI_MATCH = 'DOI cocok dengan metadata Crossref.';
 
-    public const SUSPICIOUS = 'Judul pada metadata Crossref memiliki perbedaan.';
+    public const SUSPICIOUS = 'Judul pada metadata kandidat memiliki perbedaan.';
 
     public const NOT_FOUND = 'Tidak ada kandidat ditemukan.';
 
-    public const LOCAL_VENUE = 'Sumber tidak terindeks Crossref/Garuda; perlu pemeriksaan manual.';
+    public const LOCAL_VENUE = 'Sumber tidak terindeks di katalog eksternal; perlu pemeriksaan manual.';
 
     public const GARUDA_TRANSIENT = 'Validasi Garuda gagal sementara. Coba lagi nanti.';
 
@@ -80,6 +86,14 @@ final class MatchReasonBuilder
     }
 
     /**
+     * A DOI that resolved agrees with the reference metadata.
+     */
+    public function forDoiMatch(MetadataSource $source): string
+    {
+        return 'DOI cocok dengan metadata '.$source->label().'.';
+    }
+
+    /**
      * @param  list<string>  $conflicts
      */
     public function forDoiConflict(array $conflicts): string
@@ -96,6 +110,31 @@ final class MatchReasonBuilder
         return $candidate->work->doi === null
             ? 'Kandidat terbaik memiliki kemiripan tinggi.'
             : "Kandidat dengan DOI {$candidate->work->doi} memiliki kemiripan tinggi.";
+    }
+
+    /**
+     * Transient-failure reason for a source that could not answer.
+     *
+     * Garuda keeps its established literal (Phase 08 tests and reason wording);
+     * the other supplemental sources use the generic source-aware shape.
+     */
+    public function transient(MetadataSource $source): string
+    {
+        return match ($source) {
+            MetadataSource::Garuda => self::GARUDA_TRANSIENT,
+            default => sprintf('Validasi %s gagal sementara. Coba lagi nanti.', $source->label()),
+        };
+    }
+
+    /**
+     * Budget-exhaustion reason for a fallback source that was skipped.
+     */
+    public function budget(MetadataSource $source): string
+    {
+        return match ($source) {
+            MetadataSource::Garuda => self::GARUDA_BUDGET,
+            default => sprintf('Batas permintaan %s tercapai; coba lagi nanti.', $source->label()),
+        };
     }
 
     private function fieldLabel(string $field): string

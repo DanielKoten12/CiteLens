@@ -9,6 +9,7 @@ use App\Services\Analysis\AnalysisProgress;
 use App\Services\Analysis\Contracts\PipelineStep;
 use App\Services\ReferenceFinding\ReferenceFindingWriter;
 use App\Services\Scoring\ReferenceScorer;
+use App\Services\Scoring\ScoredCandidate;
 use App\Services\Scoring\VerdictDecider;
 
 /**
@@ -44,6 +45,7 @@ final class ScoreReferencesStep implements PipelineStep
 
         foreach ($batch->verifications as $index => $verification) {
             $ranked = $this->scorer->score($verification->reference, $verification->candidates, $embeddings);
+            $ranked = $this->cap($ranked);
 
             $verdicts[] = $this->decider->decide(
                 $verification->reference,
@@ -51,11 +53,28 @@ final class ScoreReferencesStep implements PipelineStep
                 $verification->transientFailure,
                 $ranked,
                 $verification->pendingReason,
+                $verification->doiSource,
             );
 
             $this->progress->report($document, $this->step(), $index + 1, $total);
         }
 
         $this->writer->persistBatch($document, $verdicts);
+    }
+
+    /**
+     * Bound the persisted candidate list after ranking (D-09-09).
+     *
+     * `0` means unlimited. Ranks stay `1..N` and contiguous, so
+     * `selected_candidate_id` always resolves.
+     *
+     * @param  list<ScoredCandidate>  $ranked
+     * @return list<ScoredCandidate>
+     */
+    private function cap(array $ranked): array
+    {
+        $limit = max(0, (int) config('analysis.metadata.max_candidates_per_reference', 10));
+
+        return $limit === 0 ? $ranked : array_slice($ranked, 0, $limit);
     }
 }

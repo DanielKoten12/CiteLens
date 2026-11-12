@@ -1,7 +1,7 @@
 <?php
 
 use App\Services\Crossref\CrossrefResultMapper;
-use App\Services\Crossref\DoiNormalizer;
+use App\Services\Metadata\DoiNormalizer;
 use Tests\Support\Fixtures;
 
 function mapper(): CrossrefResultMapper

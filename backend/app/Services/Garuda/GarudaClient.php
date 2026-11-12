@@ -6,21 +6,22 @@ use App\Contracts\Metadata\BibliographicSource;
 use App\Enums\MetadataSource;
 use App\Exceptions\GarudaUnavailableException;
 use App\Services\Metadata\ReferenceQuery;
+use App\Services\Metadata\Support\RequestThrottle;
+use App\Services\Metadata\Support\SearchCache;
 use App\Services\Metadata\WorkMetadata;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 /**
  * Transport client for the Garuda search page (`garuda.kemdiktisaintek.go.id`).
  *
- * Garuda publishes no API, so this is a fallback source: it is queried only
- * when the primary sources produced no plausible candidate
+ * Garuda publishes no API, so this is a fallback source: the metadata chain
+ * queries it only when the primary sources produced no plausible candidate
  * (`docs/plans/backend/08-garuda-fallback-source.md`). It owns politeness
- * (global throttle, cache, UA), parsing and mapping — never verdicts.
+ * (shared throttle, cache, UA), parsing and mapping — never verdicts.
  *
  * Failure policy (D-08-03): transport errors, unexpected statuses and pages
  * that no longer match the expected structure throw
@@ -40,11 +41,18 @@ final class GarudaClient implements BibliographicSource
     public function __construct(
         private readonly GarudaSearchParser $parser,
         private readonly GarudaResultMapper $mapper,
+        private readonly SearchCache $cache,
+        private readonly RequestThrottle $throttle,
     ) {}
 
     public function source(): MetadataSource
     {
         return MetadataSource::Garuda;
+    }
+
+    public function enabled(): bool
+    {
+        return (bool) config('services.garuda.enabled', true);
     }
 
     /**
@@ -54,7 +62,7 @@ final class GarudaClient implements BibliographicSource
      */
     public function search(ReferenceQuery $query): array
     {
-        if (! (bool) config('services.garuda.enabled', true)) {
+        if (! $this->enabled()) {
             return [];
         }
 
@@ -64,18 +72,11 @@ final class GarudaClient implements BibliographicSource
             return [];
         }
 
-        $cacheKey = self::CACHE_PREFIX.sha1($title);
-
-        if (Cache::has($cacheKey)) {
-            return $this->map((array) Cache::get($cacheKey, []));
-        }
-
-        $cards = $this->fetch($title);
-
-        Cache::put(
-            $cacheKey,
-            $cards,
-            $cards === [] ? $this->negativeTtl() : $this->ttl(),
+        $cards = $this->cache->remember(
+            self::CACHE_PREFIX.sha1($title),
+            $this->ttl(),
+            $this->negativeTtl(),
+            fn (): array => $this->fetch($title),
         );
 
         return $this->map($cards);
@@ -101,7 +102,7 @@ final class GarudaClient implements BibliographicSource
      */
     private function fetch(string $title): array
     {
-        $response = $this->throttled(fn (): Response => $this->request($title));
+        $response = $this->request($title);
 
         if ($response->failed()) {
             throw GarudaUnavailableException::unexpectedResponse($response->status());
@@ -145,10 +146,16 @@ final class GarudaClient implements BibliographicSource
         $lastException = null;
 
         for ($attempt = 1; $attempt <= $attempts; $attempt++) {
-            $this->waitForSlot();
-
             try {
-                $response = $this->pending()->get('/documents', ['q' => $title]);
+                $response = $this->throttle->run(
+                    lockName: self::THROTTLE_LOCK,
+                    minIntervalMs: $this->minIntervalMs(),
+                    callback: fn (): Response => $this->pending()->get('/documents', ['q' => $title]),
+                    onLockTimeout: static fn (LockTimeoutException $exception): GarudaUnavailableException => GarudaUnavailableException::serviceUnavailable($exception),
+                    lockSeconds: max(10, $this->timeout() * ($this->retries() + 2)),
+                    lastRequestKey: self::LAST_REQUEST_KEY,
+                    waitSeconds: max(2, $this->timeout() + 2),
+                );
             } catch (ConnectionException $exception) {
                 $lastException = $exception;
                 $this->backoff($attempt);
@@ -166,45 +173,6 @@ final class GarudaClient implements BibliographicSource
         }
 
         throw GarudaUnavailableException::serviceUnavailable($lastException);
-    }
-
-    /**
-     * Serialize requests across workers and respect the configured interval.
-     *
-     * @template T
-     *
-     * @param  callable(): T  $callback
-     * @return T
-     *
-     * @throws GarudaUnavailableException
-     */
-    private function throttled(callable $callback): mixed
-    {
-        $seconds = max(10, $this->timeout() * ($this->retries() + 2));
-
-        try {
-            return Cache::lock(self::THROTTLE_LOCK, $seconds)->block($seconds, $callback);
-        } catch (LockTimeoutException $exception) {
-            throw GarudaUnavailableException::serviceUnavailable($exception);
-        }
-    }
-
-    private function waitForSlot(): void
-    {
-        $interval = max(0, (int) config('services.garuda.min_interval_ms', 1000));
-
-        if ($interval === 0) {
-            return;
-        }
-
-        $last = (int) Cache::get(self::LAST_REQUEST_KEY, 0);
-        $waitMs = $interval - (now()->getTimestampMs() - $last);
-
-        if ($waitMs > 0) {
-            usleep((int) ($waitMs * 1000));
-        }
-
-        Cache::put(self::LAST_REQUEST_KEY, now()->getTimestampMs(), 3600);
     }
 
     private function backoff(int $attempt): void
@@ -269,6 +237,11 @@ final class GarudaClient implements BibliographicSource
     private function timeout(): int
     {
         return max(1, (int) config('services.garuda.timeout', 10));
+    }
+
+    private function minIntervalMs(): int
+    {
+        return max(0, (int) config('services.garuda.min_interval_ms', 1000));
     }
 
     private function rows(): int

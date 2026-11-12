@@ -6,7 +6,8 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Record which external catalogue a candidate record came from
- * (`App\Enums\MetadataSource`: `crossref`, `openalex`, `garuda`).
+ * (`App\Enums\MetadataSource`: `crossref`, `garuda`, `semantic_scholar`,
+ * `openalex`; `varchar(20)` covers every value).
  *
  * The default backfills existing rows in the same table rebuild (portable on
  * SQLite, MySQL and Postgres). The writer always sets the source explicitly;
