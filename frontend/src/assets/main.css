@@ -134,8 +134,11 @@ input[type="password"]::-ms-clear {
   background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(226, 232, 240, 0.45));
 }
 
+/* `stretch` (bukan `start`) memberi kolom kiri tinggi penuh baris grid,
+   sehingga `.document-paper` punya ruang tempel untuk `position: sticky`.
+   Dengan `start`, tinggi kolom = tinggi kertas dan sticky tidak pernah aktif. */
 .result-layout {
-  align-items: start;
+  align-items: stretch;
 }
 
 .document-paper {
@@ -144,6 +147,19 @@ input[type="password"]::-ms-clear {
   border-radius: 8px;
   background: #fff;
   box-shadow: 0 18px 45px rgba(31, 46, 70, 0.13), 0 2px 5px rgba(31, 46, 70, 0.08);
+}
+
+/* Tinggi area gulir PDF mengikuti viewport supaya kertas dokumen yang menempel
+   (sticky) tidak terpotong di layar pendek. Di layar tinggi nilainya tetap
+   560px seperti sebelumnya. */
+.pdf-viewer-scrollport {
+  height: clamp(360px, calc(100vh - 10rem), 560px);
+}
+
+@supports (height: 100dvh) {
+  .pdf-viewer-scrollport {
+    height: clamp(360px, calc(100dvh - 10rem), 560px);
+  }
 }
 
 .document-toolbar {
@@ -341,13 +357,47 @@ input[type="password"]::-ms-clear {
   color: #c4cad4;
 }
 
+/* Kolom kanan punya area gulir sendiri dan tingginya dibatasi viewport,
+   supaya daftar pustaka yang panjang tidak mendorong dokumen keluar layar. */
 .reference-panel {
   position: sticky;
   top: 1rem;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-height: calc(100vh - 2rem);
+}
+
+.reference-panel-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  /* Ruang tipis agar outline kartu terpilih tidak terpotong tepi area gulir. */
+  padding: 2px 2px 6px;
+  overscroll-behavior: contain;
+}
+
+/* Area gulir membatasi tinggi daftar, jadi kartu tidak boleh ikut menyusut
+   (flex item default `flex-shrink: 1` akan meremas semua kartu sampai tipis). */
+.reference-panel-list > * {
+  flex-shrink: 0;
 }
 
 @media (max-width: 1023px) {
+  /* Satu kolom: biarkan halaman yang menggulir, jangan kunci tinggi panel
+     dan jangan menempelkan dokumen setinggi ~600px di atas daftar pustaka. */
   .reference-panel {
+    position: static;
+    display: block;
+    max-height: none;
+  }
+
+  .reference-panel-list {
+    overflow-y: visible;
+    padding: 0;
+  }
+
+  .document-paper {
     position: static;
   }
 }
@@ -419,6 +469,7 @@ input[type="password"]::-ms-clear {
   }
 
   .document-paper {
+    position: static;
     border: 0;
     box-shadow: none;
   }

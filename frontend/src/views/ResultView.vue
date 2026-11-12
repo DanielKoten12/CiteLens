@@ -378,7 +378,7 @@ onMounted(() => {
 
       <div class="result-layout max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-5 gap-8">
         <section class="lg:col-span-3">
-          <div class="document-paper">
+          <div class="document-paper sticky top-4">
             <div class="document-toolbar">
               <div class="flex items-center gap-2 min-w-0">
                 <span class="document-file-icon">PDF</span>
@@ -407,167 +407,167 @@ onMounted(() => {
           </div>
         </section>
 
-      <div class="lg:col-span-2 reference-panel">
-        <div class="flex items-center justify-between mb-4">
-          <p class="text-xs font-bold tracking-widest" :style="{ color: 'var(--muted-foreground)' }">
-            DAFTAR PUSTAKA
-          </p>
-          <p class="text-xs" :style="{ color: 'var(--muted-foreground)' }">{{ counts.total }} entri</p>
-        </div>
-
-        <div class="inline-flex p-1 rounded-full mb-4" :style="{ background: 'var(--secondary)' }">
-          <button
-            v-for="filter in filters"
-            :key="filter.key"
-            class="text-xs font-bold px-3.5 py-1.5 rounded-full transition-colors"
-            :style="{
-              background: activeFilter === filter.key ? 'var(--card)' : 'transparent',
-              color: activeFilter === filter.key ? 'var(--foreground)' : 'var(--muted-foreground)',
-              boxShadow: activeFilter === filter.key ? '0 1px 2px rgba(15,22,41,0.08)' : 'none',
-            }"
-            @click="activeFilter = filter.key"
-          >
-            {{ filter.label }}
-          </button>
-        </div>
-
-        <div class="flex flex-col gap-3">
-          <div
-            v-for="reference in filteredReferences"
-            :key="reference.id"
-            :ref="(el) => (refItemEls[reference.id] = (el as any)?.$el ?? (el as any))"
-            class="rounded-xl border-l-4 border border-t border-r border-b overflow-hidden cursor-pointer"
-            :style="{
-              borderLeftColor: statusMeta[reference.bucket].fg,
-              borderTopColor: 'var(--border)',
-              borderRightColor: 'var(--border)',
-              borderBottomColor: 'var(--border)',
-              background: 'var(--card)',
-              outline: selectedRefId === reference.id ? `2px solid ${statusMeta[reference.bucket].fg}` : 'none',
-              outlineOffset: '1px',
-            }"
-            @click="selectReference(reference.id)"
-          >
-            <div class="p-4">
-              <div class="flex items-start justify-between gap-3">
-                <div class="flex items-start gap-2.5 min-w-0">
-                  <span
-                    class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold mt-0.5"
-                    :style="{ background: hexToRgba(statusMeta[reference.bucket].fg, 0.18), color: statusMeta[reference.bucket].fg }"
-                  >
-                    {{ reference.index }}
-                  </span>
-                  <p class="text-sm font-bold leading-snug" :style="{ color: 'var(--foreground)' }">
-                    {{ reference.title }}
-                  </p>
-                </div>
-
-                <span
-                  class="flex-shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full"
-                  :style="{ background: statusMeta[reference.bucket].bg, color: statusMeta[reference.bucket].fg }"
-                >
-                  {{ statusMeta[reference.bucket].label }}
-                </span>
-              </div>
-
-              <p v-if="reference.authors" class="text-xs mt-2 ml-8" :style="{ color: 'var(--muted-foreground)' }">
-                {{ reference.authors }}
-              </p>
-              <p v-if="reference.year" class="text-xs ml-8" :style="{ color: 'var(--muted-foreground)' }">
-                {{ reference.year }}
-              </p>
-              <a
-                v-if="reference.doi"
-                :href="`https://doi.org/${reference.doi}`"
-                target="_blank"
-                rel="noopener"
-                class="text-xs mt-1 ml-8 inline-flex items-center gap-1 hover:underline"
-                :style="{ color: 'var(--accent)' }"
-                @click.stop
-              >
-                ↗ {{ reference.doi }}
-              </a>
-              <span v-else class="block text-xs mt-1 ml-8" :style="{ color: 'var(--muted-foreground)' }">
-                Tanpa DOI di daftar pustaka
-              </span>
-
-              <button
-                class="w-full mt-3 flex items-center justify-between text-xs font-semibold px-3 py-2 rounded-lg"
-                :style="{ background: 'var(--secondary)', color: 'var(--foreground)' }"
-                @click.stop="toggleExpanded(reference.id)"
-              >
-                <span class="flex items-center gap-1.5">ⓘ Lihat hasil validasi</span>
-                <span :style="{ transform: expandedIds.has(reference.id) ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }">
-                  ⌄
-                </span>
-              </button>
-
-              <div
-                v-if="expandedIds.has(reference.id)"
-                class="mt-2 text-xs rounded-lg px-3 py-2.5"
-                :style="{ background: 'var(--muted)', color: 'var(--foreground)' }"
-              >
-                <p class="font-semibold" :style="{ color: statusMeta[reference.bucket].fg }">
-                  {{ statusMeta[reference.bucket].label }} &middot; status backend: {{ reference.findingStatus }}
-                  <span v-if="reference.findingStatus !== 'pending'">
-                    &middot; keyakinan {{ Math.round(reference.confidence * 100) }}%
-                  </span>
-                  <span v-if="reference.isManual">&middot; ditinjau manual</span>
-                </p>
-                <p v-if="reference.reason" class="mt-1">{{ reference.reason }}</p>
-                <p v-else class="mt-1">Belum ada alasan dari backend.</p>
-
-                <div
-                  v-if="reference.candidate"
-                  class="mt-2 pt-2"
-                  :style="{ borderTop: '1px solid var(--border)' }"
-                >
-                  <p class="font-semibold">
-                    Kandidat teratas &middot; {{ metadataSourceLabel(reference.candidate.source) }}
-                  </p>
-                  <p v-if="reference.candidate.title" class="mt-0.5">{{ reference.candidate.title }}</p>
-                  <p v-if="reference.candidate.authors" class="mt-0.5">{{ reference.candidate.authors }}</p>
-                  <p
-                    v-if="reference.candidate.publication_name || reference.candidate.publication_year"
-                    class="mt-0.5"
-                  >
-                    {{ reference.candidate.publication_name }}
-                    <span v-if="reference.candidate.publication_year">({{ reference.candidate.publication_year }})</span>
-                  </p>
-                  <a
-                    v-if="reference.candidate.doi"
-                    :href="`https://doi.org/${reference.candidate.doi}`"
-                    target="_blank"
-                    rel="noopener"
-                    class="mt-1 inline-flex items-center gap-1 hover:underline"
-                    :style="{ color: 'var(--accent)' }"
-                    @click.stop
-                  >
-                    ↗ {{ reference.candidate.doi }}
-                  </a>
-                  <p v-if="reference.candidate.match_reason" class="mt-1">
-                    {{ reference.candidate.match_reason }}
-                  </p>
-                </div>
-
-                <ul v-if="reference.citations.length" class="mt-2 flex flex-col gap-1">
-                  <li v-for="citation in reference.citations" :key="citation.id">
-                    &bull; {{ citation.citation_text }}
-                    <span :style="{ color: 'var(--muted-foreground)' }">
-                      ({{ citationStatusLabel[citation.status] ?? citation.status }})
-                    </span>
-                  </li>
-                </ul>
-              </div>
-            </div>
+        <div class="lg:col-span-2 reference-panel">
+          <div class="flex items-center justify-between mb-4">
+            <p class="text-xs font-bold tracking-widest" :style="{ color: 'var(--muted-foreground)' }">
+              DAFTAR PUSTAKA
+            </p>
+            <p class="text-xs" :style="{ color: 'var(--muted-foreground)' }">{{ counts.total }} entri</p>
           </div>
 
-          <p v-if="filteredReferences.length === 0" class="text-sm text-center py-8" :style="{ color: 'var(--muted-foreground)' }">
-            Tidak ada referensi pada kategori ini.
-          </p>
+          <div class="inline-flex self-start p-1 rounded-full mb-4" :style="{ background: 'var(--secondary)' }">
+            <button
+              v-for="filter in filters"
+              :key="filter.key"
+              class="text-xs font-bold px-3.5 py-1.5 rounded-full transition-colors"
+              :style="{
+                background: activeFilter === filter.key ? 'var(--card)' : 'transparent',
+                color: activeFilter === filter.key ? 'var(--foreground)' : 'var(--muted-foreground)',
+                boxShadow: activeFilter === filter.key ? '0 1px 2px rgba(15,22,41,0.08)' : 'none',
+              }"
+              @click="activeFilter = filter.key"
+            >
+              {{ filter.label }}
+            </button>
+          </div>
+
+          <div class="reference-panel-list flex flex-col gap-3">
+            <div
+              v-for="reference in filteredReferences"
+              :key="reference.id"
+              :ref="(el) => (refItemEls[reference.id] = (el as any)?.$el ?? (el as any))"
+              class="rounded-xl border-l-4 border border-t border-r border-b overflow-hidden cursor-pointer"
+              :style="{
+                borderLeftColor: statusMeta[reference.bucket].fg,
+                borderTopColor: 'var(--border)',
+                borderRightColor: 'var(--border)',
+                borderBottomColor: 'var(--border)',
+                background: 'var(--card)',
+                outline: selectedRefId === reference.id ? `2px solid ${statusMeta[reference.bucket].fg}` : 'none',
+                outlineOffset: '1px',
+              }"
+              @click="selectReference(reference.id)"
+            >
+              <div class="p-4">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-start gap-2.5 min-w-0">
+                    <span
+                      class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold mt-0.5"
+                      :style="{ background: hexToRgba(statusMeta[reference.bucket].fg, 0.18), color: statusMeta[reference.bucket].fg }"
+                    >
+                      {{ reference.index }}
+                    </span>
+                    <p class="text-sm font-bold leading-snug" :style="{ color: 'var(--foreground)' }">
+                      {{ reference.title }}
+                    </p>
+                  </div>
+
+                  <span
+                    class="flex-shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full"
+                    :style="{ background: statusMeta[reference.bucket].bg, color: statusMeta[reference.bucket].fg }"
+                  >
+                    {{ statusMeta[reference.bucket].label }}
+                  </span>
+                </div>
+
+                <p v-if="reference.authors" class="text-xs mt-2 ml-8" :style="{ color: 'var(--muted-foreground)' }">
+                  {{ reference.authors }}
+                </p>
+                <p v-if="reference.year" class="text-xs ml-8" :style="{ color: 'var(--muted-foreground)' }">
+                  {{ reference.year }}
+                </p>
+                <a
+                  v-if="reference.doi"
+                  :href="`https://doi.org/${reference.doi}`"
+                  target="_blank"
+                  rel="noopener"
+                  class="text-xs mt-1 ml-8 inline-flex items-center gap-1 hover:underline"
+                  :style="{ color: 'var(--accent)' }"
+                  @click.stop
+                >
+                  ↗ {{ reference.doi }}
+                </a>
+                <span v-else class="block text-xs mt-1 ml-8" :style="{ color: 'var(--muted-foreground)' }">
+                  Tanpa DOI di daftar pustaka
+                </span>
+
+                <button
+                  class="w-full mt-3 flex items-center justify-between text-xs font-semibold px-3 py-2 rounded-lg"
+                  :style="{ background: 'var(--secondary)', color: 'var(--foreground)' }"
+                  @click.stop="toggleExpanded(reference.id)"
+                >
+                  <span class="flex items-center gap-1.5">ⓘ Lihat hasil validasi</span>
+                  <span :style="{ transform: expandedIds.has(reference.id) ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }">
+                    ⌄
+                  </span>
+                </button>
+
+                <div
+                  v-if="expandedIds.has(reference.id)"
+                  class="mt-2 text-xs rounded-lg px-3 py-2.5"
+                  :style="{ background: 'var(--muted)', color: 'var(--foreground)' }"
+                >
+                  <p class="font-semibold" :style="{ color: statusMeta[reference.bucket].fg }">
+                    {{ statusMeta[reference.bucket].label }} &middot; status backend: {{ reference.findingStatus }}
+                    <span v-if="reference.findingStatus !== 'pending'">
+                      &middot; keyakinan {{ Math.round(reference.confidence * 100) }}%
+                    </span>
+                    <span v-if="reference.isManual">&middot; ditinjau manual</span>
+                  </p>
+                  <p v-if="reference.reason" class="mt-1">{{ reference.reason }}</p>
+                  <p v-else class="mt-1">Belum ada alasan dari backend.</p>
+
+                  <div
+                    v-if="reference.candidate"
+                    class="mt-2 pt-2"
+                    :style="{ borderTop: '1px solid var(--border)' }"
+                  >
+                    <p class="font-semibold">
+                      Kandidat teratas &middot; {{ metadataSourceLabel(reference.candidate.source) }}
+                    </p>
+                    <p v-if="reference.candidate.title" class="mt-0.5">{{ reference.candidate.title }}</p>
+                    <p v-if="reference.candidate.authors" class="mt-0.5">{{ reference.candidate.authors }}</p>
+                    <p
+                      v-if="reference.candidate.publication_name || reference.candidate.publication_year"
+                      class="mt-0.5"
+                    >
+                      {{ reference.candidate.publication_name }}
+                      <span v-if="reference.candidate.publication_year">({{ reference.candidate.publication_year }})</span>
+                    </p>
+                    <a
+                      v-if="reference.candidate.doi"
+                      :href="`https://doi.org/${reference.candidate.doi}`"
+                      target="_blank"
+                      rel="noopener"
+                      class="mt-1 inline-flex items-center gap-1 hover:underline"
+                      :style="{ color: 'var(--accent)' }"
+                      @click.stop
+                    >
+                      ↗ {{ reference.candidate.doi }}
+                    </a>
+                    <p v-if="reference.candidate.match_reason" class="mt-1">
+                      {{ reference.candidate.match_reason }}
+                    </p>
+                  </div>
+
+                  <ul v-if="reference.citations.length" class="mt-2 flex flex-col gap-1">
+                    <li v-for="citation in reference.citations" :key="citation.id">
+                      &bull; {{ citation.citation_text }}
+                      <span :style="{ color: 'var(--muted-foreground)' }">
+                        ({{ citationStatusLabel[citation.status] ?? citation.status }})
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <p v-if="filteredReferences.length === 0" class="text-sm text-center py-8" :style="{ color: 'var(--muted-foreground)' }">
+              Tidak ada referensi pada kategori ini.
+            </p>
+          </div>
         </div>
       </div>
     </div>
   </div>
-</div>
 </template>
