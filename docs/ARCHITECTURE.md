@@ -288,7 +288,7 @@ Base URL `http://inference:8000` (private network, no auth in v1). Defined in `A
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/health` | `{ status, grobid[, sbert] }` liveness |
+| GET | `/health` | `{ status, grobid, sbert }` liveness |
 | POST | `/v1/extract` | Multipart PDF → references + citations + coordinates (GROBID) |
 | POST | `/v1/embeddings` | Batch texts → vectors (SBERT) |
 
@@ -351,8 +351,9 @@ The repository implements this topology with Compose files at the repo root (run
 
 Only the Laravel edge (`web`) and the SPA are published by default; GROBID, the inference service,
 Gotenberg and the database never receive public ports (`docs/SECURITY.md` §7). Semantic scoring is
-disabled in the container environment (`SCORING_SEMANTIC_ENABLED=false`) until the SBERT slice
-(`POST /v1/embeddings`) is implemented, because a 404 from that step is fatal to the pipeline.
+disabled by default in the container environment (`SCORING_SEMANTIC_ENABLED=false`); SBERT
+(`POST /v1/embeddings`) is implemented, but the model download and image size have not been
+validated in Docker yet (see `docker/README.md` §5).
 
 ---
 
@@ -430,9 +431,8 @@ Verified against the repository:
   candidate cap. **Missing:** the inference service implementation (FastAPI).
 - **Frontend** is a working Vue 3 + Vite SPA with mocked auth and prototype types; the API is not
   wired yet.
-- **Inference** implements the GROBID extraction slice (`GET /health`, `POST /v1/extract`) in
-  `inference/src/inference/` with a hermetic pytest suite; `/v1/embeddings` (SBERT) is not
-  implemented yet.
+- **Inference** implements `GET /health`, `POST /v1/extract` (GROBID) and `POST /v1/embeddings`
+  (SBERT) in `inference/src/inference/` with a hermetic pytest suite.
 
 Everything described as "the pipeline" or "scoring" above is the **target** design; the document
 lifecycle endpoints, the upload→job dispatch seam, the extraction/persistence half (Phase 03),
