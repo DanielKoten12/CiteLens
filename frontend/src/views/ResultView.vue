@@ -1,307 +1,141 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, reactive, ref, shallowRef, watch } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
-import { getDocument, GlobalWorkerOptions, type PDFDocumentProxy, type PageViewport } from "pdfjs-dist";
-import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-import { useDocumentStore } from "@/stores/document";
-import type { DocumentSegment, FilterStatus, PdfHighlight, Reference, RefStatus } from "@/types";
+import PdfHighlightViewer from "@/components/viewer/PdfHighlightViewer.vue";
+import { useDocumentHighlights } from "@/composables/useDocumentHighlights";
+import { ApiError } from "@/lib/api";
+import { reportUrl } from "@/lib/documents";
+import { metadataSourceLabel } from "@/lib/metadataSources";
+import type { ApiCitation, ApiReference, Candidate, FindingStatus } from "@/types/api";
+import type { HighlightItem } from "@/types/viewer";
 
+const props = defineProps<{ id?: string }>();
 const router = useRouter();
-const documentStore = useDocumentStore();
-GlobalWorkerOptions.workerSrc = workerUrl;
 
-const pdfDocument = shallowRef<PDFDocumentProxy | null>(null);
-const pdfLoading = ref(false);
-const pdfError = ref("");
+const viewer = ref<InstanceType<typeof PdfHighlightViewer> | null>(null);
+const {
+  document: documentData,
+  references,
+  citations,
+  highlights,
+  loading,
+  error,
+  load,
+} = useDocumentHighlights(props.id);
 
-type RenderedPdfPage = {
-  number: number;
-  width: number;
-  height: number;
-  viewport: PageViewport;
+/* ---------- Pemetaan status backend -> bucket tampilan ---------- */
+
+/**
+ * Bucket hanya untuk tampilan. Verdict tetap milik backend
+ * (`reference_findings.status`); frontend tidak memutuskan valid/invalid.
+ */
+type Bucket = "valid" | "warning" | "halu" | "pending";
+
+const BUCKET: Record<FindingStatus, Bucket> = {
+  valid: "valid",
+  suspicious: "warning",
+  invalid: "halu",
+  not_found: "halu",
+  pending: "pending",
 };
 
-const renderedPages = ref<RenderedPdfPage[]>([]);
-const pageCanvasEls = ref<Record<number, HTMLCanvasElement | null>>({});
-
-async function renderPdf() {
-  if (!documentStore.file || !documentStore.isPdf) return;
-  pdfLoading.value = true;
-  pdfError.value = "";
-  renderedPages.value = [];
-
-  try {
-    await pdfDocument.value?.cleanup();
-    pdfDocument.value = null;
-    const fileData = new Uint8Array(await documentStore.file.arrayBuffer());
-    const loadingTask = getDocument({ data: fileData });
-    const loadedDocument = await loadingTask.promise;
-    pdfDocument.value = loadedDocument;
-
-    const pages: RenderedPdfPage[] = [];
-    for (let pageNumber = 1; pageNumber <= loadedDocument.numPages; pageNumber += 1) {
-      const page = await loadedDocument.getPage(pageNumber);
-      const viewport = page.getViewport({ scale: 1.35 });
-      pages.push({ number: pageNumber, width: viewport.width, height: viewport.height, viewport });
-    }
-    renderedPages.value = pages;
-    pdfLoading.value = false;
-    let canvases: HTMLCanvasElement[] = [];
-    for (let attempt = 0; attempt < 60 && canvases.length < pages.length; attempt += 1) {
-      await nextTick();
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      canvases = Array.from(document.querySelectorAll<HTMLCanvasElement>(".pdf-page-canvas"));
-    }
-    if (canvases.length < pages.length) throw new Error("Canvas halaman PDF belum siap dirender.");
-    for (const [index, page] of pages.entries()) {
-      const canvas = canvases[index];
-      if (!canvas) continue;
-      const pdfPage = await loadedDocument.getPage(page.number);
-      canvas.width = page.width;
-      canvas.height = page.height;
-      const canvasContext = canvas.getContext("2d");
-      if (!canvasContext) throw new Error("Canvas context tidak tersedia.");
-      canvasContext.clearRect(0, 0, canvas.width, canvas.height);
-      await pdfPage.render({ canvas, viewport: page.viewport }).promise;
-    }
-  } catch (error) {
-    console.error("Gagal merender PDF:", error);
-    pdfError.value = error instanceof Error ? `PDF tidak dapat ditampilkan: ${error.message}` : "PDF tidak dapat ditampilkan.";
-  } finally {
-    pdfLoading.value = false;
-  }
-}
-
-function setPageCanvas(pageNumber: number, element: Element | null) {
-  pageCanvasEls.value[pageNumber] = element as HTMLCanvasElement | null;
-}
-
-function pageHighlights(pageNumber: number) {
-  return documentStore.highlights.filter((highlight) => highlight.page === pageNumber);
-}
-
-function highlightStyle(highlight: PdfHighlight, page: RenderedPdfPage) {
-  const points = [
-    page.viewport.convertToViewportPoint(highlight.x, highlight.y),
-    page.viewport.convertToViewportPoint(highlight.x + highlight.width, highlight.y),
-    page.viewport.convertToViewportPoint(highlight.x, highlight.y + highlight.height),
-    page.viewport.convertToViewportPoint(highlight.x + highlight.width, highlight.y + highlight.height),
-  ];
-  const left = Math.min(...points.map(([x]) => x));
-  const top = Math.min(...points.map(([, y]) => y));
-  const right = Math.max(...points.map(([x]) => x));
-  const bottom = Math.max(...points.map(([, y]) => y));
-  const statusColor = statusMeta[highlight.status];
-  return {
-    left: `${left}px`,
-    top: `${top}px`,
-    width: `${right - left}px`,
-    height: `${bottom - top}px`,
-    background: statusColor.bg,
-    borderColor: statusColor.fg,
-  };
-}
-
-watch(() => documentStore.objectUrl, renderPdf, { immediate: true });
-onBeforeUnmount(() => {
-  void pdfDocument.value?.cleanup();
-});
-
-// TODO: ganti mock data ini dengan hasil asli dari backend / store setelah
-// pipeline pemeriksaan selesai (lihat ProcessingView.vue).
-const fileName = computed(() => documentStore.fileName);
-
-const references: Reference[] = [
-  {
-    id: 1,
-    color: "#d97706",
-    title: "Deep Learning for Natural Language Processing: A Comprehensive Survey",
-    authors: "LeCun, Y., Bengio, Y., & Hinton, G.",
-    year: 2019,
-    doi: "10.1145/3234435.3234512",
-    status: "valid",
-    citedAt: [0],
-    citedInText: true,
-    doiCheck: { status: "resolves_match", resolvedTitle: "Deep Learning for Natural Language Processing: A Comprehensive Survey", titleSimilarity: 98 },
-  },
-  {
-    id: 2,
-    color: "#16a34a",
-    title: "Transformer Architecture and Attention Mechanisms in Modern NLP",
-    authors: "Vaswani, A., Shazeer, N., Parmar, N., & Uszkoreit, J.",
-    year: 2017,
-    doi: "10.5555/3295222.3295349",
-    status: "valid",
-    citedAt: [1],
-    citedInText: true,
-    doiCheck: { status: "resolves_match", resolvedTitle: "Attention Is All You Need", titleSimilarity: 95 },
-  },
-  {
-    id: 3,
-    color: "#7c3aed",
-    title: "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
-    authors: "Devlin, J., Chang, M. W., Lee, K., & Toutanova, K.",
-    year: 2019,
-    doi: "10.18653/v1/N19-1423",
-    status: "valid",
-    citedAt: [2],
-    citedInText: true,
-    doiCheck: { status: "resolves_match", resolvedTitle: "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding", titleSimilarity: 100 },
-  },
-  {
-    id: 4,
-    color: "#2563eb",
-    title: "Kualitas Sitasi dalam Karya Ilmiah Mahasiswa Indonesia",
-    authors: "Sutrisno, B., & Rahardjo, D.",
-    year: 2020,
-    doi: "10.21831/jpai.v8i2.3311",
-    status: "warning",
-    citedAt: [3],
-    citedInText: true,
-    warningReasons: [
-      "Judul pada DOI sedikit berbeda dari yang tertulis di daftar pustaka.",
-      "Nama jurnal tidak sepenuhnya cocok dengan hasil pencarian Crossref.",
-    ],
-    doiCheck: { status: "resolves_partial", resolvedTitle: "Kualitas Sitasi Karya Ilmiah pada Mahasiswa di Indonesia", titleSimilarity: 78 },
-  },
-  {
-    id: 5,
-    color: "#dc2626",
-    title: "Automated Reasoning in Large-Scale Academic Databases",
-    authors: "Prasetya, A., & Hidayat, M.",
-    year: 2022,
-    doi: "10.1234/fake.doi.2022.001",
-    status: "halu",
-    citedAt: [4],
-    citedInText: true,
-    haluReasons: [
-      "DOI tidak ditemukan di Crossref, Garuda, OpenAlex, maupun Semantic Scholar.",
-      "Tidak ada jejak publikasi dengan judul dan penulis ini di internet.",
-    ],
-    doiCheck: { status: "not_found" },
-  },
-  {
-    id: 6,
-    color: "#0891b2",
-    title: "Large Language Models as Research Assistants: Opportunities and Risks",
-    authors: "Kurniawan, F., & Anggraini, S.",
-    year: 2023,
-    doi: "10.1016/j.jrp.2023.104521",
-    status: "valid",
-    citedAt: [5],
-    citedInText: true,
-    doiCheck: { status: "resolves_match", resolvedTitle: "Large Language Models as Research Assistants: Opportunities and Risks", titleSimilarity: 94 },
-  },
-  {
-    id: 7,
-    color: "#be185d",
-    title: "Academic Integrity in the Age of Generative AI",
-    authors: "Wulandari, T.",
-    year: 2023,
-    doi: "10.3102/0013189X231234567",
-    status: "valid",
-    citedAt: [6],
-    citedInText: true,
-    doiCheck: { status: "resolves_match", resolvedTitle: "Academic Integrity in the Age of Generative AI", titleSimilarity: 97 },
-  },
-  {
-    id: 8,
-    color: "#ca8a04",
-    title: "Evaluating Reference Accuracy in Undergraduate Theses",
-    authors: "Nugroho, H., & Permata, I.",
-    year: 2021,
-    doi: "10.31219/osf.io/7yk2m",
-    status: "warning",
-    citedAt: [7],
-    citedInText: true,
-    warningReasons: ["Tahun terbit pada sumber asli tercatat 2020, bukan 2021."],
-    doiCheck: { status: "resolves_partial", resolvedTitle: "Evaluating Citation Accuracy in Undergraduate Theses", titleSimilarity: 81 },
-  },
-];
-
-type DocBlock =
-  | { kind: "h1" | "h2" | "h3"; text: string }
-  | { kind: "p"; segments: DocumentSegment[] };
-
-const documentBlocks: DocBlock[] = [
-  { kind: "h1", text: "BAB I" },
-  { kind: "h2", text: "PENDAHULUAN" },
-  { kind: "h3", text: "1.1 Latar Belakang" },
-  {
-    kind: "p",
-    segments: [
-      {
-        type: "text",
-        content:
-          "Perkembangan teknologi kecerdasan buatan telah membawa perubahan signifikan dalam berbagai aspek kehidupan akademik. Penggunaan model bahasa besar (Large Language Models) sebagai alat bantu penulisan semakin meluas di kalangan mahasiswa ",
-      },
-      { type: "citation", content: "(Sutrisno & Rahardjo, 2020)", refId: 4 },
-      {
-        type: "text",
-        content:
-          ". Fenomena ini menimbulkan berbagai tantangan baru dalam penjaminan mutu akademik, khususnya dalam hal keotentikan daftar pustaka yang dicantumkan dalam karya ilmiah.",
-      },
-    ],
-  },
-  {
-    kind: "p",
-    segments: [
-      {
-        type: "text",
-        content: "Penelitian terdahulu menunjukkan bahwa model deep learning telah berhasil diaplikasikan dalam berbagai tugas pemrosesan bahasa alami ",
-      },
-      { type: "citation", content: "(LeCun, Bengio & Hinton, 2019)", refId: 1 },
-      { type: "text", content: ". Arsitektur transformer yang diperkenalkan oleh " },
-      { type: "citation", content: "(Vaswani et al., 2017)", refId: 2 },
-      {
-        type: "text",
-        content: " menjadi landasan bagi banyak model bahasa modern, termasuk BERT yang dikembangkan untuk pemahaman bahasa dua arah ",
-      },
-      { type: "citation", content: "(Devlin et al., 2019)", refId: 3 },
-      { type: "text", content: "." },
-    ],
-  },
-  {
-    kind: "p",
-    segments: [
-      {
-        type: "text",
-        content:
-          "Namun, penggunaan model bahasa besar dalam penulisan akademik juga membuka celah baru berupa referensi yang tampak meyakinkan namun sebenarnya tidak pernah ada ",
-      },
-      { type: "citation", content: "(Prasetya & Hidayat, 2022)", refId: 5, isHalu: true },
-      { type: "text", content: ", sehingga diperlukan mekanisme validasi otomatis terhadap setiap sitasi yang dicantumkan." },
-    ],
-  },
-];
-
-const statusMeta: Record<RefStatus, { label: string; bg: string; fg: string }> = {
+const statusMeta: Record<Bucket, { label: string; bg: string; fg: string }> = {
   valid: { label: "Valid", bg: "#dcfce7", fg: "#15803d" },
   warning: { label: "Perlu Dicek", bg: "#fef3c7", fg: "#b45309" },
-  halu: { label: "Halu / Tidak Ditemukan", bg: "#fee2e2", fg: "#b91c1c" },
+  halu: { label: "Tidak Valid", bg: "#fee2e2", fg: "#b91c1c" },
+  pending: { label: "Belum Dicek", bg: "#e2e8f0", fg: "#475569" },
 };
 
-const filters: { key: FilterStatus; label: string }[] = [
-  { key: "all", label: "Semua" },
-  { key: "valid", label: "Valid" },
-  { key: "warning", label: "Perlu Dicek" },
-  { key: "halu", label: "Halu" },
-];
+/**
+ * `citation.status` sudah mencakup `unresolved` di `docs/API_SPEC.md` §2.6, tetapi
+ * `types/api.ts` belum memuatnya, jadi dipetakan sebagai Record<string, string>.
+ */
+const citationStatusLabel: Record<string, string> = {
+  valid: "valid",
+  unreliable: "tidak reliabel",
+  pending: "menunggu",
+  hallucination: "tanpa padanan",
+  unresolved: "belum pasti",
+};
 
-const activeFilter = ref<FilterStatus>("all");
-const selectedRefId = ref<number | null>(null);
-const expandedIds = reactive<Set<number>>(new Set());
-const refItemEls = ref<Record<number, HTMLElement | null>>({});
+/* ---------- Baris referensi ---------- */
 
-const counts = computed(() => ({
-  total: references.length,
-  valid: references.filter((r) => r.status === "valid").length,
-  warning: references.filter((r) => r.status === "warning").length,
-  halu: references.filter((r) => r.status === "halu").length,
-}));
+type ReferenceRow = {
+  id: string;
+  index: number;
+  bucket: Bucket;
+  findingStatus: FindingStatus;
+  title: string;
+  authors: string | null;
+  year: number | null;
+  doi: string | null;
+  reason: string;
+  confidence: number;
+  isManual: boolean;
+  candidate: Candidate | null;
+  citations: ApiCitation[];
+};
+
+/** Sitasi yang sudah dipasangkan ke referensi, dikelompokkan per id referensi. */
+const citationsByReference = computed(() => {
+  const grouped = new Map<string, ApiCitation[]>();
+  for (const citation of citations.value) {
+    const referenceId = citation.reference?.id;
+    if (!referenceId) continue;
+    const existing = grouped.get(referenceId);
+    if (existing) existing.push(citation);
+    else grouped.set(referenceId, [citation]);
+  }
+  return grouped;
+});
+
+function pickedCandidate(reference: ApiReference): Candidate | null {
+  const finding = reference.finding;
+  if (!finding?.candidates?.length) return null;
+  return (
+    finding.candidates.find((candidate) => candidate.id === finding.selected_candidate_id) ??
+    finding.candidates[0] ??
+    null
+  );
+}
+
+function rowTitle(reference: ApiReference): string {
+  if (reference.title) return reference.title;
+  const raw = reference.raw_text.trim();
+  return raw.length > 140 ? `${raw.slice(0, 140)}…` : raw;
+}
+
+const rows = computed<ReferenceRow[]>(() =>
+  references.value.map((reference, position) => {
+    const finding = reference.finding;
+    const status: FindingStatus = finding?.status ?? "pending";
+    return {
+      id: reference.id,
+      index: position + 1,
+      bucket: BUCKET[status],
+      findingStatus: status,
+      title: rowTitle(reference),
+      authors: reference.authors,
+      year: reference.publication_year,
+      doi: reference.doi,
+      reason: finding?.reason ?? "",
+      confidence: finding?.confidence ?? 0,
+      isManual: finding?.is_manual === true,
+      candidate: pickedCandidate(reference),
+      citations: citationsByReference.value.get(reference.id) ?? [],
+    };
+  }),
+);
+
+const counts = computed(() => {
+  const totals = { total: rows.value.length, valid: 0, warning: 0, halu: 0, pending: 0 };
+  for (const row of rows.value) totals[row.bucket] += 1;
+  return totals;
+});
 
 const trustScore = computed(() => {
   if (counts.value.total === 0) return 0;
+  // Rasio tampilan (bukan verdict): valid + 50% perlu dicek, sama dengan halaman Profil.
   const weighted = counts.value.valid + counts.value.warning * 0.5;
   return Math.round((weighted / counts.value.total) * 100);
 });
@@ -311,10 +145,34 @@ const RING_RADIUS = 22;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 const ringOffset = computed(() => RING_CIRCUMFERENCE * (1 - trustScore.value / 100));
 
-const filteredReferences = computed(() => {
-  if (activeFilter.value === "all") return references;
-  return references.filter((r) => r.status === activeFilter.value);
+const headerStats = computed(() => {
+  const stats: { key: Bucket; count: number }[] = [
+    { key: "valid", count: counts.value.valid },
+    { key: "warning", count: counts.value.warning },
+    { key: "halu", count: counts.value.halu },
+  ];
+  if (counts.value.pending > 0) stats.push({ key: "pending", count: counts.value.pending });
+  return stats;
 });
+
+const filters: { key: "all" | Bucket; label: string }[] = [
+  { key: "all", label: "Semua" },
+  { key: "valid", label: "Valid" },
+  { key: "warning", label: "Perlu Dicek" },
+  { key: "halu", label: "Tidak Valid" },
+  { key: "pending", label: "Belum Dicek" },
+];
+
+const activeFilter = ref<"all" | Bucket>("all");
+const selectedRefId = ref<string | null>(null);
+const expandedIds = reactive(new Set<string>());
+const refItemEls = ref<Record<string, HTMLElement | null>>({});
+
+const filteredReferences = computed(() =>
+  activeFilter.value === "all"
+    ? rows.value
+    : rows.value.filter((row) => row.bucket === activeFilter.value),
+);
 
 function hexToRgba(hex: string, alpha: number) {
   const parsed = hex.replace("#", "");
@@ -324,56 +182,88 @@ function hexToRgba(hex: string, alpha: number) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-function citationStyle(refId: number | null | undefined) {
-  const reference = references.find((r) => r.id === refId);
-  const color = reference?.color ?? "#6b7a99";
-  const isSelected = selectedRefId.value === refId;
-  return {
-    background: hexToRgba(color, isSelected ? 0.45 : 0.22),
-    color: "var(--foreground)",
-    boxShadow: isSelected ? `0 0 0 1.5px ${color}` : "none",
-  };
-}
-
-function selectCitation(refId: number | null | undefined) {
-  if (refId == null) return;
-  selectedRefId.value = refId;
-  activeFilter.value = "all";
-  expandedIds.add(refId);
-  requestAnimationFrame(() => {
-    refItemEls.value[refId]?.scrollIntoView({ behavior: "smooth", block: "center" });
-  });
-}
-
-function toggleExpanded(id: number) {
+function toggleExpanded(id: string) {
   if (expandedIds.has(id)) expandedIds.delete(id);
   else expandedIds.add(id);
 }
 
-function doiCheckLabel(reference: Reference) {
-  switch (reference.doiCheck.status) {
-    case "resolves_match":
-      return `Cocok dengan sumber asli (kemiripan judul ${reference.doiCheck.titleSimilarity}%).`;
-    case "resolves_partial":
-      return `Sebagian cocok dengan sumber asli (kemiripan judul ${reference.doiCheck.titleSimilarity}%).`;
-    case "resolves_mismatch":
-      return "DOI ditemukan tetapi judul tidak cocok dengan sumber asli.";
-    case "not_found":
-      return "DOI tidak ditemukan di database manapun.";
-    case "no_doi":
-      return "Referensi ini tidak mencantumkan DOI.";
-    default:
-      return "";
+function scrollToRow(id: string) {
+  requestAnimationFrame(() => {
+    refItemEls.value[id]?.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+}
+
+/** Klik baris referensi: sorot baris + lompat ke halaman PDF-nya. */
+function selectReference(id: string) {
+  selectedRefId.value = id;
+  expandedIds.add(id);
+  scrollToRow(id);
+  viewer.value?.scrollToHighlight(id);
+}
+
+/** Klik sorotan di PDF: pilih referensi, atau referensi pasangan sebuah sitasi. */
+function onViewerSelect(item: Pick<HighlightItem, "id" | "kind">) {
+  if (item.kind === "reference") {
+    selectedRefId.value = item.id;
+    expandedIds.add(item.id);
+    scrollToRow(item.id);
+    return;
+  }
+
+  const citation = citations.value.find((entry) => entry.id === item.id);
+  const referenceId = citation?.reference?.id ?? null;
+  // Sitasi tanpa padanan tidak punya baris referensi yang bisa disorot.
+  if (!referenceId) return;
+  selectedRefId.value = referenceId;
+  expandedIds.add(referenceId);
+  scrollToRow(referenceId);
+}
+
+/* ---------- Unduh laporan ---------- */
+
+const reportBusy = ref(false);
+const reportError = ref("");
+
+async function downloadReport() {
+  if (!props.id || reportBusy.value) return;
+  reportBusy.value = true;
+  reportError.value = "";
+  try {
+    window.open(await reportUrl(props.id), "_blank");
+  } catch (e) {
+    reportError.value = e instanceof Error ? e.message : "Gagal menyiapkan laporan.";
+  } finally {
+    reportBusy.value = false;
   }
 }
+
+/* ---------- Status pemuatan ---------- */
+
+const pdfSrc = computed(() => documentData.value?.file?.url ?? "");
+const notCompleted = computed(
+  () => documentData.value !== null && documentData.value.status !== "completed",
+);
+const errorMessage = computed(() => {
+  if (!error.value) return "";
+  return error.value instanceof ApiError ? error.value.detailMessages : error.value.message;
+});
 
 function goBack() {
   router.push({ name: "upload" });
 }
 
-function downloadReport() {
-  // TODO: sambungkan ke endpoint export PDF laporan hasil.
+function goToProcessing() {
+  if (props.id) router.push({ name: "processing", params: { id: props.id } });
 }
+
+onMounted(() => {
+  // Router masih memakai `:id?` (lihat `router/index.ts`); tanpa id tidak ada hasil.
+  if (!props.id) {
+    router.replace({ name: "upload" });
+    return;
+  }
+  void load();
+});
 </script>
 
 <template>
@@ -402,33 +292,17 @@ function downloadReport() {
           </span>
 
           <span
+            v-for="stat in headerStats"
+            :key="stat.key"
             class="flex items-center gap-2 text-sm font-bold px-3 py-1.5 rounded-full"
-            :style="{ background: statusMeta.valid.bg, color: statusMeta.valid.fg }"
+            :style="{ background: statusMeta[stat.key].bg, color: statusMeta[stat.key].fg }"
           >
-            <span class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-extrabold" :style="{ background: 'white' }">{{
-              counts.valid
-            }}</span>
-            Valid
-          </span>
-
-          <span
-            class="flex items-center gap-2 text-sm font-bold px-3 py-1.5 rounded-full"
-            :style="{ background: statusMeta.warning.bg, color: statusMeta.warning.fg }"
-          >
-            <span class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-extrabold" :style="{ background: 'white' }">{{
-              counts.warning
-            }}</span>
-            Perlu Dicek
-          </span>
-
-          <span
-            class="flex items-center gap-2 text-sm font-bold px-3 py-1.5 rounded-full"
-            :style="{ background: statusMeta.halu.bg, color: statusMeta.halu.fg }"
-          >
-            <span class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-extrabold" :style="{ background: 'white' }">{{
-              counts.halu
-            }}</span>
-            Halu / Tidak Ditemukan
+            <span
+              class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-extrabold"
+              :style="{ background: 'white' }"
+              >{{ stat.count }}</span
+            >
+            {{ statusMeta[stat.key].label }}
           </span>
         </div>
 
@@ -454,13 +328,16 @@ function downloadReport() {
             </svg>
             <div>
               <p class="text-sm font-bold" :style="{ color: 'var(--foreground)' }">Tingkat Kepercayaan</p>
-              <p class="text-xs" :style="{ color: 'var(--muted-foreground)' }">{{ trustScore }}% referensi valid</p>
+              <p class="text-xs" :style="{ color: 'var(--muted-foreground)' }">
+                {{ counts.valid }} dari {{ counts.total }} referensi valid
+              </p>
             </div>
           </div>
 
           <button
-            class="flex items-center gap-2 text-sm font-bold px-5 py-2.5 rounded-full text-white flex-shrink-0"
+            class="flex items-center gap-2 text-sm font-bold px-5 py-2.5 rounded-full text-white flex-shrink-0 disabled:opacity-60"
             :style="{ background: 'var(--primary)' }"
+            :disabled="reportBusy || notCompleted || !id"
             @click="downloadReport"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -468,13 +345,37 @@ function downloadReport() {
               <path d="M7 10l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
               <path d="M3 15v4a2 2 0 002 2h14a2 2 0 002-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
-            Unduh Laporan
+            {{ reportBusy ? "Menyiapkan…" : "Unduh Laporan" }}
           </button>
         </div>
       </div>
     </div>
 
     <div class="result-workspace">
+      <div v-if="error" class="max-w-7xl mx-auto px-6 pt-6">
+        <div
+          class="flex flex-wrap items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm"
+          :style="{ background: statusMeta.halu.bg, color: statusMeta.halu.fg }"
+        >
+          <span>{{ errorMessage }}</span>
+          <button class="font-bold underline" @click="load">Coba lagi</button>
+        </div>
+      </div>
+
+      <div v-else-if="notCompleted" class="max-w-7xl mx-auto px-6 pt-6">
+        <div
+          class="flex flex-wrap items-center gap-3 rounded-xl px-4 py-3 text-sm"
+          :style="{ background: statusMeta.pending.bg, color: statusMeta.pending.fg }"
+        >
+          <span>Analisis dokumen ini belum selesai, jadi hasilnya belum lengkap.</span>
+          <button class="font-bold underline" @click="goToProcessing">Lihat progres</button>
+        </div>
+      </div>
+
+      <div v-if="reportError" class="max-w-7xl mx-auto px-6 pt-4 text-sm" :style="{ color: statusMeta.halu.fg }">
+        {{ reportError }}
+      </div>
+
       <div class="result-layout max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-5 gap-8">
         <section class="lg:col-span-3">
           <div class="document-paper">
@@ -482,32 +383,25 @@ function downloadReport() {
               <div class="flex items-center gap-2 min-w-0">
                 <span class="document-file-icon">PDF</span>
                 <div class="min-w-0">
-                  <p class="document-file-name truncate">{{ fileName }}</p>
+                  <p class="document-file-name truncate">{{ documentData?.name ?? "Dokumen" }}</p>
                   <p class="document-file-meta">Hasil pemeriksaan sitasi</p>
                 </div>
               </div>
-              <span class="document-page-label">Halaman 1 dari 1</span>
             </div>
 
-            <div class="document-viewer">
-              <div v-if="pdfLoading" class="document-viewer-empty">Memuat PDF&hellip;</div>
-              <div v-else-if="pdfError" class="document-viewer-empty">{{ pdfError }}</div>
-              <div v-else-if="renderedPages.length" class="pdf-pages">
-                <div v-for="page in renderedPages" :key="page.number" class="pdf-page-shell" :style="{ width: `${page.width}px`, height: `${page.height}px` }">
-                  <canvas :ref="(element) => setPageCanvas(page.number, element as Element | null)" class="pdf-page-canvas" />
-                  <button
-                    v-for="highlight in pageHighlights(page.number)"
-                    :key="highlight.id"
-                    class="pdf-highlight"
-                    :style="highlightStyle(highlight, page)"
-                    :title="highlight.text ?? statusMeta[highlight.status].label"
-                    @click="selectCitation(highlight.refId)"
-                  />
-                </div>
-              </div>
-              <div v-else class="document-viewer-empty">
-                <p class="font-bold">Pratinjau PDF belum tersedia</p>
-                <p class="mt-1">Unggah file PDF untuk melihat dokumen asli.</p>
+            <PdfHighlightViewer
+              v-if="pdfSrc"
+              ref="viewer"
+              :src="pdfSrc"
+              :highlights="highlights"
+              :selected-id="selectedRefId"
+              class="rounded-none border-0 shadow-none"
+              @select="onViewerSelect"
+            />
+            <div v-else class="document-viewer">
+              <div class="document-viewer-empty">
+                <p class="font-bold">{{ loading ? "Memuat dokumen…" : "Pratinjau PDF belum tersedia" }}</p>
+                <p class="mt-1">File dokumen tidak dapat ditampilkan.</p>
               </div>
             </div>
           </div>
@@ -542,25 +436,26 @@ function downloadReport() {
             v-for="reference in filteredReferences"
             :key="reference.id"
             :ref="(el) => (refItemEls[reference.id] = (el as any)?.$el ?? (el as any))"
-            class="rounded-xl border-l-4 border border-t border-r border-b overflow-hidden"
+            class="rounded-xl border-l-4 border border-t border-r border-b overflow-hidden cursor-pointer"
             :style="{
-              borderLeftColor: reference.color,
+              borderLeftColor: statusMeta[reference.bucket].fg,
               borderTopColor: 'var(--border)',
               borderRightColor: 'var(--border)',
               borderBottomColor: 'var(--border)',
               background: 'var(--card)',
-              outline: selectedRefId === reference.id ? `2px solid ${reference.color}` : 'none',
+              outline: selectedRefId === reference.id ? `2px solid ${statusMeta[reference.bucket].fg}` : 'none',
               outlineOffset: '1px',
             }"
+            @click="selectReference(reference.id)"
           >
             <div class="p-4">
               <div class="flex items-start justify-between gap-3">
                 <div class="flex items-start gap-2.5 min-w-0">
                   <span
                     class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold mt-0.5"
-                    :style="{ background: hexToRgba(reference.color, 0.18), color: reference.color }"
+                    :style="{ background: hexToRgba(statusMeta[reference.bucket].fg, 0.18), color: statusMeta[reference.bucket].fg }"
                   >
-                    {{ reference.id }}
+                    {{ reference.index }}
                   </span>
                   <p class="text-sm font-bold leading-snug" :style="{ color: 'var(--foreground)' }">
                     {{ reference.title }}
@@ -569,17 +464,20 @@ function downloadReport() {
 
                 <span
                   class="flex-shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full"
-                  :style="{ background: statusMeta[reference.status].bg, color: statusMeta[reference.status].fg }"
+                  :style="{ background: statusMeta[reference.bucket].bg, color: statusMeta[reference.bucket].fg }"
                 >
-                  {{ statusMeta[reference.status].label }}
+                  {{ statusMeta[reference.bucket].label }}
                 </span>
               </div>
 
-              <p class="text-xs mt-2 ml-8" :style="{ color: 'var(--muted-foreground)' }">
+              <p v-if="reference.authors" class="text-xs mt-2 ml-8" :style="{ color: 'var(--muted-foreground)' }">
                 {{ reference.authors }}
               </p>
-              <p class="text-xs ml-8" :style="{ color: 'var(--muted-foreground)' }">{{ reference.year }}</p>
+              <p v-if="reference.year" class="text-xs ml-8" :style="{ color: 'var(--muted-foreground)' }">
+                {{ reference.year }}
+              </p>
               <a
+                v-if="reference.doi"
                 :href="`https://doi.org/${reference.doi}`"
                 target="_blank"
                 rel="noopener"
@@ -589,26 +487,76 @@ function downloadReport() {
               >
                 ↗ {{ reference.doi }}
               </a>
+              <span v-else class="block text-xs mt-1 ml-8" :style="{ color: 'var(--muted-foreground)' }">
+                Tanpa DOI di daftar pustaka
+              </span>
 
               <button
                 class="w-full mt-3 flex items-center justify-between text-xs font-semibold px-3 py-2 rounded-lg"
                 :style="{ background: 'var(--secondary)', color: 'var(--foreground)' }"
-                @click="toggleExpanded(reference.id)"
+                @click.stop="toggleExpanded(reference.id)"
               >
-                <span class="flex items-center gap-1.5">ⓘ Lihat hasil cek DOI</span>
+                <span class="flex items-center gap-1.5">ⓘ Lihat hasil validasi</span>
                 <span :style="{ transform: expandedIds.has(reference.id) ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }">
                   ⌄
                 </span>
               </button>
 
-              <div v-if="expandedIds.has(reference.id)" class="mt-2 text-xs rounded-lg px-3 py-2.5" :style="{ background: 'var(--muted)', color: 'var(--foreground)' }">
-                <p>{{ doiCheckLabel(reference) }}</p>
-                <ul
-                  v-if="reference.warningReasons?.length || reference.haluReasons?.length"
-                  class="mt-2 flex flex-col gap-1"
-                  :style="{ color: statusMeta[reference.status].fg }"
+              <div
+                v-if="expandedIds.has(reference.id)"
+                class="mt-2 text-xs rounded-lg px-3 py-2.5"
+                :style="{ background: 'var(--muted)', color: 'var(--foreground)' }"
+              >
+                <p class="font-semibold" :style="{ color: statusMeta[reference.bucket].fg }">
+                  {{ statusMeta[reference.bucket].label }} &middot; status backend: {{ reference.findingStatus }}
+                  <span v-if="reference.findingStatus !== 'pending'">
+                    &middot; keyakinan {{ Math.round(reference.confidence * 100) }}%
+                  </span>
+                  <span v-if="reference.isManual">&middot; ditinjau manual</span>
+                </p>
+                <p v-if="reference.reason" class="mt-1">{{ reference.reason }}</p>
+                <p v-else class="mt-1">Belum ada alasan dari backend.</p>
+
+                <div
+                  v-if="reference.candidate"
+                  class="mt-2 pt-2"
+                  :style="{ borderTop: '1px solid var(--border)' }"
                 >
-                  <li v-for="(reason, i) in reference.warningReasons ?? reference.haluReasons" :key="i">&bull; {{ reason }}</li>
+                  <p class="font-semibold">
+                    Kandidat teratas &middot; {{ metadataSourceLabel(reference.candidate.source) }}
+                  </p>
+                  <p v-if="reference.candidate.title" class="mt-0.5">{{ reference.candidate.title }}</p>
+                  <p v-if="reference.candidate.authors" class="mt-0.5">{{ reference.candidate.authors }}</p>
+                  <p
+                    v-if="reference.candidate.publication_name || reference.candidate.publication_year"
+                    class="mt-0.5"
+                  >
+                    {{ reference.candidate.publication_name }}
+                    <span v-if="reference.candidate.publication_year">({{ reference.candidate.publication_year }})</span>
+                  </p>
+                  <a
+                    v-if="reference.candidate.doi"
+                    :href="`https://doi.org/${reference.candidate.doi}`"
+                    target="_blank"
+                    rel="noopener"
+                    class="mt-1 inline-flex items-center gap-1 hover:underline"
+                    :style="{ color: 'var(--accent)' }"
+                    @click.stop
+                  >
+                    ↗ {{ reference.candidate.doi }}
+                  </a>
+                  <p v-if="reference.candidate.match_reason" class="mt-1">
+                    {{ reference.candidate.match_reason }}
+                  </p>
+                </div>
+
+                <ul v-if="reference.citations.length" class="mt-2 flex flex-col gap-1">
+                  <li v-for="citation in reference.citations" :key="citation.id">
+                    &bull; {{ citation.citation_text }}
+                    <span :style="{ color: 'var(--muted-foreground)' }">
+                      ({{ citationStatusLabel[citation.status] ?? citation.status }})
+                    </span>
+                  </li>
                 </ul>
               </div>
             </div>

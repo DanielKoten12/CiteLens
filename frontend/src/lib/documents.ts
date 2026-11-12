@@ -119,3 +119,27 @@ export const documentsApi = {
   removeReport: (id: string) =>
     api<null>(`/reports/${id}`, { method: "DELETE" }),
 };
+
+/**
+ * URL laporan PDF yang siap diunduh untuk dokumen `completed`.
+ * Pakai laporan yang sudah selesai; kalau belum ada, buat lalu tunggu prosesnya.
+ */
+export async function reportUrl(documentId: string): Promise<string> {
+  const existing = await documentsApi.reports(documentId);
+  const ready = existing.data.find(
+    (report) => report.status === "completed" && report.download_url,
+  );
+  if (ready?.download_url) return ready.download_url;
+
+  const created = await documentsApi.createReport(documentId);
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    const { data } = await documentsApi.report(created.data.id);
+    if (data.status === "completed" && data.download_url) return data.download_url;
+    if (data.status === "failed") {
+      throw new Error(data.error ?? "Pembuatan laporan gagal.");
+    }
+  }
+
+  throw new Error("Laporan belum siap. Coba lagi beberapa saat lagi.");
+}
