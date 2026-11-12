@@ -127,7 +127,7 @@ final class AuthorMatcher
         }
 
         $names = [];
-        $chunks = preg_split('/\s*(?:&|;|\band\b|\bdkk\.?)\s*/iu', $authors) ?: [];
+        $chunks = preg_split('/\s*(?:&|;|\band\b|\bdan\b|\bdkk\.?)\s*/iu', $authors) ?: [];
 
         foreach ($chunks as $chunk) {
             $tokens = array_values(array_filter(
@@ -136,6 +136,18 @@ final class AuthorMatcher
             ));
 
             if ($tokens === []) {
+                continue;
+            }
+
+            if (count($tokens) > 1 && $this->areCompleteNames($tokens)) {
+                foreach ($tokens as $token) {
+                    $name = $this->nameFromSingleToken($token);
+
+                    if ($name !== null) {
+                        $names[] = $name;
+                    }
+                }
+
                 continue;
             }
 
@@ -162,6 +174,23 @@ final class AuthorMatcher
         }
 
         return $names;
+    }
+
+    /**
+     * @param  list<string>  $tokens
+     */
+    private function areCompleteNames(array $tokens): bool
+    {
+        foreach ($tokens as $token) {
+            $words = preg_split('/\s+/u', $token) ?: [];
+            $last = end($words);
+
+            if (count($words) < 2 || ! is_string($last) || $this->looksLikeInitial($last)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

@@ -1,9 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
-/* Varian dark: Tailwind v4 default-nya prefers-color-scheme, kita pakai class .dark */
-@custom-variant dark (&:where(.dark, .dark *));
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -55,7 +52,6 @@
 }
 
 .dark {
-  color-scheme: dark; /* input, scrollbar, dan dropdown native ikut gelap */
   --background: #0b0f1a;
   --foreground: #eef2f9;
   --card: #131929;
@@ -65,7 +61,7 @@
   --secondary: #1a2340;
   --secondary-foreground: #b8c5e8;
   --muted: #1a2340;
-  --muted-foreground: #8e9bbb;
+  --muted-foreground: #6b7a99;
   --accent: #4a7cf7;
   --accent-foreground: #ffffff;
   --border: #1f2d4a;
@@ -83,15 +79,6 @@ body,
 #app {
   height: 100%;
   font-family: "Manrope", sans-serif;
-}
-
-html {
-  overflow-x: hidden; /* konten yang meluber tidak membuat seluruh halaman tergeser */
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
 }
 
 * {
@@ -128,17 +115,35 @@ input[type="password"]::-ms-clear {
   display: none;
 }
 
+.result-page {
+  display: flex;
+  height: calc(100dvh - 65px);
+  min-height: 0;
+  flex-direction: column;
+}
+
 .result-workspace {
-  min-height: calc(100vh - 73px);
+  display: flex;
+  min-height: 0;
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow: hidden;
   background: #e9edf3;
   background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(226, 232, 240, 0.45));
 }
 
-/* `stretch` (bukan `start`) memberi kolom kiri tinggi penuh baris grid,
-   sehingga `.document-paper` punya ruang tempel untuk `position: sticky`.
-   Dengan `start`, tinggi kolom = tinggi kertas dan sticky tidak pernah aktif. */
+.result-summary {
+  flex: 0 0 auto;
+}
+
 .result-layout {
   align-items: stretch;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  flex: 1 1 0%;
+  grid-template-rows: minmax(0, 1fr);
+  overflow: hidden;
 }
 
 .document-paper {
@@ -150,8 +155,7 @@ input[type="password"]::-ms-clear {
 }
 
 /* Tinggi area gulir PDF mengikuti viewport supaya kertas dokumen yang menempel
-   (sticky) tidak terpotong di layar pendek. Di layar tinggi nilainya tetap
-   560px seperti sebelumnya. */
+   (sticky) tidak terpotong di layar pendek. */
 .pdf-viewer-scrollport {
   height: clamp(360px, calc(100vh - 10rem), 560px);
 }
@@ -213,9 +217,10 @@ input[type="password"]::-ms-clear {
 }
 
 .document-viewer {
-  min-height: 820px;
+  height: 100%;
+  min-height: 0;
   background: #697586;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .pdf-pages {
@@ -357,38 +362,43 @@ input[type="password"]::-ms-clear {
   color: #c4cad4;
 }
 
-/* Kolom kanan punya area gulir sendiri dan tingginya dibatasi viewport,
-   supaya daftar pustaka yang panjang tidak mendorong dokumen keluar layar. */
 .reference-panel {
   position: sticky;
   top: 1rem;
   display: flex;
   flex-direction: column;
-  min-width: 0;
   max-height: calc(100vh - 2rem);
+  height: 100%;
+  min-height: 0;
 }
 
 .reference-panel-list {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  /* Ruang tipis agar outline kartu terpilih tidak terpotong tepi area gulir. */
-  padding: 2px 2px 6px;
-  overscroll-behavior: contain;
-}
-
-/* Area gulir membatasi tinggi daftar, jadi kartu tidak boleh ikut menyusut
-   (flex item default `flex-shrink: 1` akan meremas semua kartu sampai tipis). */
-.reference-panel-list > * {
-  flex-shrink: 0;
 }
 
 @media (max-width: 1023px) {
-  /* Satu kolom: biarkan halaman yang menggulir, jangan kunci tinggi panel
-     dan jangan menempelkan dokumen setinggi ~600px di atas daftar pustaka. */
+  .result-page {
+    height: auto;
+    min-height: calc(100dvh - 65px);
+  }
+
+  .result-workspace {
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .result-layout {
+    height: auto;
+    grid-template-rows: none;
+    overflow: visible;
+  }
+
   .reference-panel {
     position: static;
     display: block;
+    height: auto;
     max-height: none;
   }
 
@@ -430,32 +440,6 @@ input[type="password"]::-ms-clear {
   .document-page-label {
     display: none;
   }
-}
-
-/* ---------- Mode gelap: halaman hasil ---------- */
-/* Kertas dokumen sengaja tetap putih. Yang digelapkan hanya area di sekitarnya. */
-.dark .result-workspace {
-  background: var(--background);
-  background-image: none;
-}
-
-.dark .document-paper {
-  border-color: var(--border);
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
-}
-
-.dark .document-toolbar {
-  background: var(--card);
-  border-bottom-color: var(--border);
-}
-
-.dark .document-file-name {
-  color: var(--foreground);
-}
-
-.dark .document-file-meta,
-.dark .document-page-label {
-  color: var(--muted-foreground);
 }
 
 @media print {

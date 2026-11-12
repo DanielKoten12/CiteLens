@@ -64,7 +64,6 @@ final class ValidateReferencesStep implements PipelineStep
 
         foreach ($references as $index => $reference) {
             $verifications[] = $this->verifyReference($reference, $state);
-
             $this->progress->report($document, $this->step(), $index + 1, $total);
         }
 

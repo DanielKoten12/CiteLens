@@ -1,228 +1,171 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from "vue";
-import { useRouter } from "vue-router";
-import PdfHighlightViewer from "@/components/viewer/PdfHighlightViewer.vue";
-import { useDocumentHighlights } from "@/composables/useDocumentHighlights";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { ApiError } from "@/lib/api";
 import { reportUrl } from "@/lib/documents";
-import { metadataSourceLabel } from "@/lib/metadataSources";
-import type { ApiCitation, ApiReference, Candidate, FindingStatus } from "@/types/api";
-import type { HighlightItem } from "@/types/viewer";
+import { useDocumentHighlights } from "@/composables/useDocumentHighlights";
+import PdfHighlightViewer from "@/components/viewer/PdfHighlightViewer.vue";
+import { citationGroup, countByStatus, toReferenceRow, type ReferenceRow, type UiStatus } from "@/lib/resultAdapters";
 
 const props = defineProps<{ id?: string }>();
+const route = useRoute();
 const router = useRouter();
+const mockMode = import.meta.env.DEV && route.query.mock === "1";
+const viewerRef = ref<InstanceType<typeof PdfHighlightViewer> | null>(null);
+const selectedRefId = ref<string | null>(null);
+const selectedHighlightId = ref<string | null>(null);
+const activeFilter = ref<"all" | UiStatus>("all");
+const expandedIds = ref(new Set<string>());
+const refItemEls = ref<Record<string, HTMLElement | null>>({});
+const citationItemEls = ref<Record<string, HTMLElement | null>>({});
+const activeOccurrenceByReference = ref<Record<string, number>>({});
+const reportBusy = ref(false);
+const reportError = ref("");
 
-const viewer = ref<InstanceType<typeof PdfHighlightViewer> | null>(null);
-const {
-  document: documentData,
-  references,
-  citations,
-  highlights,
-  loading,
-  error,
-  load,
-} = useDocumentHighlights(props.id);
-
-/* ---------- Pemetaan status backend -> bucket tampilan ---------- */
-
-/**
- * Bucket hanya untuk tampilan. Verdict tetap milik backend
- * (`reference_findings.status`); frontend tidak memutuskan valid/invalid.
- */
-type Bucket = "valid" | "warning" | "halu" | "pending";
-
-const BUCKET: Record<FindingStatus, Bucket> = {
-  valid: "valid",
-  suspicious: "warning",
-  invalid: "halu",
-  not_found: "halu",
-  pending: "pending",
-};
-
-const statusMeta: Record<Bucket, { label: string; bg: string; fg: string }> = {
-  valid: { label: "Valid", bg: "#dcfce7", fg: "#15803d" },
-  warning: { label: "Perlu Dicek", bg: "#fef3c7", fg: "#b45309" },
-  halu: { label: "Tidak Valid", bg: "#fee2e2", fg: "#b91c1c" },
-  pending: { label: "Belum Dicek", bg: "#e2e8f0", fg: "#475569" },
-};
-
-/**
- * `citation.status` sudah mencakup `unresolved` di `docs/API_SPEC.md` §2.6, tetapi
- * `types/api.ts` belum memuatnya, jadi dipetakan sebagai Record<string, string>.
- */
-const citationStatusLabel: Record<string, string> = {
-  valid: "valid",
-  unreliable: "tidak reliabel",
-  pending: "menunggu",
-  hallucination: "tanpa padanan",
-  unresolved: "belum pasti",
-};
-
-/* ---------- Baris referensi ---------- */
-
-type ReferenceRow = {
-  id: string;
-  index: number;
-  bucket: Bucket;
-  findingStatus: FindingStatus;
-  title: string;
-  authors: string | null;
-  year: number | null;
-  doi: string | null;
-  reason: string;
-  confidence: number;
-  isManual: boolean;
-  candidate: Candidate | null;
-  citations: ApiCitation[];
-};
-
-/** Sitasi yang sudah dipasangkan ke referensi, dikelompokkan per id referensi. */
-const citationsByReference = computed(() => {
-  const grouped = new Map<string, ApiCitation[]>();
-  for (const citation of citations.value) {
-    const referenceId = citation.reference?.id;
-    if (!referenceId) continue;
-    const existing = grouped.get(referenceId);
-    if (existing) existing.push(citation);
-    else grouped.set(referenceId, [citation]);
-  }
-  return grouped;
-});
-
-function pickedCandidate(reference: ApiReference): Candidate | null {
-  const finding = reference.finding;
-  if (!finding?.candidates?.length) return null;
-  return (
-    finding.candidates.find((candidate) => candidate.id === finding.selected_candidate_id) ??
-    finding.candidates[0] ??
-    null
-  );
-}
-
-function rowTitle(reference: ApiReference): string {
-  if (reference.title) return reference.title;
-  const raw = reference.raw_text.trim();
-  return raw.length > 140 ? `${raw.slice(0, 140)}…` : raw;
-}
-
-const rows = computed<ReferenceRow[]>(() =>
-  references.value.map((reference, position) => {
-    const finding = reference.finding;
-    const status: FindingStatus = finding?.status ?? "pending";
-    return {
-      id: reference.id,
-      index: position + 1,
-      bucket: BUCKET[status],
-      findingStatus: status,
-      title: rowTitle(reference),
-      authors: reference.authors,
-      year: reference.publication_year,
-      doi: reference.doi,
-      reason: finding?.reason ?? "",
-      confidence: finding?.confidence ?? 0,
-      isManual: finding?.is_manual === true,
-      candidate: pickedCandidate(reference),
-      citations: citationsByReference.value.get(reference.id) ?? [],
-    };
-  }),
+const { document, references, citations, highlights, loading, error, load } = useDocumentHighlights(
+  props.id,
+  { mock: mockMode },
 );
 
-const counts = computed(() => {
-  const totals = { total: rows.value.length, valid: 0, warning: 0, halu: 0, pending: 0 };
-  for (const row of rows.value) totals[row.bucket] += 1;
-  return totals;
+onMounted(() => void load());
+
+watch(
+  () => document.value?.status,
+  (status) => {
+    if (!mockMode && props.id && (status === "pending" || status === "processing")) {
+      void router.replace({ name: "processing", params: { id: props.id } });
+    }
+  },
+  { immediate: true },
+);
+
+const rows = computed(() => references.value.map(toReferenceRow));
+const counts = computed(() => ({ total: rows.value.length, ...countByStatus(rows.value) }));
+const filteredReferences = computed(() =>
+  activeFilter.value === "all" ? rows.value : rows.value.filter((row) => row.status === activeFilter.value),
+);
+const citationsForReference = (referenceId: string) =>
+  citations.value
+    .filter((citation) => citation.reference?.id === referenceId)
+    .sort((left, right) => (left.occurrence_index ?? 0) - (right.occurrence_index ?? 0));
+const orphanCitations = computed(() => citations.value.filter((citation) => citation.reference === null));
+const visibleOrphanCitations = computed(() =>
+  activeFilter.value === "all"
+    ? orphanCitations.value
+    : orphanCitations.value.filter((citation) => citationGroup(citation.status) === activeFilter.value),
+);
+const visibleHighlights = computed(() => {
+  if (activeFilter.value === "all") return highlights.value;
+  return highlights.value.filter((highlight) => {
+    if (highlight.kind === "reference") {
+      const reference = references.value.find((item) => item.id === highlight.id);
+      if (!reference) return false;
+      return toReferenceRow(reference, references.value.indexOf(reference)).status === activeFilter.value;
+    }
+    const citation = citations.value.find((item) => item.id === highlight.id);
+    return citation ? citationGroup(citation.status) === activeFilter.value : false;
+  });
 });
 
+const fileName = computed(() => document.value?.file?.filename ?? document.value?.name ?? "Dokumen PDF");
+const pdfUrl = computed(() => (mockMode ? "/sample.pdf" : document.value?.file?.url ?? ""));
+const errorMessage = computed(() => {
+  if (error.value instanceof ApiError) return error.value.detailMessages;
+  return error.value?.message ?? "Gagal memuat hasil pemeriksaan.";
+});
+const isNotFound = computed(() => !mockMode && !props.id);
+const isFailed = computed(() => !mockMode && document.value?.status === "failed");
 const trustScore = computed(() => {
-  if (counts.value.total === 0) return 0;
-  // Rasio tampilan (bukan verdict): valid + 50% perlu dicek, sama dengan halaman Profil.
-  const weighted = counts.value.valid + counts.value.warning * 0.5;
-  return Math.round((weighted / counts.value.total) * 100);
+  if (!counts.value.total) return 0;
+  return Math.round(((counts.value.valid + counts.value.warning * 0.5) / counts.value.total) * 100);
 });
-
-// SVG ring math for the trust-score donut.
 const RING_RADIUS = 22;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 const ringOffset = computed(() => RING_CIRCUMFERENCE * (1 - trustScore.value / 100));
-
-const headerStats = computed(() => {
-  const stats: { key: Bucket; count: number }[] = [
-    { key: "valid", count: counts.value.valid },
-    { key: "warning", count: counts.value.warning },
-    { key: "halu", count: counts.value.halu },
-  ];
-  if (counts.value.pending > 0) stats.push({ key: "pending", count: counts.value.pending });
-  return stats;
-});
-
-const filters: { key: "all" | Bucket; label: string }[] = [
-  { key: "all", label: "Semua" },
-  { key: "valid", label: "Valid" },
-  { key: "warning", label: "Perlu Dicek" },
-  { key: "halu", label: "Tidak Valid" },
-  { key: "pending", label: "Belum Dicek" },
+const filters = [
+  { key: "all" as const, label: "Semua" },
+  { key: "valid" as const, label: "Valid" },
+  { key: "warning" as const, label: "Perlu Dicek" },
+  { key: "halu" as const, label: "Halu" },
 ];
+const statusMeta: Record<UiStatus, { label: string; fg: string; bg: string }> = {
+  valid: { label: "Valid", fg: "#15803d", bg: "#dcfce7" },
+  warning: { label: "Perlu Dicek", fg: "#b45309", bg: "#fef3c7" },
+  halu: { label: "Halu", fg: "#b91c1c", bg: "#fee2e2" },
+};
+const citationMeta: Record<UiStatus, { label: string; fg: string; bg: string }> = {
+  valid: { label: "Valid", fg: "#15803d", bg: "#dcfce7" },
+  warning: { label: "Perlu Dicek", fg: "#b45309", bg: "#fef3c7" },
+  halu: { label: "Sitasi bermasalah", fg: "#a16207", bg: "#fef9c3" },
+};
 
-const activeFilter = ref<"all" | Bucket>("all");
-const selectedRefId = ref<string | null>(null);
-const expandedIds = reactive(new Set<string>());
-const refItemEls = ref<Record<string, HTMLElement | null>>({});
+function selectReference(id: string) {
+  selectedRefId.value = id;
+  selectedHighlightId.value = id;
+  activeFilter.value = "all";
+  expandedIds.value.add(id);
+  void nextTick(() => refItemEls.value[id]?.scrollIntoView({ behavior: "smooth", block: "center" }));
+  viewerRef.value?.scrollToHighlight(id);
+}
 
-const filteredReferences = computed(() =>
-  activeFilter.value === "all"
-    ? rows.value
-    : rows.value.filter((row) => row.bucket === activeFilter.value),
-);
+function scrollCitationCard(id: string) {
+  void nextTick(() => citationItemEls.value[id]?.scrollIntoView({ behavior: "smooth", block: "center" }));
+}
 
-function hexToRgba(hex: string, alpha: number) {
-  const parsed = hex.replace("#", "");
-  const r = parseInt(parsed.substring(0, 2), 16);
-  const g = parseInt(parsed.substring(2, 4), 16);
-  const b = parseInt(parsed.substring(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+function selectCitation(citationId: string) {
+  const citation = citations.value.find((item) => item.id === citationId);
+  if (!citation) return;
+
+  selectedHighlightId.value = citation.id;
+  selectedRefId.value = citation.reference?.id ?? null;
+  activeFilter.value = "all";
+  if (citation.reference?.id) {
+    const matches = citationsForReference(citation.reference.id);
+    const occurrence = matches.findIndex((match) => match.id === citation.id);
+    activeOccurrenceByReference.value = {
+      ...activeOccurrenceByReference.value,
+      [citation.reference.id]: Math.max(0, occurrence),
+    };
+    expandedIds.value.add(citation.reference.id);
+  }
+  scrollCitationCard(citation.id);
+  viewerRef.value?.scrollToHighlight(citation.id);
+}
+
+function navigateCitation(referenceId: string, delta: number) {
+  const matches = citationsForReference(referenceId);
+  if (matches.length === 0) return;
+  const current = activeOccurrenceByReference.value[referenceId] ?? 0;
+  const next = (current + delta + matches.length) % matches.length;
+  activeOccurrenceByReference.value = { ...activeOccurrenceByReference.value, [referenceId]: next };
+  selectCitation(matches[next].id);
+}
+
+function onSelectHighlight(selection: { id: string; kind: "reference" | "citation" }) {
+  selectedHighlightId.value = selection.id;
+  activeFilter.value = "all";
+  if (selection.kind === "citation") {
+    selectCitation(selection.id);
+    return;
+  }
+  const referenceId =
+    selection.kind === "reference" ? selection.id : null;
+  if (!referenceId) return;
+  selectedRefId.value = referenceId;
+  expandedIds.value.add(referenceId);
+  void nextTick(() => refItemEls.value[referenceId]?.scrollIntoView({ behavior: "smooth", block: "center" }));
 }
 
 function toggleExpanded(id: string) {
-  if (expandedIds.has(id)) expandedIds.delete(id);
-  else expandedIds.add(id);
+  const next = new Set(expandedIds.value);
+  if (next.has(id)) next.delete(id);
+  else next.add(id);
+  expandedIds.value = next;
 }
 
-function scrollToRow(id: string) {
-  requestAnimationFrame(() => {
-    refItemEls.value[id]?.scrollIntoView({ behavior: "smooth", block: "center" });
-  });
+function goBack() {
+  void router.push({ name: "upload" });
 }
-
-/** Klik baris referensi: sorot baris + lompat ke halaman PDF-nya. */
-function selectReference(id: string) {
-  selectedRefId.value = id;
-  expandedIds.add(id);
-  scrollToRow(id);
-  viewer.value?.scrollToHighlight(id);
-}
-
-/** Klik sorotan di PDF: pilih referensi, atau referensi pasangan sebuah sitasi. */
-function onViewerSelect(item: Pick<HighlightItem, "id" | "kind">) {
-  if (item.kind === "reference") {
-    selectedRefId.value = item.id;
-    expandedIds.add(item.id);
-    scrollToRow(item.id);
-    return;
-  }
-
-  const citation = citations.value.find((entry) => entry.id === item.id);
-  const referenceId = citation?.reference?.id ?? null;
-  // Sitasi tanpa padanan tidak punya baris referensi yang bisa disorot.
-  if (!referenceId) return;
-  selectedRefId.value = referenceId;
-  expandedIds.add(referenceId);
-  scrollToRow(referenceId);
-}
-
-/* ---------- Unduh laporan ---------- */
-
-const reportBusy = ref(false);
-const reportError = ref("");
 
 async function downloadReport() {
   if (!props.id || reportBusy.value) return;
@@ -230,341 +173,150 @@ async function downloadReport() {
   reportError.value = "";
   try {
     window.open(await reportUrl(props.id), "_blank");
-  } catch (e) {
-    reportError.value = e instanceof Error ? e.message : "Gagal menyiapkan laporan.";
+  } catch (caught) {
+    reportError.value = caught instanceof Error ? caught.message : "Gagal menyiapkan laporan.";
   } finally {
     reportBusy.value = false;
   }
 }
-
-/* ---------- Status pemuatan ---------- */
-
-const pdfSrc = computed(() => documentData.value?.file?.url ?? "");
-const notCompleted = computed(
-  () => documentData.value !== null && documentData.value.status !== "completed",
-);
-const errorMessage = computed(() => {
-  if (!error.value) return "";
-  return error.value instanceof ApiError ? error.value.detailMessages : error.value.message;
-});
-
-function goBack() {
-  router.push({ name: "upload" });
-}
-
-function goToProcessing() {
-  if (props.id) router.push({ name: "processing", params: { id: props.id } });
-}
-
-onMounted(() => {
-  // Router masih memakai `:id?` (lihat `router/index.ts`); tanpa id tidak ada hasil.
-  if (!props.id) {
-    router.replace({ name: "upload" });
-    return;
-  }
-  void load();
-});
 </script>
 
 <template>
-  <div>
-    <div class="border-b" :style="{ borderColor: 'var(--border)', background: 'var(--card)' }">
+  <div class="result-page">
+    <div v-if="!isNotFound" class="result-summary border-b" :style="{ borderColor: 'var(--border)', background: 'var(--card)' }">
       <div class="max-w-7xl mx-auto px-6 py-4 flex flex-wrap items-center justify-between gap-4">
         <div class="flex flex-wrap items-center gap-3">
-          <button
-            class="flex items-center gap-1 text-sm font-semibold"
-            :style="{ color: 'var(--muted-foreground)' }"
-            @click="goBack"
-          >
+          <button class="flex items-center gap-1 text-sm font-semibold" :style="{ color: 'var(--muted-foreground)' }" @click="goBack">
             <span>&lsaquo;</span> Kembali
           </button>
-
-          <span
-            class="flex items-center gap-2 text-sm font-bold px-3 py-1.5 rounded-full"
-            :style="{ background: 'var(--secondary)', color: 'var(--foreground)' }"
-          >
-            <span
-              class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-extrabold"
-              :style="{ background: 'var(--foreground)', color: 'var(--card)' }"
-              >{{ counts.total }}</span
-            >
-            Total Referensi
-          </span>
-
-          <span
-            v-for="stat in headerStats"
-            :key="stat.key"
-            class="flex items-center gap-2 text-sm font-bold px-3 py-1.5 rounded-full"
-            :style="{ background: statusMeta[stat.key].bg, color: statusMeta[stat.key].fg }"
-          >
-            <span
-              class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-extrabold"
-              :style="{ background: 'white' }"
-              >{{ stat.count }}</span
-            >
-            {{ statusMeta[stat.key].label }}
+          <span v-for="chip in [
+            { label: 'Total Referensi', value: counts.total, style: { background: 'var(--secondary)', color: 'var(--foreground)' } },
+            { label: 'Valid', value: counts.valid, style: statusMeta.valid },
+            { label: 'Perlu Dicek', value: counts.warning, style: statusMeta.warning },
+            { label: 'Halu / Tidak Ditemukan', value: counts.halu, style: statusMeta.halu },
+          ]" :key="chip.label" class="flex items-center gap-2 text-sm font-bold px-3 py-1.5 rounded-full" :style="chip.style">
+            <span class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-extrabold" :style="{ background: 'white' }">{{ chip.value }}</span>
+            {{ chip.label }}
           </span>
         </div>
-
         <div class="flex items-center gap-4">
           <div class="flex items-center gap-3">
             <svg width="56" height="56" viewBox="0 0 56 56">
               <circle cx="28" cy="28" :r="RING_RADIUS" fill="none" stroke="var(--secondary)" stroke-width="5" />
-              <circle
-                cx="28"
-                cy="28"
-                :r="RING_RADIUS"
-                fill="none"
-                stroke="#d97706"
-                stroke-width="5"
-                stroke-linecap="round"
-                :stroke-dasharray="RING_CIRCUMFERENCE"
-                :stroke-dashoffset="ringOffset"
-                transform="rotate(-90 28 28)"
-              />
-              <text x="28" y="32" text-anchor="middle" font-size="13" font-weight="800" fill="var(--foreground)">
-                {{ trustScore }}%
-              </text>
+              <circle cx="28" cy="28" :r="RING_RADIUS" fill="none" stroke="#d97706" stroke-width="5" stroke-linecap="round" :stroke-dasharray="RING_CIRCUMFERENCE" :stroke-dashoffset="ringOffset" transform="rotate(-90 28 28)" />
+              <text x="28" y="32" text-anchor="middle" font-size="13" font-weight="800" fill="var(--foreground)">{{ trustScore }}%</text>
             </svg>
             <div>
               <p class="text-sm font-bold" :style="{ color: 'var(--foreground)' }">Tingkat Kepercayaan</p>
-              <p class="text-xs" :style="{ color: 'var(--muted-foreground)' }">
-                {{ counts.valid }} dari {{ counts.total }} referensi valid
-              </p>
+              <p class="text-xs" :style="{ color: 'var(--muted-foreground)' }">{{ trustScore }}% referensi valid</p>
             </div>
           </div>
-
-          <button
-            class="flex items-center gap-2 text-sm font-bold px-5 py-2.5 rounded-full text-white flex-shrink-0 disabled:opacity-60"
-            :style="{ background: 'var(--primary)' }"
-            :disabled="reportBusy || notCompleted || !id"
-            @click="downloadReport"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              <path d="M7 10l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              <path d="M3 15v4a2 2 0 002 2h14a2 2 0 002-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
+          <button class="flex items-center gap-2 text-sm font-bold px-5 py-2.5 rounded-full text-white flex-shrink-0 disabled:opacity-60" :style="{ background: 'var(--primary)' }" :disabled="reportBusy || !props.id" @click="downloadReport">
             {{ reportBusy ? "Menyiapkan…" : "Unduh Laporan" }}
           </button>
         </div>
       </div>
     </div>
+    <div v-if="reportError" class="max-w-7xl mx-auto px-6 pt-4 text-sm" :style="{ color: statusMeta.halu.fg }">
+      {{ reportError }}
+    </div>
 
-    <div class="result-workspace">
-      <div v-if="error" class="max-w-7xl mx-auto px-6 pt-6">
-        <div
-          class="flex flex-wrap items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm"
-          :style="{ background: statusMeta.halu.bg, color: statusMeta.halu.fg }"
-        >
-          <span>{{ errorMessage }}</span>
-          <button class="font-bold underline" @click="load">Coba lagi</button>
-        </div>
-      </div>
-
-      <div v-else-if="notCompleted" class="max-w-7xl mx-auto px-6 pt-6">
-        <div
-          class="flex flex-wrap items-center gap-3 rounded-xl px-4 py-3 text-sm"
-          :style="{ background: statusMeta.pending.bg, color: statusMeta.pending.fg }"
-        >
-          <span>Analisis dokumen ini belum selesai, jadi hasilnya belum lengkap.</span>
-          <button class="font-bold underline" @click="goToProcessing">Lihat progres</button>
-        </div>
-      </div>
-
-      <div v-if="reportError" class="max-w-7xl mx-auto px-6 pt-4 text-sm" :style="{ color: statusMeta.halu.fg }">
-        {{ reportError }}
-      </div>
-
-      <div class="result-layout max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-5 gap-8">
-        <section class="lg:col-span-3">
-          <div class="document-paper sticky top-4">
+    <div v-if="isNotFound" class="max-w-2xl mx-auto px-6 py-16 text-center">
+      <h1 class="text-xl font-bold">Dokumen tidak ditemukan</h1>
+      <button class="mt-5 rounded-xl px-4 py-2 text-sm font-bold text-white" :style="{ background: 'var(--primary)' }" @click="goBack">Kembali</button>
+    </div>
+    <div v-else-if="loading" class="max-w-2xl mx-auto px-6 py-16 text-center">Memuat hasil pemeriksaan&hellip;</div>
+    <div v-else-if="isFailed || error" class="max-w-2xl mx-auto px-6 py-16 text-center">
+      <h1 class="text-xl font-bold">{{ isFailed ? "Pemeriksaan gagal" : "Hasil tidak dapat dimuat" }}</h1>
+      <p class="mt-2 text-sm" :style="{ color: 'var(--muted-foreground)' }">{{ isFailed ? document?.error : errorMessage }}</p>
+      <button class="mt-5 rounded-xl px-4 py-2 text-sm font-bold text-white" :style="{ background: 'var(--primary)' }" @click="goBack">Unggah file lain</button>
+    </div>
+    <div v-else class="result-workspace">
+      <div class="result-layout max-w-7xl mx-auto px-6 py-4 grid grid-cols-1 lg:grid-cols-5 gap-6 min-w-0">
+        <section class="lg:col-span-3 min-w-0 min-h-0 h-full">
+          <div class="document-paper h-full flex min-h-0 flex-col">
             <div class="document-toolbar">
               <div class="flex items-center gap-2 min-w-0">
                 <span class="document-file-icon">PDF</span>
                 <div class="min-w-0">
-                  <p class="document-file-name truncate">{{ documentData?.name ?? "Dokumen" }}</p>
+                  <p class="document-file-name truncate">{{ fileName }}</p>
                   <p class="document-file-meta">Hasil pemeriksaan sitasi</p>
                 </div>
               </div>
             </div>
-
-            <PdfHighlightViewer
-              v-if="pdfSrc"
-              ref="viewer"
-              :src="pdfSrc"
-              :highlights="highlights"
-              :selected-id="selectedRefId"
-              class="rounded-none border-0 shadow-none"
-              @select="onViewerSelect"
-            />
-            <div v-else class="document-viewer">
-              <div class="document-viewer-empty">
-                <p class="font-bold">{{ loading ? "Memuat dokumen…" : "Pratinjau PDF belum tersedia" }}</p>
-                <p class="mt-1">File dokumen tidak dapat ditampilkan.</p>
-              </div>
+            <div class="document-viewer min-w-0 min-h-0 flex-1">
+              <PdfHighlightViewer ref="viewerRef" :src="pdfUrl" :highlights="visibleHighlights" :selected-id="selectedHighlightId" @select="onSelectHighlight" />
             </div>
           </div>
         </section>
 
-        <div class="lg:col-span-2 reference-panel">
+        <div class="lg:col-span-2 reference-panel min-w-0 min-h-0 overflow-y-auto pr-1">
           <div class="flex items-center justify-between mb-4">
-            <p class="text-xs font-bold tracking-widest" :style="{ color: 'var(--muted-foreground)' }">
-              DAFTAR PUSTAKA
-            </p>
+            <p class="text-xs font-bold tracking-widest" :style="{ color: 'var(--muted-foreground)' }">DAFTAR PUSTAKA</p>
             <p class="text-xs" :style="{ color: 'var(--muted-foreground)' }">{{ counts.total }} entri</p>
           </div>
-
-          <div class="inline-flex self-start p-1 rounded-full mb-4" :style="{ background: 'var(--secondary)' }">
-            <button
-              v-for="filter in filters"
-              :key="filter.key"
-              class="text-xs font-bold px-3.5 py-1.5 rounded-full transition-colors"
-              :style="{
-                background: activeFilter === filter.key ? 'var(--card)' : 'transparent',
-                color: activeFilter === filter.key ? 'var(--foreground)' : 'var(--muted-foreground)',
-                boxShadow: activeFilter === filter.key ? '0 1px 2px rgba(15,22,41,0.08)' : 'none',
-              }"
-              @click="activeFilter = filter.key"
-            >
+          <div class="inline-flex p-1 rounded-full mb-4" :style="{ background: 'var(--secondary)' }">
+            <button v-for="filter in filters" :key="filter.key" class="text-xs font-bold px-3.5 py-1.5 rounded-full transition-colors" :style="{ background: activeFilter === filter.key ? 'var(--card)' : 'transparent', color: activeFilter === filter.key ? 'var(--foreground)' : 'var(--muted-foreground)' }" @click="activeFilter = filter.key">
               {{ filter.label }}
             </button>
           </div>
-
-          <div class="reference-panel-list flex flex-col gap-3">
-            <div
-              v-for="reference in filteredReferences"
-              :key="reference.id"
-              :ref="(el) => (refItemEls[reference.id] = (el as any)?.$el ?? (el as any))"
-              class="rounded-xl border-l-4 border border-t border-r border-b overflow-hidden cursor-pointer"
-              :style="{
-                borderLeftColor: statusMeta[reference.bucket].fg,
-                borderTopColor: 'var(--border)',
-                borderRightColor: 'var(--border)',
-                borderBottomColor: 'var(--border)',
-                background: 'var(--card)',
-                outline: selectedRefId === reference.id ? `2px solid ${statusMeta[reference.bucket].fg}` : 'none',
-                outlineOffset: '1px',
-              }"
-              @click="selectReference(reference.id)"
-            >
+          <div class="flex flex-col gap-3">
+            <div v-for="reference in filteredReferences" :key="reference.id" :ref="(el) => (refItemEls[reference.id] = (el as HTMLElement | null))" class="rounded-xl border-l-4 border overflow-hidden" :style="{ borderLeftColor: statusMeta[reference.status].fg, borderColor: 'var(--border)', background: 'var(--card)', outline: selectedRefId === reference.id ? `2px solid ${statusMeta[reference.status].fg}` : 'none', outlineOffset: '1px' }">
               <div class="p-4">
                 <div class="flex items-start justify-between gap-3">
                   <div class="flex items-start gap-2.5 min-w-0">
-                    <span
-                      class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold mt-0.5"
-                      :style="{ background: hexToRgba(statusMeta[reference.bucket].fg, 0.18), color: statusMeta[reference.bucket].fg }"
-                    >
-                      {{ reference.index }}
-                    </span>
-                    <p class="text-sm font-bold leading-snug" :style="{ color: 'var(--foreground)' }">
-                      {{ reference.title }}
-                    </p>
+                    <span class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold mt-0.5" :style="{ background: statusMeta[reference.status].bg, color: statusMeta[reference.status].fg }">{{ reference.no }}</span>
+                    <p class="text-sm font-bold leading-snug cursor-pointer" :style="{ color: 'var(--foreground)' }" @click="selectReference(reference.id)">{{ reference.title }}</p>
                   </div>
-
-                  <span
-                    class="flex-shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full"
-                    :style="{ background: statusMeta[reference.bucket].bg, color: statusMeta[reference.bucket].fg }"
-                  >
-                    {{ statusMeta[reference.bucket].label }}
-                  </span>
+                  <span class="flex-shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full" :style="{ background: statusMeta[reference.status].bg, color: statusMeta[reference.status].fg }">{{ statusMeta[reference.status].label }}</span>
                 </div>
-
-                <p v-if="reference.authors" class="text-xs mt-2 ml-8" :style="{ color: 'var(--muted-foreground)' }">
-                  {{ reference.authors }}
-                </p>
-                <p v-if="reference.year" class="text-xs ml-8" :style="{ color: 'var(--muted-foreground)' }">
-                  {{ reference.year }}
-                </p>
-                <a
-                  v-if="reference.doi"
-                  :href="`https://doi.org/${reference.doi}`"
-                  target="_blank"
-                  rel="noopener"
-                  class="text-xs mt-1 ml-8 inline-flex items-center gap-1 hover:underline"
-                  :style="{ color: 'var(--accent)' }"
-                  @click.stop
-                >
-                  ↗ {{ reference.doi }}
-                </a>
-                <span v-else class="block text-xs mt-1 ml-8" :style="{ color: 'var(--muted-foreground)' }">
-                  Tanpa DOI di daftar pustaka
-                </span>
-
-                <button
-                  class="w-full mt-3 flex items-center justify-between text-xs font-semibold px-3 py-2 rounded-lg"
-                  :style="{ background: 'var(--secondary)', color: 'var(--foreground)' }"
-                  @click.stop="toggleExpanded(reference.id)"
-                >
-                  <span class="flex items-center gap-1.5">ⓘ Lihat hasil validasi</span>
-                  <span :style="{ transform: expandedIds.has(reference.id) ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }">
-                    ⌄
-                  </span>
+                <p class="text-xs mt-2 ml-8" :style="{ color: 'var(--muted-foreground)' }">{{ reference.authors }}</p>
+                <p v-if="reference.year" class="text-xs ml-8" :style="{ color: 'var(--muted-foreground)' }">{{ reference.year }}</p>
+                <a v-if="reference.doi" :href="`https://doi.org/${reference.doi}`" target="_blank" rel="noopener" class="text-xs mt-1 ml-8 inline-flex hover:underline" :style="{ color: 'var(--accent)' }" @click.stop>↗ {{ reference.doi }}</a>
+                <p v-else class="text-xs mt-1 ml-8" :style="{ color: 'var(--muted-foreground)' }">Tidak ada DOI</p>
+                <div class="mt-3 rounded-lg px-3 py-2" :style="{ background: 'var(--secondary)' }">
+                  <template v-if="citationsForReference(reference.id).length">
+                    <div class="flex items-center justify-between text-xs font-semibold">
+                      <button class="rounded px-1.5 py-0.5 disabled:opacity-40" :disabled="citationsForReference(reference.id).length < 2" @click.stop="navigateCitation(reference.id, -1)">&lsaquo;</button>
+                      <span>{{ (activeOccurrenceByReference[reference.id] ?? 0) + 1 }} of {{ citationsForReference(reference.id).length }}</span>
+                      <button class="rounded px-1.5 py-0.5 disabled:opacity-40" :disabled="citationsForReference(reference.id).length < 2" @click.stop="navigateCitation(reference.id, 1)">&rsaquo;</button>
+                    </div>
+                    <div v-for="(citation, citationIndex) in citationsForReference(reference.id)" v-show="citationIndex === (activeOccurrenceByReference[reference.id] ?? 0)" :key="citation.id" class="mt-2 rounded px-1 text-xs leading-relaxed cursor-pointer" :style="{ color: 'var(--muted-foreground)', background: citationMeta[citationGroup(citation.status)].bg }" @click.stop="selectCitation(citation.id)">
+                      <span>{{ citation.context_before }}</span>
+                      <strong :style="{ color: citationMeta[citationGroup(citation.status)].fg }">{{ citation.citation_text }}</strong>
+                      <span>{{ citation.context_after }}</span>
+                    </div>
+                  </template>
+                  <span v-else class="text-xs" :style="{ color: 'var(--muted-foreground)' }">Tidak disitasi di naskah</span>
+                </div>
+                <button class="w-full mt-3 flex items-center justify-between text-xs font-semibold px-3 py-2 rounded-lg" :style="{ background: 'var(--secondary)', color: 'var(--foreground)' }" @click.stop="toggleExpanded(reference.id)">
+                  <span>ⓘ Lihat hasil cek DOI</span><span>{{ expandedIds.has(reference.id) ? "⌃" : "⌄" }}</span>
                 </button>
-
-                <div
-                  v-if="expandedIds.has(reference.id)"
-                  class="mt-2 text-xs rounded-lg px-3 py-2.5"
-                  :style="{ background: 'var(--muted)', color: 'var(--foreground)' }"
-                >
-                  <p class="font-semibold" :style="{ color: statusMeta[reference.bucket].fg }">
-                    {{ statusMeta[reference.bucket].label }} &middot; status backend: {{ reference.findingStatus }}
-                    <span v-if="reference.findingStatus !== 'pending'">
-                      &middot; keyakinan {{ Math.round(reference.confidence * 100) }}%
-                    </span>
-                    <span v-if="reference.isManual">&middot; ditinjau manual</span>
-                  </p>
-                  <p v-if="reference.reason" class="mt-1">{{ reference.reason }}</p>
-                  <p v-else class="mt-1">Belum ada alasan dari backend.</p>
-
-                  <div
-                    v-if="reference.candidate"
-                    class="mt-2 pt-2"
-                    :style="{ borderTop: '1px solid var(--border)' }"
-                  >
-                    <p class="font-semibold">
-                      Kandidat teratas &middot; {{ metadataSourceLabel(reference.candidate.source) }}
-                    </p>
-                    <p v-if="reference.candidate.title" class="mt-0.5">{{ reference.candidate.title }}</p>
-                    <p v-if="reference.candidate.authors" class="mt-0.5">{{ reference.candidate.authors }}</p>
-                    <p
-                      v-if="reference.candidate.publication_name || reference.candidate.publication_year"
-                      class="mt-0.5"
-                    >
-                      {{ reference.candidate.publication_name }}
-                      <span v-if="reference.candidate.publication_year">({{ reference.candidate.publication_year }})</span>
-                    </p>
-                    <a
-                      v-if="reference.candidate.doi"
-                      :href="`https://doi.org/${reference.candidate.doi}`"
-                      target="_blank"
-                      rel="noopener"
-                      class="mt-1 inline-flex items-center gap-1 hover:underline"
-                      :style="{ color: 'var(--accent)' }"
-                      @click.stop
-                    >
-                      ↗ {{ reference.candidate.doi }}
-                    </a>
-                    <p v-if="reference.candidate.match_reason" class="mt-1">
-                      {{ reference.candidate.match_reason }}
-                    </p>
-                  </div>
-
-                  <ul v-if="reference.citations.length" class="mt-2 flex flex-col gap-1">
-                    <li v-for="citation in reference.citations" :key="citation.id">
-                      &bull; {{ citation.citation_text }}
-                      <span :style="{ color: 'var(--muted-foreground)' }">
-                        ({{ citationStatusLabel[citation.status] ?? citation.status }})
-                      </span>
-                    </li>
-                  </ul>
+                <div v-if="expandedIds.has(reference.id)" class="mt-2 text-xs rounded-lg px-3 py-2.5" :style="{ background: 'var(--muted)', color: 'var(--foreground)' }">
+                  <p v-if="reference.confidence != null">Kemiripan: {{ reference.confidence }}%</p>
+                  <p>{{ reference.reason }}</p>
                 </div>
               </div>
             </div>
-
-            <p v-if="filteredReferences.length === 0" class="text-sm text-center py-8" :style="{ color: 'var(--muted-foreground)' }">
-              Tidak ada referensi pada kategori ini.
-            </p>
+            <div v-for="citation in visibleOrphanCitations" :key="citation.id" :ref="(el) => (citationItemEls[citation.id] = (el as HTMLElement | null))" class="rounded-xl border-l-4 border overflow-hidden cursor-pointer" :style="{ borderLeftColor: citationMeta[citationGroup(citation.status)].fg, borderColor: 'var(--border)', background: 'var(--card)', outline: selectedHighlightId === citation.id ? `2px solid ${citationMeta[citationGroup(citation.status)].fg}` : 'none', outlineOffset: '1px' }" @click="selectCitation(citation.id)">
+              <div class="p-4">
+                <div class="flex items-start justify-between gap-3">
+                  <p class="text-sm font-bold" :style="{ color: 'var(--foreground)' }">Sitasi tanpa entri di daftar pustaka</p>
+                  <span class="flex-shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full" :style="{ background: citationMeta[citationGroup(citation.status)].bg, color: citationMeta[citationGroup(citation.status)].fg }">Sitasi bermasalah</span>
+                </div>
+                <p class="text-xs mt-2 leading-relaxed" :style="{ color: 'var(--muted-foreground)' }">
+                  <span>{{ citation.context_before }}</span>
+                  <strong :style="{ color: 'var(--foreground)' }">{{ citation.citation_text }}</strong>
+                  <span>{{ citation.context_after }}</span>
+                </p>
+                <div class="mt-3 flex items-center justify-between text-xs font-semibold rounded-lg px-3 py-2" :style="{ background: 'var(--secondary)' }">
+                  <button class="rounded px-1.5 py-0.5 disabled:opacity-40" disabled>&lsaquo;</button>
+                  <span>1 of 1</span>
+                  <button class="rounded px-1.5 py-0.5 disabled:opacity-40" disabled>&rsaquo;</button>
+                </div>
+              </div>
+            </div>
+            <p v-if="filteredReferences.length === 0" class="text-sm text-center py-8" :style="{ color: 'var(--muted-foreground)' }">Tidak ada referensi pada kategori ini.</p>
           </div>
         </div>
       </div>

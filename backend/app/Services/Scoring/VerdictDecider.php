@@ -33,6 +33,17 @@ final class VerdictDecider
         ?string $pendingReason = null,
         ?MetadataSource $doiSource = null,
     ): ReferenceVerdict {
+        if ($reference->doi === null && $this->isInstitutionalDocument($reference)) {
+            return $this->verdict(
+                $reference,
+                ReferenceFindingStatus::Suspicious,
+                null,
+                'Dokumen lembaga atau standar tanpa DOI perlu dicek secara manual.',
+                null,
+                $ranked,
+            );
+        }
+
         // A DOI no enabled resolver could check is pending, never invalid — even
         // when the search chain produced candidates for manual review (D-09-16).
         if ($doiLookup === DoiLookup::Unknown) {
@@ -138,6 +149,24 @@ final class VerdictDecider
         }
 
         return $this->verdict($reference, ReferenceFindingStatus::NotFound, null, MatchReasonBuilder::NOT_FOUND, null, $ranked);
+    }
+
+    private function isInstitutionalDocument(ScoringReference $reference): bool
+    {
+        $text = mb_strtolower(implode(' ', array_filter([
+            $reference->rawText,
+            $reference->title,
+            $reference->authors,
+            $reference->publicationName,
+        ])));
+
+        foreach (['bsn', 'sni', 'badan', 'kementerian', 'laporan'] as $keyword) {
+            if (str_contains($text, $keyword)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

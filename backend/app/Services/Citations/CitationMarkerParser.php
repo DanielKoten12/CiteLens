@@ -50,7 +50,7 @@ final class CitationMarkerParser
     /**
      * `authors, year` inside a parenthetical segment.
      */
-    private const string SEGMENT_PATTERN = '/^(.+?),\s*((?:19|20)\d{2}[a-z]?)\s*$/u';
+    private const string SEGMENT_PATTERN = '/^(.+?),\s*((?:19|20)\d{2}[a-z]?)(?:\s*,\s*(?:p{1,2}\.?\s*)?\d+(?:\s*[-–]\s*\d+)?)?\s*$/u';
 
     /**
      * A segment that is only a year (the parenthetical half of a narrative pair).
@@ -69,7 +69,7 @@ final class CitationMarkerParser
     public function parse(?string $marker, ?string $citationText = null): ParsedCitationMarker
     {
         $raw = $marker !== null && trim($marker) !== '' ? $marker : $citationText;
-        $raw = trim($raw ?? '');
+        $raw = $this->normalizeMarker($raw ?? '');
 
         if ($raw === '') {
             return new ParsedCitationMarker;
@@ -82,6 +82,14 @@ final class CitationMarkerParser
         }
 
         return new ParsedCitationMarker($this->apaPairs($raw));
+    }
+
+    private function normalizeMarker(string $raw): string
+    {
+        $raw = str_replace(["\u{00AD}", "\r", "\n"], ['', ' ', ' '], $raw);
+        $raw = preg_replace('/(?<=[[:lower:]])-\s+(?=[[:lower:]])/u', '', $raw) ?? $raw;
+
+        return trim(preg_replace('/\s+/u', ' ', $raw) ?? $raw);
     }
 
     /**

@@ -54,6 +54,27 @@ it('parses multiple surnames joined by ampersand', function () {
         ->and($marker->primaryPair()->year)->toBe(2023);
 });
 
+it('parses localized author connectors and page suffixes', function () {
+    foreach ([
+        '(Mukhlis dkk, 2019, p. 5)' => ['Mukhlis', 2019],
+        '(Rizal dan Syaibana, 2022)' => ['Rizal', 2022],
+        '(Rizal and Syaibana, 2022)' => ['Rizal', 2022],
+        '(Asrul et al, 2025)' => ['Asrul', 2025],
+    ] as $markerText => [$surname, $year]) {
+        $pair = $this->parser->parse($markerText)->primaryPair();
+
+        expect(parsedSurnames($pair))->toContain($surname)
+            ->and($pair->year)->toBe($year);
+    }
+});
+
+it('normalizes whitespace and line-break hyphenation in a marker', function () {
+    $pair = $this->parser->parse("(Rizal & Syaiba-\nna, 2022)")->primaryPair();
+
+    expect(parsedSurnames($pair))->toBe(['Rizal', 'Syaibana'])
+        ->and($pair->year)->toBe(2022);
+});
+
 it('parses a marker without enclosing parentheses', function () {
     $marker = $this->parser->parse('LeCun et al., 2015');
 

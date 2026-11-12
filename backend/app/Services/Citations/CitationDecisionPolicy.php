@@ -41,7 +41,9 @@ final class CitationDecisionPolicy
 
         $runnerUp = $ranked[1] ?? null;
 
-        if ($runnerUp !== null && ($best->confidence - $runnerUp->confidence) < $this->config->winnerMargin()) {
+        if ($runnerUp !== null
+            && $best->confidence !== $runnerUp->confidence
+            && ($best->confidence - $runnerUp->confidence) < $this->config->winnerMargin()) {
             return CitationResolutionState::Unresolved;
         }
 
