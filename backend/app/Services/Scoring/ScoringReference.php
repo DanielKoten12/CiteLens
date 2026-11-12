@@ -21,7 +21,6 @@ final class ScoringReference
         public readonly ?int $publicationYear,
         public readonly ?string $doi,
         public readonly bool $doiValid,
-        public readonly ?string $rawText = null,
     ) {}
 
     public static function fromModel(ResearchedDocumentReference $reference, DoiNormalizer $normalizer): self
@@ -36,7 +35,6 @@ final class ScoringReference
             publicationYear: $reference->publication_year,
             doi: $doi,
             doiValid: $doi !== null && $normalizer->isValid($doi),
-            rawText: $reference->raw_text,
         );
     }
 

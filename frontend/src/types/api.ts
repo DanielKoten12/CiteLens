@@ -42,7 +42,6 @@ export type CitationStatus =
   | "valid"
   | "unreliable"
   | "pending"
-  | "unresolved"
   | "hallucination";
 
 export type Severity = "high" | "medium" | "low" | "info";
@@ -52,7 +51,6 @@ export type FindingType =
   | "reference_suspicious"
   | "reference_not_found"
   | "citation_unreliable"
-  | "citation_unresolved"
   | "citation_hallucination";
 
 export type ReportStatus = "pending" | "processing" | "completed" | "failed";

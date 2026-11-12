@@ -60,7 +60,6 @@ function focusHighlight(id: string) {
     <div class="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">
       <PdfHighlightViewer
         ref="viewer"
-        class="min-h-[620px]"
         :src="source"
         :highlights="highlights"
         :selected-id="selectedId"
