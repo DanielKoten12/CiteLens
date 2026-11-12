@@ -439,7 +439,7 @@ onBeforeUnmount(() => {
 
 <template>
   <section
-    class="flex min-h-[620px] flex-col overflow-hidden rounded-xl border bg-slate-100 shadow-sm"
+    class="flex flex-col overflow-hidden rounded-xl border bg-slate-100 shadow-sm"
     style="--highlight-reference-valid: #22c55e; --highlight-reference-suspicious: #f59e0b; --highlight-reference-invalid: #ef4444; --highlight-reference-pending: #94a3b8; --highlight-citation-valid: #22c55e; --highlight-citation-hallucination: #eab308; --highlight-citation-unreliable: #fb7185; --highlight-citation-pending: #cbd5e1; --highlight-neutral: #94a3b8"
   >
     <header class="flex flex-wrap items-center justify-between gap-3 border-b bg-white px-4 py-3">
@@ -460,9 +460,9 @@ onBeforeUnmount(() => {
       </div>
     </header>
 
-    <div ref="container" class="flex h-[560px] max-h-[560px] min-w-0 w-full min-h-0 flex-none justify-center overflow-auto p-4">
-      <div v-if="error" class="flex min-h-[560px] max-w-md flex-col items-center justify-center gap-2 text-center text-sm text-red-700"><strong>PDF tidak dapat dimuat</strong><span>{{ error }}</span></div>
-      <div v-else-if="!pdf" class="flex min-h-[560px] items-center text-sm text-slate-500">Memuat dokumen PDF...</div>
+    <div ref="container" class="pdf-viewer-scrollport flex min-w-0 w-full min-h-0 flex-none justify-center overflow-auto p-4">
+      <div v-if="error" class="flex max-w-md flex-col items-center justify-center gap-2 text-center text-sm text-red-700"><strong>PDF tidak dapat dimuat</strong><span>{{ error }}</span></div>
+      <div v-else-if="!pdf" class="flex items-center text-sm text-slate-500">Memuat dokumen PDF...</div>
       <div v-else class="flex flex-col gap-4">
         <div v-for="page in pdf.numPages" :key="page" :ref="(element) => setPageRef(element, page - 1)" class="relative shrink-0 bg-white shadow-md" :style="{ width: `${metricFor(page - 1)?.cssWidth ?? 0}px`, height: `${metricFor(page - 1)?.cssHeight ?? 0}px` }">
           <canvas :ref="(element) => setCanvasRef(element, page - 1)" class="block" :style="{ width: `${metricFor(page - 1)?.cssWidth ?? 0}px`, height: `${metricFor(page - 1)?.cssHeight ?? 0}px` }" />

@@ -78,7 +78,8 @@ async function handleSubmit() {
   loading.value = true;
   try {
     await auth.register(form.name, form.email, form.password, form.confirmPassword);
-    router.push({ name: "upload" });
+    // Register tidak membuat sesi, jadi arahkan ke login.
+    router.push({ name: "login", query: { registered: "1" } });
   } catch (e) {
     if (e instanceof ApiError) {
       if (e.status === 422 && e.details) {

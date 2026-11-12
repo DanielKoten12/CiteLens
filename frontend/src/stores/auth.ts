@@ -26,24 +26,25 @@ export const useAuthStore = defineStore("auth", () => {
     );
   }
 
-  /** POST /auth/register. Backend mewajibkan password_confirmation. */
+  /**
+   * POST /auth/register. Backend mewajibkan password_confirmation.
+   * Tidak membuat sesi: user harus login manual setelah mendaftar.
+   */
   async function register(
     name: string,
     email: string,
     password: string,
     passwordConfirmation: string = password,
   ) {
-    applyAuth(
-      await api<AuthResponse>("/auth/register", {
-        method: "POST",
-        body: JSON.stringify({
-          name,
-          email,
-          password,
-          password_confirmation: passwordConfirmation,
-        }),
+    await api("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({
+        name,
+        email,
+        password,
+        password_confirmation: passwordConfirmation,
       }),
-    );
+    });
   }
 
   /** Pulihkan sesi dari token tersimpan. Panggil sekali sebelum router dipasang. */
@@ -56,6 +57,7 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  /** Navigasi ke login dilakukan oleh pemanggil, setelah fungsi ini selesai. */
   async function logout() {
     try {
       await api("/auth/logout", { method: "POST" });

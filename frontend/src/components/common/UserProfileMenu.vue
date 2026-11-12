@@ -7,9 +7,10 @@ const router = useRouter();
 const auth = useAuthStore();
 
 const open = ref(false);
+const loggingOut = ref(false);
 
-const displayName = computed(() => auth.user?.name ?? "Andi Firmansyah");
-const displayEmail = computed(() => auth.user?.email ?? "andi@mahasiswa.ac.id");
+const displayName = computed(() => auth.user?.name ?? "Pengguna");
+const displayEmail = computed(() => auth.user?.email ?? "");
 const initial = computed(() => displayName.value.charAt(0).toUpperCase());
 
 function toggle() {
@@ -20,10 +21,16 @@ function close() {
   open.value = false;
 }
 
-function handleLogout() {
+async function handleLogout() {
+  if (loggingOut.value) return;
+  loggingOut.value = true;
   close();
-  auth.logout();
-  router.push({ name: "login" });
+  try {
+    await auth.logout(); // tunggu sampai state benar-benar kosong
+    await router.replace({ name: "login" });
+  } finally {
+    loggingOut.value = false;
+  }
 }
 
 function goTo(name: "profile" | "documents" | "settings") {
@@ -66,7 +73,7 @@ const menuItems = [
     >
       <div
         class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold flex-shrink-0"
-        :style="{ background: 'var(--primary)', color: 'white' }"
+        :style="{ background: 'var(--primary)', color: 'var(--primary-foreground)' }"
       >
         {{ initial }}
       </div>
@@ -96,7 +103,7 @@ const menuItems = [
         <div class="flex items-center gap-3">
           <div
             class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-extrabold flex-shrink-0"
-            :style="{ background: 'var(--primary)', color: 'white' }"
+            :style="{ background: 'var(--primary)', color: 'var(--primary-foreground)' }"
           >
             {{ initial }}
           </div>
@@ -123,8 +130,11 @@ const menuItems = [
       <div class="h-px mx-3 my-1" :style="{ background: 'var(--border)' }" />
 
       <button
-        class="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium transition-colors text-left hover:bg-[#fff1f1]"
-        style="color: #b91c1c"
+        class="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium transition-colors text-left
+               text-[#b91c1c] hover:bg-[#fff1f1]
+               dark:text-[#f87171] dark:hover:bg-[#2a1517]
+               disabled:opacity-60"
+        :disabled="loggingOut"
         @click="handleLogout"
       >
         <svg width="13" height="13" fill="none" viewBox="0 0 13 13">
