@@ -189,7 +189,7 @@ const howItWorks = [
     icon: "check",
     highlighted: false,
     title: "Validasi Daftar Pustaka",
-    desc: "Dicocokkan dengan Metadata yang ada",
+    desc: "Dicocokkan ke empat katalog metadata",
   },
   {
     icon: "report",
@@ -199,6 +199,36 @@ const howItWorks = [
   },
 ];
 
+const dataSources = [
+  {
+    name: "Crossref",
+    desc: "100M+ publikasi",
+    dot: "#2d5be3",
+    bg: "#eaf0fd",
+    fg: "#1e3a6e",
+  },
+  {
+    name: "Garuda",
+    desc: "Jurnal Indonesia",
+    dot: "#0f766e",
+    bg: "#e6f7f4",
+    fg: "#115e59",
+  },
+  {
+    name: "Semantic Scholar",
+    desc: "200M+ makalah",
+    dot: "#7c3aed",
+    bg: "#f1ebff",
+    fg: "#5b21b6",
+  },
+  {
+    name: "OpenAlex",
+    desc: "Katalog terbuka",
+    dot: "#b45309",
+    bg: "#fff4e5",
+    fg: "#92400e",
+  },
+];
 </script>
 
 <template>
@@ -218,7 +248,7 @@ const howItWorks = [
 
         <p class="mt-4 max-w-md text-sm sm:text-base leading-relaxed" :style="{ color: 'var(--muted-foreground)' }">
           Unggah dokumen <strong :style="{ color: 'var(--foreground)' }">.pdf</strong> dan semua referensi
-          divalidasi otomatis.
+          divalidasi otomatis ke empat katalog metadata.
         </p>
 
         <input
@@ -381,6 +411,28 @@ const howItWorks = [
 
           <p class="text-sm font-bold" :style="{ color: 'var(--foreground)' }">{{ step.title }}</p>
           <p class="text-sm mt-1" :style="{ color: 'var(--muted-foreground)' }">{{ step.desc }}</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= Sumber database ================= -->
+    <div class="h-px my-10 sm:my-14" :style="{ background: 'var(--border)' }" />
+
+    <section>
+      <p class="section-label">SUMBER DATABASE</p>
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div
+          v-for="source in dataSources"
+          :key="source.name"
+          class="source-card"
+          :style="{ '--source-bg': source.bg, '--source-dot': source.dot, '--source-fg': source.fg }"
+        >
+          <span class="source-dot" aria-hidden="true" />
+          <div>
+            <p class="source-name">{{ source.name }}</p>
+            <p class="source-desc">{{ source.desc }}</p>
+          </div>
         </div>
       </div>
     </section>
@@ -685,23 +737,23 @@ const howItWorks = [
   gap: 0.625rem;
   padding: 1rem;
   border-radius: 0.75rem;
-  background: #eaf0fd;
+  background: var(--source-bg, var(--card));
 }
 .source-dot {
   width: 0.5rem;
   height: 0.5rem;
   flex-shrink: 0;
   border-radius: 9999px;
-  background: #2d5be3;
+  background: var(--source-dot, var(--accent));
 }
 .source-name {
-  color: #1e3a6e;
+  color: var(--source-fg, var(--foreground));
   font-size: 0.875rem;
   font-weight: 700;
 }
 .source-desc {
   margin-top: 0.125rem;
-  color: #1e3a6e;
+  color: var(--source-fg, var(--muted-foreground));
   opacity: 0.75;
   font-size: 0.75rem;
 }

@@ -151,6 +151,19 @@ receive `404 NOT_FOUND` (never `403`).
 | T-REF-10 | Reference indexed only in Garuda (no Crossref candidate) | fallback finds it; candidate `source=garuda`, DOI may be `null` |
 | T-REF-11 | Garuda outage on the first fallback lookup | document `failed` with the safe Garuda message; later failures degrade to `pending` |
 | T-REF-12 | Garuda page reports `Found 0 documents` | treated as a miss (`not_found`), never as an outage |
+| T-REF-13 | Reference not in Crossref/Garuda, found in Semantic Scholar | candidate `source=semantic_scholar`, document `completed`, verdict `valid`/`suspicious` per score |
+| T-REF-14 | Reference only in OpenAlex | candidate `source=openalex`, document `completed` |
+| T-REF-15 | An earlier source satisfies the stop policy | later sources receive zero HTTP requests |
+| T-REF-16 | Degradable source outage, no other candidate | reference `pending` (never `not_found`), document `completed` |
+| T-REF-17 | Degradable source outage, a later source has a candidate | normal verdict from the later source, document `completed` |
+| T-REF-18 | `SEMANTIC_SCHOLAR_ENABLED=false` / `OPENALEX_ENABLED=false` | exact Phase 08 Crossref→Garuda behavior, zero requests to disabled sources, DOI chain reduces to Crossref |
+| T-REF-19 | DOI absent from Crossref but resolves in Semantic Scholar/OpenAlex with matching metadata | DOI is `Resolved`, verdict `valid`, reason names the resolver, document `completed` |
+| T-REF-20 | DOI absent from Crossref, fallback DOI resolvers unavailable, none confirms | `DoiLookup::Unknown` → `pending`, never `invalid`, document `completed` |
+| T-REF-21 | DOI absent from Crossref, all enabled DOI resolvers answer `404` | `DoiLookup::NotFound` → `invalid` with the generic DOI reason |
+| T-REF-22 | `METADATA_FAILURE_POLICY_*` changes a source from `fatal` to `degrade` | behavior changes without code change; an invalid value fails loudly at the first run |
+| T-REF-23 | No Semantic Scholar/OpenAlex keys configured | both sources disabled; pipeline behaves exactly like Phase 08; no 429s, no false `invalid` |
+| T-REF-24 | Candidate merge: Garuda hit without DOI + same normalized title with DOI later | one candidate, DOI promoted, rank-1 provenance from the DOI-bearing source |
+| T-REF-25 | Candidate cap (`ANALYSIS_METADATA_MAX_CANDIDATES`) | persisted ranks are contiguous `1..N`, cap respected, `0` = unlimited |
 
 ### 5.5 Citations and derivation (`T-CIT`)
 
@@ -233,13 +246,13 @@ receive `404 NOT_FOUND` (never `403`).
 
 | ID | Case | Expected |
 |---|---|---|
-| T-INF-01 | `GET /health` | `{status, grobid}` (`sbert` arrives with the SBERT slice) |
+| T-INF-01 | `GET /health` | `{status, grobid, sbert}`; `degraded` + `down` for the failing capability |
 | T-INF-02 | `POST /v1/extract` valid PDF | header + references + citations + locations; the captured real response validates against the models |
 | T-INF-03 | `POST /v1/extract` non-PDF extension/content type | `415 UNSUPPORTED_MEDIA_TYPE` |
 | T-INF-04 | `POST /v1/extract` GROBID down (connection/5xx) | `503 EXTRACTION_FAILED` |
-| T-INF-05 | `POST /v1/embeddings` batch | dimensions + count match, batching respected |
-| T-INF-06 | `POST /v1/embeddings` empty | `422` |
-| T-INF-07 | `POST /v1/embeddings` model down | `503 INFERENCE_FAILED` |
+| T-INF-05 | `POST /v1/embeddings` batch | dimensions + count match, order preserved, normalised + batched model call |
+| T-INF-06 | `POST /v1/embeddings` empty/blank/missing `texts`, unknown `model`, over the batch cap | `422 VALIDATION_ERROR` |
+| T-INF-07 | `POST /v1/embeddings` model load/encode failure (then recovery) | `503 INFERENCE_FAILED`, no internals leaked |
 | T-INF-08 | `POST /v1/extract` over the size cap | `413 PAYLOAD_TOO_LARGE` |
 | T-INF-09 | `POST /v1/extract` `.pdf` without `%PDF-` bytes or unusable TEI | `422 EXTRACTION_FAILED` |
 | T-INF-10 | Error envelope on framework/runtime errors | `404 NOT_FOUND`, `500 SERVER_ERROR`; no internals leaked |
@@ -303,30 +316,34 @@ F1        = 2 * (Precision * Recall) / (Precision + Recall)
 - Upload endpoint responds `202` without waiting for analysis.
 - Status polling is cheap and stable at 120/min/user.
 - Embedding requests are batched (e.g. 32 texts) to bound latency/memory.
+- Fallback metadata work is bounded per document (`ANALYSIS_METADATA_MAX_FALLBACK_REQUESTS` /
+  `_SECONDS`) well below `ANALYSIS_TIMEOUT`; throttled sources never sleep past
+  `max_retry_after_seconds`.
 
 ---
 
 ## 8. Current coverage and gaps
 
-**Exists today** (`backend/tests`):
+**Exists today** (`backend/tests`, Pest): authentication and throttling, upload validation,
+document lifecycle (list/detail/status/retry/delete/purge), ownership isolation for every
+endpoint, the analysis step machine and failure handling, extraction persistence, Crossref
+verification/scoring (including the three product cases), citation resolution/derivation, manual
+review, the findings feed, report generation, the Garuda fallback, and — from Phase 09 — the
+Semantic Scholar/OpenAlex clients, DOI/search chains, policy/budget/circuit-breaker helpers,
+cross-source merge/promotion, candidate cap and the multi-source end-to-end suites. `Tests\TestCase`
+sets `Http::preventStrayRequests()`; `phpunit.xml` disables Garuda, Semantic Scholar and OpenAlex
+by default, so any test that wants a source enables it explicitly and installs a fake.
 
-- `UploadDocumentTest` — upload persistence, custom name, 415/413/422/401 paths.
-- `DomainSchemaTest` — canonical tables, UUID PKs, cascade delete, citation unpairing.
-- Example tests (to be replaced as real behaviour lands).
+**Remaining gaps** (highest priority first):
 
-**Gaps to close** (highest priority first):
-
-1. Auth endpoints + token revocation + throttling.
-2. Ownership isolation suite (`T-OWN`) for all endpoints.
-3. Document list/detail/status/retry/delete.
-4. Findings/citations derivation + manual review audit.
-5. Reports generation rules.
-6. Scoring unit tests + Crossref fixtures.
-7. `AnalyzeDocumentJob` step transitions and failure handling.
-8. Inference service tests (pytest).
-9. Evaluation harness.
-
----
+1. A labelled evaluation corpus for precision/recall (§6); the metadata-source coverage and
+   DOI-resolution reports are future work (§10 of the Phase 09 plan).
+2. Live smoke checks for Semantic Scholar/OpenAlex with real keys (documented, intentionally not
+   part of the hermetic suite).
+3. Frontend behaviour: no test runner exists; `npm run type-check` / `npm run build` are the only
+   automated checks (`AGENTS.md` §16).
+4. Backend pagination/filter matrices for the largest collections are covered but could be
+   property-tested.
 
 ## 9. Exit criteria
 

@@ -11,14 +11,15 @@ changing anything, and consult the docs before modifying any contract. Canonical
 
 **Dafpus Cek** is an academic-reference verification application. A user uploads a document
 (PDF), the system extracts its bibliography references and in-text citations, validates each
-reference against external publication metadata (Crossref), scores possible matches, resolves
+reference against external publication metadata (Crossref, with Garuda/Semantic Scholar/OpenAlex
+fallbacks), scores possible matches, resolves
 citations to references, and reports problems such as:
 
 - invalid / hallucinated DOI references (a DOI that does not resolve, or resolves to a different
   publication),
 - references that look valid but cannot be verified against external metadata,
 - valid references without a DOI, where the system suggests a likely DOI,
-- mismatches between a bibliography entry and its Crossref metadata,
+- mismatches between a bibliography entry and its external metadata,
 - in-text citations with no valid bibliography counterpart,
 - incorrect author/year combinations in in-text citations,
 - citation/reference relationships that need manual review.
@@ -80,7 +81,8 @@ Vue.js SPA
 Laravel API
     |
     +-- MySQL/Postgres          (docs/DB_SCHEMA.md; SQLite is the current dev/test default)
-    +-- Crossref REST API       (outbound HTTP, orchestrated by Laravel)
+    +-- Metadata sources        (outbound HTTP, orchestrated by Laravel; ordered chains:
+    |                            Crossref primary → Garuda → Semantic Scholar → OpenAlex)
     +-- Queue worker            (async analysis pipeline)
     +-- FastAPI inference server (internal, private network only)
              |
@@ -226,7 +228,7 @@ users
          |      |
          |      +-- reference_findings                         (verification verdict)
          |             |
-         |             +-- reference_finding_candidates        (ranked Crossref matches)
+         |             +-- reference_finding_candidates        (ranked external matches)
          |
          +-- researched_document_citations       (one row per in-text occurrence)
          |      |
@@ -339,7 +341,7 @@ Pipeline behavior (spec §10):
 1. store PDF → create document (`pending`, step `queued`),
 2. FastAPI `POST /v1/extract` (GROBID) → persist references, reference locations, citations,
    citation locations,
-3. per reference: Crossref lookup (DOI or bibliographic search) → persist ranked
+3. per reference: ordered DOI chain + ordered search chain → persist ranked
    `reference_finding_candidates`,
 4. similarity scoring in **Laravel** (Jaro-Winkler + Levenshtein + SBERT embeddings) → compute
    confidence, pick `selected_candidate_id`, upsert `reference_findings`,
@@ -384,7 +386,7 @@ pending | valid | suspicious | invalid | not_found
 | `valid` | matched confidently |
 | `suspicious` | matched but low confidence / partial mismatch |
 | `invalid` | match found but metadata conflicts |
-| `not_found` | no candidate found in Crossref |
+| `not_found` | no candidate found in the **enabled** metadata sources |
 
 **Citation status is DERIVED, never stored.** Do not add a persisted citation-status column unless
 the canonical schema is deliberately changed. Derived values:
@@ -413,15 +415,30 @@ document**.
 
 ## 11. External Services
 
-- **Crossref** — external, independent source of truth for publication metadata; used for
-  reference validation and candidate lookup. **Laravel orchestrates all Crossref requests.** Never
+- **Crossref** — external, independent source of truth for publication metadata; the **primary**
+  metadata source and the first DOI resolver. **Laravel orchestrates all Crossref requests.** Never
   call Crossref from the frontend, and never expose Crossref credentials to the browser.
 - **Garuda** (`garuda.kemdiktisaintek.go.id`) — Indonesian catalogue with **no public API**, used
   only as a **fallback** when no primary candidate is a plausible title match. Laravel queue
   workers fetch one search page per gated reference (throttled, cached, metadata only — never the
   PDFs). Not exposed to the frontend. `GARUDA_ENABLED=false` disables it; a valid
-  `Found 0 documents` page is a miss, while a transport/format failure surfaces (document `failed`
-  on the first failure of a run).
+  `Found 0 documents` page is a miss, while a transport/format failure follows the source's
+  `METADATA_FAILURE_POLICY_GARUDA` policy (default `fatal`: document `failed` on the first failure
+  of a run).
+- **Semantic Scholar** (`api.semanticscholar.org`) — supplemental JSON source added in Phase 09
+  (an extension beyond the proposal). Key-gated via `SEMANTIC_SCHOLAR_API_KEY`; disabled without a
+  key. Used for bibliographic search **and** DOI resolution. The key travels in the `x-api-key`
+  header, never in a URL or log.
+- **OpenAlex** (`api.openalex.org`) — supplemental JSON source added in Phase 09 (the proposal
+  allows it). Key-gated via `OPENALEX_API_KEY`; disabled without a key. Search uses
+  `title.search` (not full-text `search=`); DOI lookups are free single-entity calls. No full-text
+  or content downloads, no datasets. Bearer token in the header, never in a URL or log.
+- **Metadata chain order** lives only in `backend/config/analysis.php`
+  (`primary_sources` / `fallback_sources` / `doi_resolvers`) and is intentionally not an env
+  toggle. Enablement, per-source failure policy (`METADATA_FAILURE_POLICY_*`, `fatal|degrade`) and
+  budgets are env-tunable; an unknown policy value fails loudly at the first run. The default
+  chain is `Crossref → Garuda → Semantic Scholar → OpenAlex`; DOI resolution is
+  `Crossref → Semantic Scholar → OpenAlex` (Garuda has no DOI endpoint).
 - **GROBID** — internal; extracts bibliography entries, in-text citations, and coordinates. Not
   exposed to the frontend. It runs as a private compose service; the dev-only
   `compose.remote-grobid.yaml` overlay points `inference` at a hosted GROBID instead, which sends
@@ -431,22 +448,24 @@ document**.
 - **Google Scholar** — explicitly **excluded** by the proposal (no official API; scraping
   prohibited by ToS). **Do not add Google Scholar scraping.**
 
-The proposal also names **OpenAlex API** as an allowed external metadata source alongside
-Crossref; `API_SPEC.md` only specifies Crossref. See §15 — do not silently add OpenAlex.
-
 ## 12. Matching and Verification Logic
 
 Intended combination: exact matching + Levenshtein distance + Jaro-Winkler + SBERT semantic
-similarity + Crossref metadata + author/year matching. Fuzzy matching is used for author names;
+similarity + external metadata + author/year matching. Fuzzy matching is used for author names;
 SBERT for semantic title similarity. Preserve the responsibility split:
 
 ```text
 GROBID                     → extraction (references, citations, coordinates)
-Crossref                   → external metadata candidates
+Crossref/Garuda/S2/OpenAlex → external metadata candidates (ordered chain)
+Crossref/S2/OpenAlex        → DOI resolution (ordered chain, Crossref first)
 Levenshtein / Jaro-Winkler → string similarity          (implemented in Laravel)
 SBERT                      → semantic similarity        (embeddings from FastAPI)
 Laravel                    → orchestration, ranking, scoring, decision/finding persistence
 ```
+
+Scoring is source-agnostic: `source` drives provenance, merge order and reason wording, never the
+score. Keep the stop policy, outage policy, budgets and dedupe/promotion rules inside
+`app/Services/Metadata/*` — never in a pipeline step, a client or the frontend.
 
 Do not move the matching algorithm into the frontend, and do not let the frontend independently
 decide whether a reference is valid.
@@ -535,9 +554,17 @@ Be aware of what is scaffold vs. contract before promising behavior:
   source-agnostic metadata seam (`Services/Metadata/*`, `Contracts/Metadata/BibliographicSource`,
   `Enums/MetadataSource`), candidate provenance (`reference_finding_candidates.source`) and the
   gated Garuda fallback (`Services/Garuda/*`, `GarudaUnavailableException`, fallback wiring in
-  `ValidateReferencesStep`). The FastAPI inference service implements the GROBID extraction slice
-  (see the `inference/` bullet); SBERT embeddings are still pending. See
-  `docs/ARCHITECTURE.md` §13 for the full status.
+  `ValidateReferencesStep`). Phase 09 adds multi-source metadata search: `MetadataSource::
+  SemanticScholar`, `Contracts/Metadata/{DoiResolver,SourceUnavailableException}`, the ordered
+  `Services/Metadata/{MetadataSourceRegistry,MetadataSourceChain,DoiResolutionChain,
+  SourceChainPolicy,SourceChainState,SourceChainResult,DoiResolutionResult,WorkMetadataMerger}`
+  layer (with `Support/{SearchCache,RequestThrottle,SourceCircuitBreaker}`),
+  `Services/SemanticScholar/*` + `Services/OpenAlex/*` (search + DOI clients, query builders,
+  tolerant mappers), per-source `fatal|degrade` policies, per-source/document budgets, the DOI
+  `Unknown` → `pending` outcome, candidate dedupe/promotion and the persisted-candidate cap.
+  The FastAPI inference service implements the GROBID extraction slice (see the `inference/`
+  bullet); SBERT embeddings are still pending. See `docs/ARCHITECTURE.md` §13 for the full
+  status.
 - **`frontend/`** is a working Vue 3 + Vite 6 + TypeScript + Tailwind 4 + Pinia + vue-router SPA
   with shadcn-vue (`reka-ui`) components. **`src/stores/auth.ts` is mocked** (setTimeout, no API
   calls) and `src/types/index.ts` uses prototype types (`valid | warning | halu`, numeric ids,
@@ -559,9 +586,12 @@ implementation, and mention it in your summary when it affects the task.
 
 1. **DOCX:** the proposal scopes PDF + DOCX; `API_SPEC.md` v1 is **PDF only**. Do not implement
    DOCX in v1 unless the API contract is explicitly changed (and `API_SPEC.md` updated).
-2. **OpenAlex:** the proposal allows Crossref **and** OpenAlex as validation sources;
-   `API_SPEC.md` defines Crossref only. Do not silently add OpenAlex; if needed, change the
-   contract deliberately.
+2. **OpenAlex / Semantic Scholar:** the proposal allows Crossref **and** OpenAlex; Phase 09
+   deliberately added both OpenAlex and Semantic Scholar as supplemental, key-gated sources and
+   documented the ordered chains in `API_SPEC.md`/`API_SPEC_ID.md`. This resolved the old
+   "OpenAlex excluded" rule. Semantic Scholar is an engineering extension beyond the proposal.
+   Do not reorder the chains or change the DOI verdict semantics without a deliberate contract
+   change.
 3. **`docs/DB_SCHEMA.md` contains two DBML blocks.** The second one (after the stray "lmao"
    heading) is a **stale older draft** (no analysis-progress columns, no location tables for
    references, no manual-review fields). The **first block is canonical**.
@@ -665,7 +695,7 @@ docker compose down -v                            # also removes data volumes
   `CROSSREF_MAILTO`, `SCORING_SEMANTIC_ENABLED`). Copy to `.env` (git-ignored) to override the
   development defaults baked into `compose.yaml`.
 - Inference is uv-managed (`pyproject.toml`, `uv.lock`, `.python-version` = 3.14).
-- When external-service configuration is needed (e.g. inference base URL, Crossref access), add it
+- When external-service configuration is needed (e.g. inference base URL, Crossref access, Semantic Scholar/OpenAlex keys), add it
   through Laravel config (`backend/config/services.php`) + `.env.example` with placeholders such
   as `CROSSREF_API_KEY=<configured through environment>`.
 - **Never commit secrets.** Never put real credentials, API keys, tokens, or passwords in code,
@@ -748,7 +778,7 @@ mutate schema meaning in place.
 
 ### When changing analysis behavior
 
-Walk the entire pipeline: upload → queue → extraction → persistence → Crossref validation →
+Walk the entire pipeline: upload → queue → extraction → persistence → metadata validation →
 embedding → scoring → citation resolution → report generation → completion/failure. Keep
 asynchronous processing asynchronous.
 

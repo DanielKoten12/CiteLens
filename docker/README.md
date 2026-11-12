@@ -66,6 +66,20 @@ Notable variables: `WEB_PORT`, `FRONTEND_PORT`, `FRONTEND_PROD_PORT`, `POSTGRES_
 `APP_URL`, `CROSSREF_MAILTO`, `SCORING_SEMANTIC_ENABLED`, `REMOTE_GROBID_URL` (only used by
 `compose.remote-grobid.yaml`), and the `*_DEBUG_PORT` values used by `compose.debug.yaml`.
 
+Supplemental metadata search (Phase 09) is key-gated and off by default:
+
+| Variable | Purpose |
+|---|---|
+| `SEMANTIC_SCHOLAR_API_KEY` | Semantic Scholar Graph API key (`x-api-key`). Empty = source disabled. |
+| `OPENALEX_API_KEY` | OpenAlex API key (`Authorization: Bearer`). Empty = source disabled. |
+| `OPENALEX_MAILTO` | Optional OpenAlex polite-pool contact; falls back to `CROSSREF_MAILTO`. |
+| `METADATA_FAILURE_POLICY_*` | Per-source outage policy: `fatal` (fails the document on the first failure) or `degrade` (records the failure, reference becomes `pending` instead of `not_found`). Defaults: Crossref/Garuda `fatal`, Semantic Scholar/OpenAlex `degrade`. |
+| `ANALYSIS_METADATA_MAX_FALLBACK_REQUESTS` / `_SECONDS` | Document-wide cap for optional-source lookups (search + DOI). |
+
+The search/DOI chain **order** is intentionally config-only (`backend/config/analysis.php`); it is
+not an env toggle. `METADATA_FAILURE_POLICY_*` overrides are picked up without a deploy, and an
+invalid value fails the first analysis run loudly.
+
 ### Why the root `.env` and not per-component `.env` files
 
 `.env` does two different jobs, and only the root file covers both:
