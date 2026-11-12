@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ApiError } from "@/lib/api";
+import { reportUrl } from "@/lib/documents";
 import { useDocumentHighlights } from "@/composables/useDocumentHighlights";
 import PdfHighlightViewer from "@/components/viewer/PdfHighlightViewer.vue";
 import { citationGroup, countByStatus, toReferenceRow, type ReferenceRow, type UiStatus } from "@/lib/resultAdapters";
@@ -18,6 +19,8 @@ const expandedIds = ref(new Set<string>());
 const refItemEls = ref<Record<string, HTMLElement | null>>({});
 const citationItemEls = ref<Record<string, HTMLElement | null>>({});
 const activeOccurrenceByReference = ref<Record<string, number>>({});
+const reportBusy = ref(false);
+const reportError = ref("");
 
 const { document, references, citations, highlights, loading, error, load } = useDocumentHighlights(
   props.id,
@@ -164,8 +167,17 @@ function goBack() {
   void router.push({ name: "upload" });
 }
 
-function downloadReport() {
-  // TODO: sambungkan ke endpoint export PDF laporan hasil.
+async function downloadReport() {
+  if (!props.id || reportBusy.value) return;
+  reportBusy.value = true;
+  reportError.value = "";
+  try {
+    window.open(await reportUrl(props.id), "_blank");
+  } catch (caught) {
+    reportError.value = caught instanceof Error ? caught.message : "Gagal menyiapkan laporan.";
+  } finally {
+    reportBusy.value = false;
+  }
 }
 </script>
 
@@ -199,11 +211,14 @@ function downloadReport() {
               <p class="text-xs" :style="{ color: 'var(--muted-foreground)' }">{{ trustScore }}% referensi valid</p>
             </div>
           </div>
-          <button class="flex items-center gap-2 text-sm font-bold px-5 py-2.5 rounded-full text-white flex-shrink-0" :style="{ background: 'var(--primary)' }" @click="downloadReport">
-            Unduh Laporan
+          <button class="flex items-center gap-2 text-sm font-bold px-5 py-2.5 rounded-full text-white flex-shrink-0 disabled:opacity-60" :style="{ background: 'var(--primary)' }" :disabled="reportBusy || !props.id" @click="downloadReport">
+            {{ reportBusy ? "Menyiapkan…" : "Unduh Laporan" }}
           </button>
         </div>
       </div>
+    </div>
+    <div v-if="reportError" class="max-w-7xl mx-auto px-6 pt-4 text-sm" :style="{ color: statusMeta.halu.fg }">
+      {{ reportError }}
     </div>
 
     <div v-if="isNotFound" class="max-w-2xl mx-auto px-6 py-16 text-center">

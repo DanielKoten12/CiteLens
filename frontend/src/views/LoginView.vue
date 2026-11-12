@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { reactive, ref } from "vue";
-import { useRouter } from "vue-router";
-import { CircleAlert, LoaderCircle } from "lucide-vue-next";
+import { onBeforeUnmount, onMounted, reactive, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { CircleAlert, Check, LoaderCircle, X } from "lucide-vue-next";
 import AppLogo from "@/components/common/AppLogo.vue";
 import PasswordInput from "@/components/common/PasswordInput.vue";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -13,11 +13,32 @@ import { ApiError } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth";
 
 const router = useRouter();
+const route = useRoute();
 const auth = useAuthStore();
 
 const form = reactive({ email: "", password: "" });
 const error = ref("");
 const loading = ref(false);
+
+// Toast "akun berhasil dibuat"
+const TOAST_DURATION = 4500; // ms tampil sebelum mulai menghilang
+const showSuccess = ref(false);
+let toastTimer: ReturnType<typeof setTimeout> | undefined;
+
+function dismissToast() {
+  clearTimeout(toastTimer);
+  showSuccess.value = false;
+}
+
+onMounted(() => {
+  if (route.query.registered !== "1") return;
+  showSuccess.value = true;
+  toastTimer = setTimeout(dismissToast, TOAST_DURATION);
+  // Bersihkan query supaya refresh tidak menampilkan toast lagi.
+  router.replace({ name: "login" });
+});
+
+onBeforeUnmount(() => clearTimeout(toastTimer));
 
 async function handleSubmit() {
   error.value = "";
@@ -54,6 +75,40 @@ async function handleSubmit() {
     class="min-h-screen flex flex-col items-center justify-center px-4 py-12"
     :style="{ background: 'var(--background)' }"
   >
+    <!-- Toast berhasil daftar -->
+    <Transition name="toast">
+      <div
+        v-if="showSuccess"
+        role="status"
+        aria-live="polite"
+        class="toast"
+        :style="{ '--toast-duration': TOAST_DURATION + 'ms' }"
+      >
+        <div class="flex items-start gap-3 px-4 py-3.5">
+          <span class="toast-icon">
+            <Check class="h-3.5 w-3.5" :stroke-width="3" />
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-semibold leading-5" :style="{ color: 'var(--foreground)' }">
+              Akun berhasil dibuat
+            </p>
+            <p class="text-xs leading-5" :style="{ color: 'var(--muted-foreground)' }">
+              Masuk dengan email dan kata sandi yang barusan kamu daftarkan.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="toast-close"
+            aria-label="Tutup notifikasi"
+            @click="dismissToast"
+          >
+            <X class="h-4 w-4" />
+          </button>
+        </div>
+        <div class="toast-progress" />
+      </div>
+    </Transition>
+
     <RouterLink :to="{ name: 'login' }" class="mb-10">
       <AppLogo size="xl" />
     </RouterLink>
@@ -120,3 +175,89 @@ async function handleSubmit() {
     </Card>
   </div>
 </template>
+
+<style scoped>
+.toast {
+  position: fixed;
+  top: 1.25rem;
+  left: 50%;
+  translate: -50% 0;
+  z-index: 50;
+  width: min(92vw, 380px);
+  overflow: hidden;
+  border-radius: 0.875rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px -8px rgb(0 0 0 / 0.18);
+}
+
+.toast-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 1.375rem;
+  height: 1.375rem;
+  margin-top: 0.0625rem;
+  border-radius: 9999px;
+  background: #22c55e;
+  color: #fff;
+}
+
+.toast-close {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.375rem;
+  color: var(--muted-foreground);
+  transition: background-color 0.15s, color 0.15s;
+}
+.toast-close:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+/* Garis sisa waktu */
+.toast-progress {
+  height: 2px;
+  background: #22c55e;
+  transform-origin: left;
+  animation: toast-progress var(--toast-duration) linear forwards;
+}
+@keyframes toast-progress {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+/* Muncul cepat, hilang pelan */
+.toast-enter-active {
+  transition: opacity 0.35s ease-out, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.toast-leave-active {
+  transition: opacity 1.1s ease-in-out, transform 1.1s ease-in-out;
+}
+.toast-enter-from {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+.toast-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-enter-active,
+  .toast-leave-active {
+    transition: opacity 0.2s linear;
+  }
+  .toast-enter-from,
+  .toast-leave-to {
+    transform: none;
+  }
+  .toast-progress {
+    animation: none;
+    display: none;
+  }
+}
+</style>

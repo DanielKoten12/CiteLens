@@ -485,7 +485,7 @@ onBeforeUnmount(() => {
       </div>
     </header>
 
-    <div ref="container" class="flex min-h-0 min-w-0 w-full flex-1 justify-center overflow-auto p-4">
+    <div ref="container" class="pdf-viewer-scrollport flex min-h-0 min-w-0 w-full flex-1 justify-center overflow-auto p-4">
       <div v-if="error" class="flex min-h-0 flex-1 max-w-md flex-col items-center justify-center gap-2 text-center text-sm text-red-700"><strong>PDF tidak dapat dimuat</strong><span>{{ error }}</span></div>
       <div v-else-if="!pdf" class="flex min-h-0 flex-1 items-center text-sm text-slate-500">Memuat dokumen PDF...</div>
       <div v-else class="flex flex-col gap-4">

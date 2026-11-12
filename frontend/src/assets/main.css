@@ -154,6 +154,18 @@ input[type="password"]::-ms-clear {
   box-shadow: 0 18px 45px rgba(31, 46, 70, 0.13), 0 2px 5px rgba(31, 46, 70, 0.08);
 }
 
+/* Tinggi area gulir PDF mengikuti viewport supaya kertas dokumen yang menempel
+   (sticky) tidak terpotong di layar pendek. */
+.pdf-viewer-scrollport {
+  height: clamp(360px, calc(100vh - 10rem), 560px);
+}
+
+@supports (height: 100dvh) {
+  .pdf-viewer-scrollport {
+    height: clamp(360px, calc(100dvh - 10rem), 560px);
+  }
+}
+
 .document-toolbar {
   display: flex;
   align-items: center;
@@ -351,8 +363,19 @@ input[type="password"]::-ms-clear {
 }
 
 .reference-panel {
+  position: sticky;
+  top: 1rem;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 2rem);
   height: 100%;
   min-height: 0;
+}
+
+.reference-panel-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 @media (max-width: 1023px) {
@@ -373,8 +396,19 @@ input[type="password"]::-ms-clear {
   }
 
   .reference-panel {
+    position: static;
+    display: block;
     height: auto;
     max-height: none;
+  }
+
+  .reference-panel-list {
+    overflow-y: visible;
+    padding: 0;
+  }
+
+  .document-paper {
+    position: static;
   }
 }
 
@@ -386,6 +420,12 @@ input[type="password"]::-ms-clear {
   .document-page {
     min-height: 700px;
     padding-top: 1.5rem;
+  }
+
+  .document-viewer,
+  .document-viewer-empty {
+    min-height: 680px;
+    height: 680px;
   }
 
   .document-page-heading {
@@ -413,6 +453,7 @@ input[type="password"]::-ms-clear {
   }
 
   .document-paper {
+    position: static;
     border: 0;
     box-shadow: none;
   }

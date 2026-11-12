@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
+import ConfirmDialog from "@/components/common/ConfirmDialog.vue";
 import { ApiError } from "@/lib/api";
 import { documentsApi } from "@/lib/documents";
 import type { ApiDocument, DocumentStatus } from "@/types/api";
@@ -147,27 +148,76 @@ function openEntry(doc: ApiDocument) {
   router.push({ name: doc.status === "completed" ? "result" : "processing", params: { id: doc.id } });
 }
 
-async function removeEntry(doc: ApiDocument) {
-  if (!confirm("Hapus riwayat dokumen ini?")) return;
+/* ---------- Dialog konfirmasi hapus ---------- */
+
+type PendingDelete = { kind: "one"; doc: ApiDocument } | { kind: "all" };
+
+const pendingDelete = ref<PendingDelete>({ kind: "all" });
+// Dipisah dari pendingDelete supaya teks dialog tidak berubah saat animasi menutup.
+const dialogOpen = ref(false);
+const deleting = ref(false);
+
+function removeEntry(doc: ApiDocument) {
+  pendingDelete.value = { kind: "one", doc };
+  dialogOpen.value = true;
+}
+
+function clearAll() {
+  if (!total.value) return;
+  pendingDelete.value = { kind: "all" };
+  dialogOpen.value = true;
+}
+
+function cancelDelete() {
+  if (deleting.value) return;
+  dialogOpen.value = false;
+}
+
+const dialogProps = computed(() => {
+  const p = pendingDelete.value;
+  if (p.kind === "one") {
+    return {
+      title: "Hapus dokumen ini?",
+      description: "Hasil analisis dokumen ini akan dihapus dari riwayat dan tidak bisa dikembalikan.",
+      itemName: p.doc.name,
+      confirmLabel: "Hapus",
+    };
+  }
+  return {
+    title: "Hapus seluruh riwayat?",
+    description: `${total.value} dokumen beserta hasil analisisnya akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.`,
+    itemName: "",
+    confirmLabel: "Hapus Semua",
+  };
+});
+
+async function confirmDelete() {
+  if (deleting.value) return;
+  const p = pendingDelete.value;
+  deleting.value = true;
+  errorMessage.value = "";
   try {
-    await documentsApi.remove(doc.id);
+    if (p.kind === "one") {
+      await documentsApi.remove(p.doc.id);
+    } else {
+      await documentsApi.purge();
+      page.value = 1;
+    }
     await load();
   } catch (e) {
-    errorMessage.value = e instanceof ApiError ? e.message : "Gagal menghapus dokumen.";
+    errorMessage.value =
+      e instanceof ApiError
+        ? e.message
+        : p.kind === "one"
+          ? "Gagal menghapus dokumen."
+          : "Gagal menghapus riwayat.";
+  } finally {
+    deleting.value = false;
+    dialogOpen.value = false;
   }
 }
 
-async function clearAll() {
-  if (!total.value) return;
-  if (!confirm("Hapus seluruh riwayat analisis? Tindakan ini tidak bisa dibatalkan.")) return;
-  try {
-    await documentsApi.purge();
-    page.value = 1;
-    await load();
-  } catch (e) {
-    errorMessage.value = e instanceof ApiError ? e.message : "Gagal menghapus riwayat.";
-  }
-}
+/* ---------- Unduh laporan ---------- */
 
 /** Pakai laporan yang sudah jadi; kalau belum ada, buat lalu tunggu selesai. */
 async function getReportUrl(docId: string): Promise<string> {
@@ -211,7 +261,7 @@ async function downloadEntry(doc: ApiDocument) {
 
       <button
         class="flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-lg border disabled:opacity-50"
-        style="color: #b91c1c; border-color: #fecaca; background: white"
+        style="color: #b91c1c; border-color: #fecaca; background: var(--card)"
         :disabled="!total"
         @click="clearAll"
       >
@@ -244,7 +294,7 @@ async function downloadEntry(doc: ApiDocument) {
           class="text-sm font-semibold px-3.5 py-2 rounded-lg border transition-colors"
           :style="{
             borderColor: statusFilter === filter.key ? 'var(--foreground)' : 'var(--border)',
-            background: statusFilter === filter.key ? 'white' : 'transparent',
+            background: statusFilter === filter.key ? 'var(--card)' : 'transparent',
             color: statusFilter === filter.key ? 'var(--foreground)' : 'var(--muted-foreground)',
             boxShadow: statusFilter === filter.key ? '0 1px 3px rgba(15,22,41,0.12)' : 'none',
           }"
@@ -256,7 +306,7 @@ async function downloadEntry(doc: ApiDocument) {
 
       <button
         class="flex items-center gap-2 text-sm font-semibold px-3.5 py-2 rounded-lg border"
-        :style="{ borderColor: 'var(--foreground)', color: 'var(--foreground)', background: 'white' }"
+        :style="{ borderColor: 'var(--foreground)', color: 'var(--foreground)', background: 'var(--card)' }"
         @click="toggleSort"
       >
         <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
@@ -406,8 +456,8 @@ async function downloadEntry(doc: ApiDocument) {
               <td class="px-4 py-4">
                 <div class="flex items-center gap-2 justify-end">
                   <button
-                    class="text-xs font-bold px-4 py-2 rounded-lg text-white"
-                    :style="{ background: 'var(--primary)' }"
+                    class="text-xs font-bold px-4 py-2 rounded-lg"
+                    :style="{ background: 'var(--primary)', color: 'var(--primary-foreground)' }"
                     @click="openEntry(row.doc)"
                   >
                     Lihat
@@ -494,5 +544,16 @@ async function downloadEntry(doc: ApiDocument) {
         </button>
       </div>
     </div>
+
+    <ConfirmDialog
+      :open="dialogOpen"
+      :title="dialogProps.title"
+      :description="dialogProps.description"
+      :item-name="dialogProps.itemName"
+      :confirm-label="dialogProps.confirmLabel"
+      :loading="deleting"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
   </div>
 </template>

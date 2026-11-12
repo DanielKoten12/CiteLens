@@ -197,6 +197,9 @@ export function useDocumentHighlights(
         const findingLocations = locations.references.get(reference.id);
         return {
           ...reference,
+          // Detail membawa `finding.candidates` + `citations`; list hanya ringkasannya.
+          ...(detail ?? {}),
+          finding: detail?.finding ?? reference.finding,
           locations: findingLocations?.length
             ? findingLocations
             : reference.locations?.length

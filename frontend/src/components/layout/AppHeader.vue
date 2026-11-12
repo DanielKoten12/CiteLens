@@ -31,7 +31,7 @@ function isActive(matchNames: string[]) {
           class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
           :style="{
             background: isActive(item.matchNames) ? 'var(--secondary)' : 'transparent',
-            color: isActive(item.matchNames) ? 'var(--primary)' : 'var(--muted-foreground)',
+            color: isActive(item.matchNames) ? 'var(--secondary-foreground)' : 'var(--muted-foreground)',
           }"
         >
           {{ item.label }}
